@@ -1,0 +1,51 @@
+{
+  "id": "csv_upload_mixed",
+  "description": "CSV 업로드 — AAPL (US stock) + KRW-BTC (crypto) 혼합",
+  "input": {
+    "data": [
+      {
+        "rows": [
+          {"symbol": "AAPL", "date": "2024-03-01", "close": 179.5, "volume": 55000000},
+          {"symbol": "KRW-BTC", "date": "2024-03-01", "close": 92000000, "volume": 2200},
+          {"symbol": "AAPL", "date": "2024-03-02", "close": 181.2, "volume": 61000000},
+          {"symbol": "KRW-BTC", "date": "2024-03-02", "close": 94500000, "volume": 2500}
+        ],
+        "columns": ["symbol", "date", "close", "volume"],
+        "source": "csv_upload"
+      }
+    ]
+  },
+  "expected_asset_class": "mixed",
+  "expected_router_reason_keyword": "mixed",
+  "expected_heuristic": true,
+  "expected_gates": {
+    "schema_gate": "pass",
+    "domain_gate": "pass",
+    "critique_gate": "pass"
+  },
+  "mock_analyzer_output": {
+    "asset_class": "mixed",
+    "summary": "AAPL 주식과 KRW-BTC 코인 모두 상승.",
+    "headline": "US 주식 + 업비트 코인 2일 구간 상승",
+    "highlights": [
+      "AAPL 179.5 → 181.2 (+0.95%)",
+      "KRW-BTC 92000000 → 94500000 (+2.72%)"
+    ],
+    "sub_analyses": {
+      "stock": {"summary": "AAPL 2일 +0.95%"},
+      "crypto": {"summary": "KRW-BTC 2일 +2.72%"}
+    },
+    "evidence": [
+      {"claim": "AAPL 179.5 → 181.2", "rows": [0, 2]},
+      {"claim": "KRW-BTC 92000000 → 94500000", "rows": [1, 3]}
+    ]
+  },
+  "mock_critique": {
+    "verdict": "pass",
+    "per_claim": [
+      {"claim": "AAPL 179.5 → 181.2", "status": "supported"},
+      {"claim": "KRW-BTC 92000000 → 94500000", "status": "supported"}
+    ],
+    "reason": "all claims supported"
+  }
+}

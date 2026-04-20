@@ -1,0 +1,63 @@
+{
+  "id": "portfolio_balanced",
+  "description": "주식 50 / 코인 30 / 현금 20 — HHI 낮음, 분산 양호",
+  "input": {
+    "data": [
+      {"market": "yahoo", "code": "AAPL", "quantity": 10, "avg_cost": 150, "currency": "USD", "current_price_krw": 200000, "value_krw": 2000000, "cost_krw": 1500000, "asset_class": "stock_us"},
+      {"market": "yahoo", "code": "MSFT", "quantity": 5, "avg_cost": 300, "currency": "USD", "current_price_krw": 500000, "value_krw": 2500000, "cost_krw": 2000000, "asset_class": "stock_us"},
+      {"market": "naver_kr", "code": "005930", "quantity": 100, "avg_cost": 70000, "currency": "KRW", "current_price_krw": 75000, "value_krw": 7500000, "cost_krw": 7000000, "asset_class": "stock_kr"},
+      {"market": "upbit", "code": "KRW-BTC", "quantity": 0.05, "avg_cost": 50000000, "currency": "KRW", "current_price_krw": 60000000, "value_krw": 3000000, "cost_krw": 2500000, "asset_class": "crypto"},
+      {"market": "upbit", "code": "KRW-ETH", "quantity": 0.5, "avg_cost": 3000000, "currency": "KRW", "current_price_krw": 4000000, "value_krw": 2000000, "cost_krw": 1500000, "asset_class": "crypto"},
+      {"market": "cash", "code": "KRW", "quantity": 4000000, "avg_cost": 1, "currency": "KRW", "current_price_krw": 1, "value_krw": 4000000, "cost_krw": 4000000, "asset_class": "cash"}
+    ]
+  },
+  "expected_asset_class": "portfolio",
+  "expected_router_reason_keyword": "portfolio",
+  "expected_gates": {
+    "schema_gate": "pass",
+    "domain_gate": "pass",
+    "critique_gate": "pass"
+  },
+  "expected_metrics": {
+    "hhi_max": 0.4,
+    "n_asset_classes_min": 4,
+    "diversification_score_min": 50
+  },
+  "mock_analyzer_output": {
+    "asset_class": "portfolio",
+    "headline": "6종·4자산군, HHI 0.26 — 분산 양호",
+    "narrative": "주식(국내+해외) 약 50%, 크립토 ~24%, 현금 ~19% 로 균형 잡힌 구성. 환율 노출은 KRW 중심이며 낙폭은 제한적.",
+    "summary": "6종·4자산군 분산 포트폴리오, HHI 0.26 으로 집중 위험 낮음.",
+    "highlights": [
+      "총 6종·4자산군 (stock_us, stock_kr, crypto, cash)",
+      "HHI 0.26 — 분산 양호 범위",
+      "USD 노출 약 21% (AAPL+MSFT)"
+    ],
+    "metrics": {
+      "hhi": 0.26,
+      "diversification_score": 70,
+      "asset_class_breakdown": {"stock_us": 0.21, "stock_kr": 0.36, "crypto": 0.24, "cash": 0.19},
+      "currency_exposure": {"KRW": 0.79, "USD": 0.21}
+    },
+    "signals": [
+      {"kind": "diversified", "strength": "low", "rationale": "HHI 0.26 으로 자산군 분산 양호 — 현 구성 유지 권장"},
+      {"kind": "fx_hedge", "strength": "low", "rationale": "비원화 노출 21% 수준 — 환헤지 불필요"},
+      {"kind": "monitor", "strength": "low", "rationale": "6종 분산 양호 — 분기 리뷰 권장"}
+    ],
+    "evidence": [
+      {"claim": "stock_us 21%", "rows": [0, 1]},
+      {"claim": "stock_kr 36%", "rows": [2]},
+      {"claim": "crypto 24%", "rows": [3, 4]}
+    ],
+    "confidence": 0.8
+  },
+  "mock_critique": {
+    "verdict": "pass",
+    "per_claim": [
+      {"claim": "stock_us 21%", "status": "supported"},
+      {"claim": "stock_kr 36%", "status": "supported"},
+      {"claim": "crypto 24%", "status": "supported"}
+    ],
+    "reason": "all claims supported"
+  }
+}

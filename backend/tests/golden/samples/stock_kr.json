@@ -1,0 +1,48 @@
+{
+  "id": "stock_kr",
+  "description": "삼성전자 KOSPI 5일 시세",
+  "input": {
+    "data": [
+      {"symbol": "005930.KS", "date": "2024-03-11", "open": 72000, "high": 72800, "low": 71500, "close": 72500, "volume": 12500000},
+      {"symbol": "005930.KS", "date": "2024-03-12", "open": 72600, "high": 73200, "low": 72100, "close": 72900, "volume": 13100000},
+      {"symbol": "005930.KS", "date": "2024-03-13", "open": 72800, "high": 73500, "low": 72400, "close": 73100, "volume": 14200000},
+      {"symbol": "005930.KS", "date": "2024-03-14", "open": 73200, "high": 74100, "low": 72900, "close": 73800, "volume": 15800000},
+      {"symbol": "005930.KS", "date": "2024-03-15", "open": 73900, "high": 74500, "low": 73400, "close": 74200, "volume": 14900000}
+    ],
+    "query": "삼성전자 최근 5일 추세"
+  },
+  "expected_asset_class": "stock",
+  "expected_router_reason_keyword": "005930.KS",
+  "expected_gates": {
+    "schema_gate": "pass",
+    "domain_gate": "pass",
+    "critique_gate": "pass"
+  },
+  "mock_analyzer_output": {
+    "asset_class": "stock",
+    "summary": "삼성전자는 5일간 72500원에서 74200원으로 상승했다.",
+    "highlights": [
+      "첫날(2024-03-11) 종가 72500원, 마지막날(2024-03-15) 종가 74200원",
+      "5일 누적 거래량 약 70500000주",
+      "2024-03-14에 고가 74100원 기록"
+    ],
+    "metrics": {
+      "latest_close": 74200,
+      "period_return_pct": 2.35,
+      "volatility_pct": 0.9,
+      "ma_20": null
+    },
+    "evidence": [
+      {"claim": "첫날 72500, 마지막 74200", "rows": [0, 4]},
+      {"claim": "고가 74100원 2024-03-14", "rows": [3]}
+    ]
+  },
+  "mock_critique": {
+    "verdict": "pass",
+    "per_claim": [
+      {"claim": "첫날 72500, 마지막 74200", "status": "supported"},
+      {"claim": "고가 74100원 2024-03-14", "status": "supported"}
+    ],
+    "reason": "all claims supported"
+  }
+}

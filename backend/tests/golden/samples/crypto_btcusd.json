@@ -1,0 +1,34 @@
+{
+  "id": "crypto_btcusd",
+  "description": "BTC-USD (coinbase 스타일)",
+  "input": {
+    "data": [
+      {"symbol": "BTC-USD", "date": "2024-05-01", "close": 62500.00},
+      {"symbol": "BTC-USD", "date": "2024-05-02", "close": 63100.00}
+    ]
+  },
+  "expected_asset_class": "crypto",
+  "expected_router_reason_keyword": "BTC-USD",
+  "expected_gates": {
+    "schema_gate": "pass",
+    "domain_gate": "pass",
+    "critique_gate": "pass"
+  },
+  "mock_analyzer_output": {
+    "asset_class": "crypto",
+    "summary": "BTC-USD 2일간 62500 → 63100 상승.",
+    "highlights": ["2024-05-01 종가 62500", "2024-05-02 종가 63100"],
+    "metrics": {
+      "latest_price": 63100,
+      "period_return_pct": 0.96,
+      "volatility_pct": 0.3,
+      "quote_currency": "USD"
+    },
+    "evidence": [{"claim": "62500 → 63100", "rows": [0, 1]}]
+  },
+  "mock_critique": {
+    "verdict": "pass",
+    "per_claim": [{"claim": "62500 → 63100", "status": "supported"}],
+    "reason": "all claims supported"
+  }
+}

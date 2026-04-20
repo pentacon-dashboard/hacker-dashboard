@@ -1,0 +1,9 @@
+node_modules
+.next
+out
+.turbo
+.env
+.env.*
+e2e/
+playwright-report/
+playwright-results.xml

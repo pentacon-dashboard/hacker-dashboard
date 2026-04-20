@@ -1,0 +1,41 @@
+{
+  "id": "crypto_upbit",
+  "description": "업비트 BTC 일별 시세",
+  "input": {
+    "data": [
+      {"symbol": "KRW-BTC", "date": "2024-02-01", "open": 58000000, "high": 60100000, "low": 57800000, "close": 59500000, "volume": 2500},
+      {"symbol": "KRW-BTC", "date": "2024-02-02", "open": 59500000, "high": 61200000, "low": 59100000, "close": 60800000, "volume": 2800},
+      {"symbol": "KRW-BTC", "date": "2024-02-03", "open": 60800000, "high": 62500000, "low": 60200000, "close": 62000000, "volume": 3100}
+    ]
+  },
+  "expected_asset_class": "crypto",
+  "expected_router_reason_keyword": "KRW-BTC",
+  "expected_gates": {
+    "schema_gate": "pass",
+    "domain_gate": "pass",
+    "critique_gate": "pass"
+  },
+  "mock_analyzer_output": {
+    "asset_class": "crypto",
+    "summary": "업비트 KRW-BTC는 3일간 59500000원에서 62000000원으로 상승.",
+    "highlights": [
+      "2024-02-01 종가 59500000원",
+      "2024-02-03 종가 62000000원",
+      "3일 누적 거래량 8400 BTC"
+    ],
+    "metrics": {
+      "latest_price": 62000000,
+      "period_return_pct": 4.20,
+      "volatility_pct": 2.1,
+      "quote_currency": "KRW"
+    },
+    "evidence": [
+      {"claim": "59500000 → 62000000", "rows": [0, 2]}
+    ]
+  },
+  "mock_critique": {
+    "verdict": "pass",
+    "per_claim": [{"claim": "59500000 → 62000000", "status": "supported"}],
+    "reason": "all claims supported"
+  }
+}

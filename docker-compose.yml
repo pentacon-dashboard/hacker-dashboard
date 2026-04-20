@@ -1,0 +1,80 @@
+networks:
+  hacker-net:
+    driver: bridge
+
+volumes:
+  postgres-data:
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: hacker
+      POSTGRES_PASSWORD: hacker
+      POSTGRES_DB: hacker_dashboard
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    networks:
+      - hacker-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U hacker -d hacker_dashboard"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    networks:
+      - hacker-net
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      DATABASE_URL: postgresql+asyncpg://hacker:hacker@postgres:5432/hacker_dashboard
+      REDIS_URL: redis://redis:6379/0
+      # 실 API 키는 플랫폼 secret 스토어 주입 — 여기엔 placeholder 만
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-placeholder}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - hacker-net
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8000/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    restart: unless-stopped
+
+  frontend:
+    build:
+      # FE Dockerfile 이 ../shared 를 참조하므로 build context 를 루트로 설정
+      context: .
+      dockerfile: frontend/Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      NEXT_PUBLIC_API_BASE: http://backend:8000
+    depends_on:
+      backend:
+        condition: service_healthy
+    networks:
+      - hacker-net
+    restart: unless-stopped

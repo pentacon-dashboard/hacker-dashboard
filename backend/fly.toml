@@ -1,0 +1,36 @@
+# Fly.io 배포 설정 — hacker-dashboard-api
+# 생성일: 2026-04-19
+# 참고: fly launch 로 최초 생성 후 이 파일로 덮어쓰기
+
+app = "hacker-dashboard-api"
+primary_region = "nrt"
+
+[build]
+  dockerfile = "Dockerfile"
+
+[env]
+  PORT = "8000"
+  PYTHONUNBUFFERED = "1"
+
+[http_service]
+  internal_port = 8000
+  force_https = true
+  auto_stop_machines = true
+  auto_start_machines = true
+  min_machines_running = 0
+
+  [[http_service.checks]]
+    grace_period = "30s"
+    interval = "30s"
+    method = "GET"
+    path = "/health"
+    timeout = "10s"
+    headers = {}
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "512mb"
+  cpus = 1
+
+# 비밀값은 fly secrets set 으로 주입 (scripts/fly-secrets.sh 참고)
+# 마운트 없음 — stateless. DB/캐시는 Neon + Upstash Redis 외부 서비스 사용

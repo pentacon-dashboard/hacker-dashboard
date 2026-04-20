@@ -1,0 +1,83 @@
+{
+  "id": "rebalance_constraint_violation",
+  "kind": "rebalance",
+  "description": "max_single_weight=0.2 제약 근접. 일부 매수만 실행되고 나머지는 스킵. 실시간 가격 조회 실패 액션 1개 포함.",
+  "input": {
+    "actions": [
+      {
+        "action": "sell",
+        "market": "upbit",
+        "code": "KRW-BTC",
+        "asset_class": "crypto",
+        "quantity": "0.015",
+        "estimated_value_krw": "1275000",
+        "reason": "crypto 비중 45% → 목표 30%. 가장 비중이 큰 KRW-BTC부터 일부 매도"
+      },
+      {
+        "action": "buy",
+        "market": "yahoo",
+        "code": "AAPL",
+        "asset_class": "stock_us",
+        "quantity": "2",
+        "estimated_value_krw": "560000",
+        "reason": "stock_us 목표까지 +15.0% 부족. AAPL 추가 매수 (max_single_weight 0.2 근접)"
+      },
+      {
+        "action": "buy",
+        "market": "naver_kr",
+        "code": "005930",
+        "asset_class": "stock_kr",
+        "quantity": "10",
+        "estimated_value_krw": null,
+        "reason": "stock_kr 부족분 일부 매수 — 실시간 가격 조회 실패로 수량 추정치"
+      }
+    ],
+    "drift": {
+      "stock_kr": -0.1,
+      "stock_us": -0.15,
+      "crypto": 0.15,
+      "cash": 0.1,
+      "fx": 0.0
+    },
+    "current_allocation": {
+      "stock_kr": 0.1,
+      "stock_us": 0.25,
+      "crypto": 0.45,
+      "cash": 0.2,
+      "fx": 0.0
+    },
+    "target_allocation": {
+      "stock_kr": 0.2,
+      "stock_us": 0.4,
+      "crypto": 0.3,
+      "cash": 0.1,
+      "fx": 0.0
+    },
+    "constraints": {
+      "max_single_weight": 0.2,
+      "min_trade_krw": "100000",
+      "allow_fractional": false
+    }
+  },
+  "expected": {
+    "shortcut": false,
+    "headline_contains_any": ["부분", "제약", "조정", "비중"],
+    "narrative_must_include_codes": ["AAPL", "KRW-BTC"],
+    "narrative_must_not_include_codes": ["NVDA", "TSLA", "DOGE"],
+    "warnings_min_count": 1,
+    "warnings_max_count": 3,
+    "confidence_range": [0.5, 0.9],
+    "forbidden_terms": ["보장", "무조건", "투자 조언"]
+  },
+  "expected_gates": {
+    "schema_gate": "pass",
+    "domain_gate": "pass",
+    "critique_gate": "pass"
+  },
+  "mock_analyzer_output": {
+    "headline": "부분 리밸런싱 — 집중도 제약으로 일부 매수 제한",
+    "narrative": "crypto 비중이 45%로 목표 대비 15%p 과대입니다. KRW-BTC 약 127만원을 매도하고 AAPL 2주를 매수하지만, max_single_weight 0.2 제약에 근접해 추가 매수 여력이 제한됩니다. 005930(삼성전자) 실시간 가격 조회가 실패해 수량 추정치로 안내합니다.",
+    "warnings": ["실시간 가격 조회 실패분 존재 — 실행 시 재확인", "집중도 제약 접근 — max_single_weight"],
+    "confidence": 0.72
+  }
+}

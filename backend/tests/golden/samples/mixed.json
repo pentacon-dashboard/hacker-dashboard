@@ -1,0 +1,40 @@
+{
+  "id": "mixed",
+  "description": "삼성전자 + BTC 혼합 (Router 가 mixed 로 판별)",
+  "input": {
+    "data": [
+      {"symbol": "005930.KS", "date": "2024-03-15", "close": 74200},
+      {"symbol": "KRW-BTC", "date": "2024-03-15", "close": 95000000}
+    ]
+  },
+  "expected_asset_class": "mixed",
+  "expected_router_reason_keyword": "mixed",
+  "expected_gates": {
+    "schema_gate": "pass",
+    "domain_gate": "pass",
+    "critique_gate": "pass"
+  },
+  "mock_analyzer_output": {
+    "asset_class": "mixed",
+    "summary": "국내주식(삼성전자)과 암호화폐(BTC) 혼합 포트폴리오.",
+    "highlights": [
+      "005930.KS 종가 74200원",
+      "KRW-BTC 종가 95000000원"
+    ],
+    "metrics": {
+      "latest_close": 74200
+    },
+    "evidence": [
+      {"claim": "005930.KS 74200", "rows": [0]},
+      {"claim": "KRW-BTC 95000000", "rows": [1]}
+    ]
+  },
+  "mock_critique": {
+    "verdict": "pass",
+    "per_claim": [
+      {"claim": "005930.KS 74200", "status": "supported"},
+      {"claim": "KRW-BTC 95000000", "status": "supported"}
+    ],
+    "reason": "all claims supported"
+  }
+}

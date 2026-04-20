@@ -1,0 +1,2071 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Hacker Dashboard API",
+    "description": "임의 투자 데이터 스키마에서 자동 분석 뷰를 생성하는 금융 대시보드 API",
+    "version": "0.1.0"
+  },
+  "paths": {
+    "/health": {
+      "get": {
+        "tags": [
+          "infra"
+        ],
+        "summary": "Health",
+        "operationId": "health_health_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/market/symbols": {
+      "get": {
+        "tags": [
+          "market"
+        ],
+        "summary": "List Symbols",
+        "description": "지원 심볼 목록 (데모 고정 샘플)",
+        "operationId": "list_symbols_market_symbols_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/Symbol"
+                  },
+                  "type": "array",
+                  "title": "Response List Symbols Market Symbols Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/market/symbols/search": {
+      "get": {
+        "tags": [
+          "market"
+        ],
+        "summary": "Search Symbols",
+        "description": "심볼 통합 검색 (upbit + yahoo + naver_kr + alias).\n\n- 4개 소스를 asyncio.gather 로 병렬 호출\n- (market, symbol) 기준 dedupe, 높은 score 유지\n- score 내림차순 정렬 후 상위 50개 반환\n- score 필드는 응답에 포함되지 않음 (SymbolInfo.score 는 exclude=True)",
+        "operationId": "search_symbols_market_symbols_search_get",
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "description": "검색 키워드",
+              "title": "Q"
+            },
+            "description": "검색 키워드"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/SymbolInfo"
+                  },
+                  "title": "Response Search Symbols Market Symbols Search Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/market/quotes/{symbol}": {
+      "get": {
+        "tags": [
+          "market"
+        ],
+        "summary": "Get Quote",
+        "description": "단일 심볼 시세 조회 (stub — legacy 호환)",
+        "operationId": "get_quote_market_quotes__symbol__get",
+        "parameters": [
+          {
+            "name": "symbol",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Symbol"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Quote"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/market/quotes/{market}/{code}": {
+      "get": {
+        "tags": [
+          "market"
+        ],
+        "summary": "Get Market Quote",
+        "description": "market별 단일 심볼 현재가 조회. Redis 캐시(TTL 5s) 적용.",
+        "operationId": "get_market_quote_market_quotes__market___code__get",
+        "parameters": [
+          {
+            "name": "market",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Market"
+            }
+          },
+          {
+            "name": "code",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Code"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Quote"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/market/ohlc/{market}/{code}": {
+      "get": {
+        "tags": [
+          "market"
+        ],
+        "summary": "Get Ohlc",
+        "description": "OHLC 캔들 조회. Redis 캐시(TTL 60s) 적용.",
+        "operationId": "get_ohlc_market_ohlc__market___code__get",
+        "parameters": [
+          {
+            "name": "market",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Market"
+            }
+          },
+          {
+            "name": "code",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Code"
+            }
+          },
+          {
+            "name": "interval",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "pattern": "^(1d|1m)$",
+              "default": "1d",
+              "title": "Interval"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 1000,
+              "minimum": 1,
+              "default": 100,
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/OhlcBar"
+                  },
+                  "title": "Response Get Ohlc Market Ohlc  Market   Code  Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/market/watchlist/items": {
+      "get": {
+        "tags": [
+          "market"
+        ],
+        "summary": "List Watchlist",
+        "description": "워치리스트 조회 (user_id='demo' 고정).",
+        "operationId": "list_watchlist_market_watchlist_items_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/WatchlistItemResponse"
+                  },
+                  "type": "array",
+                  "title": "Response List Watchlist Market Watchlist Items Get"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "market"
+        ],
+        "summary": "Add Watchlist",
+        "description": "워치리스트에 심볼 추가.",
+        "operationId": "add_watchlist_market_watchlist_items_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WatchlistItemCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WatchlistItemResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/market/watchlist/items/{item_id}": {
+      "delete": {
+        "tags": [
+          "market"
+        ],
+        "summary": "Delete Watchlist",
+        "description": "워치리스트 항목 삭제.",
+        "operationId": "delete_watchlist_market_watchlist_items__item_id__delete",
+        "parameters": [
+          {
+            "name": "item_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Item Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/analyze": {
+      "post": {
+        "tags": [
+          "analyze"
+        ],
+        "summary": "Analyze",
+        "description": "임의 투자 데이터를 받아 Router → Analyzer → 3단 게이트 파이프라인을 실행한다.\n\n- `data` 만 주어진 경우: 그대로 분석\n- `symbol` 이 주어진 경우: market 어댑터로 OHLC 프리패치 후 주입\n- `context.ohlc` 가 주어진 경우: 그대로 rows 로 변환해 주입\n- `include_portfolio_context=True` 인 경우: DB에서 holdings를 조회해 AgentState에 주입",
+        "operationId": "analyze_analyze_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AnalyzeRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AnalyzeResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/analyze/csv": {
+      "post": {
+        "tags": [
+          "analyze"
+        ],
+        "summary": "Analyze Csv",
+        "description": "CSV 파일 업로드 → 자동 분석.\n\n- content-type: text/csv 또는 application/vnd.ms-excel\n- 파일 크기: ≤ 10MB (초과 시 413)\n- 인코딩: utf-8 / cp949 자동 탐지\n- 행 수 > 300 이면 모델을 opus 로 자동 승급\n- 결과는 파일 해시 + user_note 기반 캐시 키로 5분 캐싱",
+        "operationId": "analyze_csv_analyze_csv_post",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_analyze_csv_analyze_csv_post"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AnalyzeResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/portfolio/holdings": {
+      "get": {
+        "tags": [
+          "portfolio"
+        ],
+        "summary": "List Holdings",
+        "description": "보유 종목 전체 조회.",
+        "operationId": "list_holdings_portfolio_holdings_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/HoldingResponse"
+                  },
+                  "type": "array",
+                  "title": "Response List Holdings Portfolio Holdings Get"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "portfolio"
+        ],
+        "summary": "Create Holding",
+        "description": "보유 종목 추가.",
+        "operationId": "create_holding_portfolio_holdings_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HoldingCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HoldingResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/portfolio/holdings/{holding_id}": {
+      "patch": {
+        "tags": [
+          "portfolio"
+        ],
+        "summary": "Update Holding",
+        "description": "수량/평단가 수정.",
+        "operationId": "update_holding_portfolio_holdings__holding_id__patch",
+        "parameters": [
+          {
+            "name": "holding_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Holding Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HoldingUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HoldingResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "portfolio"
+        ],
+        "summary": "Delete Holding",
+        "description": "보유 종목 삭제.",
+        "operationId": "delete_holding_portfolio_holdings__holding_id__delete",
+        "parameters": [
+          {
+            "name": "holding_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Holding Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/portfolio/summary": {
+      "get": {
+        "tags": [
+          "portfolio"
+        ],
+        "summary": "Get Summary",
+        "description": "포트폴리오 집계 요약 (현재가 기반 실시간 계산).",
+        "operationId": "get_summary_portfolio_summary_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PortfolioSummary"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/portfolio/snapshots": {
+      "get": {
+        "tags": [
+          "portfolio"
+        ],
+        "summary": "List Snapshots",
+        "description": "포트폴리오 스냅샷 조회 (날짜 범위 필터).",
+        "operationId": "list_snapshots_portfolio_snapshots_get",
+        "parameters": [
+          {
+            "name": "from",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "시작 날짜 (YYYY-MM-DD)",
+              "title": "From"
+            },
+            "description": "시작 날짜 (YYYY-MM-DD)"
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "종료 날짜 (YYYY-MM-DD)",
+              "title": "To"
+            },
+            "description": "종료 날짜 (YYYY-MM-DD)"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/SnapshotResponse"
+                  },
+                  "title": "Response List Snapshots Portfolio Snapshots Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/portfolio/rebalance": {
+      "post": {
+        "tags": [
+          "portfolio"
+        ],
+        "summary": "Rebalance",
+        "description": "리밸런싱 제안 생성.\n\n결정적 계산(순수함수)으로 actions 배열을 생성하고,\nLLM 해석(RebalanceAnalyzer)을 옵션으로 추가.\nLLM 실패 시 llm_analysis=None, status=\"degraded\" 로 graceful degrade.",
+        "operationId": "rebalance_portfolio_rebalance_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RebalanceRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RebalanceResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "AnalyzeContext": {
+        "properties": {
+          "ohlc": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/OhlcBar"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ohlc",
+            "description": "서버 또는 클라이언트가 제공한 OHLC 시계열"
+          }
+        },
+        "type": "object",
+        "title": "AnalyzeContext",
+        "description": "선택적 부가 컨텍스트. 현재는 OHLC 프리패치 결과만."
+      },
+      "AnalyzeMeta": {
+        "properties": {
+          "asset_class": {
+            "type": "string",
+            "title": "Asset Class",
+            "description": "Router 가 결정한 자산군"
+          },
+          "router_reason": {
+            "type": "string",
+            "title": "Router Reason",
+            "description": "Router 가 선택한 이유 (한 문장)"
+          },
+          "gates": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object",
+            "title": "Gates",
+            "description": "각 게이트의 최종 상태"
+          },
+          "latency_ms": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Latency Ms",
+            "description": "그래프 실행 소요 시간(ms)"
+          },
+          "analyzer_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Analyzer Name",
+            "description": "어떤 analyzer 가 실행되었는지 (stock | crypto | fx | ...)"
+          },
+          "evidence_snippets": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Evidence Snippets",
+            "description": "critique 통과 후 확정된 근거 인용 3~5개"
+          },
+          "cache": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CacheMetrics"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "직전 요청의 프롬프트 캐시/토큰 사용량"
+          }
+        },
+        "type": "object",
+        "required": [
+          "asset_class",
+          "router_reason",
+          "gates"
+        ],
+        "title": "AnalyzeMeta"
+      },
+      "AnalyzeRequest": {
+        "properties": {
+          "data": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Data",
+            "description": "분석할 원시 데이터 rows. symbol 만으로도 분석할 경우 빈 리스트 허용."
+          },
+          "query": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Query",
+            "description": "자연어 분석 지시 (선택)"
+          },
+          "asset_class_hint": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Asset Class Hint",
+            "description": "Router 힌트: stock | crypto | fx | macro | auto"
+          },
+          "symbol": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SymbolRef"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "심볼 분석 요청. 존재 시 서버가 market 어댑터로 OHLC 를 프리패치한다."
+          },
+          "context": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AnalyzeContext"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "클라이언트가 선계산해 넘기는 OHLC 등 부가 컨텍스트"
+          },
+          "include_portfolio_context": {
+            "type": "boolean",
+            "title": "Include Portfolio Context",
+            "description": "True면 서버가 DB에서 holdings를 조회해 AgentState에 주입. LLM이 개인화된 분석 수행.",
+            "default": false
+          }
+        },
+        "type": "object",
+        "title": "AnalyzeRequest",
+        "description": "임의 투자 데이터를 받아 자동 분석을 요청한다."
+      },
+      "AnalyzeResponse": {
+        "properties": {
+          "request_id": {
+            "type": "string",
+            "title": "Request Id",
+            "description": "추적용 UUID"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status",
+            "description": "ok | error | degraded"
+          },
+          "result": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Result",
+            "description": "Analyzer 출력 (자산군별 상이)"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/AnalyzeMeta"
+          }
+        },
+        "type": "object",
+        "required": [
+          "request_id",
+          "status",
+          "meta"
+        ],
+        "title": "AnalyzeResponse"
+      },
+      "Body_analyze_csv_analyze_csv_post": {
+        "properties": {
+          "file": {
+            "type": "string",
+            "contentMediaType": "application/octet-stream",
+            "title": "File"
+          },
+          "user_note": {
+            "type": "string",
+            "title": "User Note",
+            "default": ""
+          },
+          "symbol_hint": {
+            "type": "string",
+            "title": "Symbol Hint",
+            "default": ""
+          },
+          "include_portfolio_context": {
+            "type": "boolean",
+            "title": "Include Portfolio Context",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": [
+          "file"
+        ],
+        "title": "Body_analyze_csv_analyze_csv_post"
+      },
+      "CacheMetrics": {
+        "properties": {
+          "read_tokens": {
+            "type": "integer",
+            "title": "Read Tokens",
+            "description": "프롬프트 캐시 히트 토큰",
+            "default": 0
+          },
+          "creation_tokens": {
+            "type": "integer",
+            "title": "Creation Tokens",
+            "description": "캐시 생성(기록) 토큰",
+            "default": 0
+          },
+          "input_tokens": {
+            "type": "integer",
+            "title": "Input Tokens",
+            "default": 0
+          },
+          "output_tokens": {
+            "type": "integer",
+            "title": "Output Tokens",
+            "default": 0
+          }
+        },
+        "type": "object",
+        "title": "CacheMetrics"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "HealthResponse": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "services": {
+            "$ref": "#/components/schemas/ServiceStatus"
+          },
+          "uptime_seconds": {
+            "type": "integer",
+            "title": "Uptime Seconds"
+          },
+          "version": {
+            "type": "string",
+            "title": "Version"
+          }
+        },
+        "type": "object",
+        "required": [
+          "status",
+          "services",
+          "uptime_seconds",
+          "version"
+        ],
+        "title": "HealthResponse"
+      },
+      "HoldingCreate": {
+        "properties": {
+          "market": {
+            "type": "string",
+            "title": "Market",
+            "description": "upbit | binance | yahoo | naver_kr"
+          },
+          "code": {
+            "type": "string",
+            "title": "Code",
+            "description": "심볼/코드 (예: KRW-BTC, AAPL)"
+          },
+          "quantity": {
+            "anyOf": [
+              {
+                "type": "number",
+                "exclusiveMinimum": 0.0
+              },
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+              }
+            ],
+            "title": "Quantity",
+            "description": "보유 수량"
+          },
+          "avg_cost": {
+            "anyOf": [
+              {
+                "type": "number",
+                "exclusiveMinimum": 0.0
+              },
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+              }
+            ],
+            "title": "Avg Cost",
+            "description": "평균 매입 단가"
+          },
+          "currency": {
+            "type": "string",
+            "maxLength": 4,
+            "minLength": 3,
+            "title": "Currency",
+            "description": "통화 코드 (KRW/USD/USDT/EUR/JPY)"
+          }
+        },
+        "type": "object",
+        "required": [
+          "market",
+          "code",
+          "quantity",
+          "avg_cost",
+          "currency"
+        ],
+        "title": "HoldingCreate"
+      },
+      "HoldingDetail": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "market": {
+            "type": "string",
+            "title": "Market"
+          },
+          "code": {
+            "type": "string",
+            "title": "Code"
+          },
+          "quantity": {
+            "type": "string",
+            "title": "Quantity"
+          },
+          "avg_cost": {
+            "type": "string",
+            "title": "Avg Cost"
+          },
+          "currency": {
+            "type": "string",
+            "title": "Currency"
+          },
+          "current_price": {
+            "type": "string",
+            "title": "Current Price"
+          },
+          "current_price_krw": {
+            "type": "string",
+            "title": "Current Price Krw"
+          },
+          "value_krw": {
+            "type": "string",
+            "title": "Value Krw"
+          },
+          "cost_krw": {
+            "type": "string",
+            "title": "Cost Krw"
+          },
+          "pnl_krw": {
+            "type": "string",
+            "title": "Pnl Krw"
+          },
+          "pnl_pct": {
+            "type": "string",
+            "title": "Pnl Pct"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "market",
+          "code",
+          "quantity",
+          "avg_cost",
+          "currency",
+          "current_price",
+          "current_price_krw",
+          "value_krw",
+          "cost_krw",
+          "pnl_krw",
+          "pnl_pct"
+        ],
+        "title": "HoldingDetail",
+        "description": "집계 결과에서 종목별 상세."
+      },
+      "HoldingResponse": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "user_id": {
+            "type": "string",
+            "title": "User Id"
+          },
+          "market": {
+            "type": "string",
+            "title": "Market"
+          },
+          "code": {
+            "type": "string",
+            "title": "Code"
+          },
+          "quantity": {
+            "type": "string",
+            "title": "Quantity"
+          },
+          "avg_cost": {
+            "type": "string",
+            "title": "Avg Cost"
+          },
+          "currency": {
+            "type": "string",
+            "title": "Currency"
+          },
+          "created_at": {
+            "type": "string",
+            "title": "Created At"
+          },
+          "updated_at": {
+            "type": "string",
+            "title": "Updated At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "user_id",
+          "market",
+          "code",
+          "quantity",
+          "avg_cost",
+          "currency",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "HoldingResponse"
+      },
+      "HoldingUpdate": {
+        "properties": {
+          "quantity": {
+            "anyOf": [
+              {
+                "type": "number",
+                "exclusiveMinimum": 0.0
+              },
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Quantity"
+          },
+          "avg_cost": {
+            "anyOf": [
+              {
+                "type": "number",
+                "exclusiveMinimum": 0.0
+              },
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Avg Cost"
+          }
+        },
+        "type": "object",
+        "title": "HoldingUpdate"
+      },
+      "LLMAnalysis": {
+        "properties": {
+          "headline": {
+            "type": "string",
+            "title": "Headline"
+          },
+          "narrative": {
+            "type": "string",
+            "title": "Narrative"
+          },
+          "warnings": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Warnings"
+          },
+          "confidence": {
+            "type": "number",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Confidence",
+            "default": 0.0
+          }
+        },
+        "type": "object",
+        "required": [
+          "headline",
+          "narrative"
+        ],
+        "title": "LLMAnalysis"
+      },
+      "OhlcBar": {
+        "properties": {
+          "ts": {
+            "type": "string",
+            "title": "Ts",
+            "description": "ISO-8601 UTC"
+          },
+          "open": {
+            "type": "number",
+            "title": "Open"
+          },
+          "high": {
+            "type": "number",
+            "title": "High"
+          },
+          "low": {
+            "type": "number",
+            "title": "Low"
+          },
+          "close": {
+            "type": "number",
+            "title": "Close"
+          },
+          "volume": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Volume"
+          }
+        },
+        "type": "object",
+        "required": [
+          "ts",
+          "open",
+          "high",
+          "low",
+          "close"
+        ],
+        "title": "OhlcBar",
+        "description": "OHLC 캔들 하나"
+      },
+      "PortfolioSummary": {
+        "properties": {
+          "user_id": {
+            "type": "string",
+            "title": "User Id",
+            "default": "demo"
+          },
+          "total_value_krw": {
+            "type": "string",
+            "title": "Total Value Krw"
+          },
+          "total_cost_krw": {
+            "type": "string",
+            "title": "Total Cost Krw"
+          },
+          "total_pnl_krw": {
+            "type": "string",
+            "title": "Total Pnl Krw"
+          },
+          "total_pnl_pct": {
+            "type": "string",
+            "title": "Total Pnl Pct"
+          },
+          "daily_change_krw": {
+            "type": "string",
+            "title": "Daily Change Krw"
+          },
+          "daily_change_pct": {
+            "type": "string",
+            "title": "Daily Change Pct"
+          },
+          "asset_class_breakdown": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object",
+            "title": "Asset Class Breakdown",
+            "description": "{'crypto': '0.50', 'stock_us': '0.30', ...}"
+          },
+          "holdings": {
+            "items": {
+              "$ref": "#/components/schemas/HoldingDetail"
+            },
+            "type": "array",
+            "title": "Holdings"
+          }
+        },
+        "type": "object",
+        "required": [
+          "total_value_krw",
+          "total_cost_krw",
+          "total_pnl_krw",
+          "total_pnl_pct",
+          "daily_change_krw",
+          "daily_change_pct",
+          "asset_class_breakdown",
+          "holdings"
+        ],
+        "title": "PortfolioSummary",
+        "description": "GET /portfolio/summary 응답."
+      },
+      "Quote": {
+        "properties": {
+          "symbol": {
+            "type": "string",
+            "title": "Symbol"
+          },
+          "market": {
+            "type": "string",
+            "title": "Market",
+            "description": "upbit | binance | yahoo | naver_kr",
+            "default": "unknown"
+          },
+          "price": {
+            "type": "number",
+            "exclusiveMinimum": 0.0,
+            "title": "Price"
+          },
+          "change": {
+            "type": "number",
+            "title": "Change",
+            "description": "전일 대비 변화량",
+            "default": 0.0
+          },
+          "change_pct": {
+            "type": "number",
+            "title": "Change Pct",
+            "description": "전일 대비 변화율(%)",
+            "default": 0.0
+          },
+          "volume": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Volume"
+          },
+          "currency": {
+            "type": "string",
+            "title": "Currency",
+            "description": "KRW | USD | USDT 등",
+            "default": "USD"
+          },
+          "timestamp": {
+            "type": "string",
+            "title": "Timestamp",
+            "description": "ISO-8601 UTC"
+          }
+        },
+        "type": "object",
+        "required": [
+          "symbol",
+          "price",
+          "timestamp"
+        ],
+        "title": "Quote"
+      },
+      "RebalanceAction": {
+        "properties": {
+          "action": {
+            "type": "string",
+            "enum": [
+              "buy",
+              "sell"
+            ],
+            "title": "Action"
+          },
+          "market": {
+            "type": "string",
+            "title": "Market"
+          },
+          "code": {
+            "type": "string",
+            "title": "Code"
+          },
+          "asset_class": {
+            "type": "string",
+            "title": "Asset Class"
+          },
+          "quantity": {
+            "type": "string",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Quantity"
+          },
+          "estimated_value_krw": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Estimated Value Krw"
+          },
+          "reason": {
+            "type": "string",
+            "title": "Reason"
+          }
+        },
+        "type": "object",
+        "required": [
+          "action",
+          "market",
+          "code",
+          "asset_class",
+          "quantity",
+          "reason"
+        ],
+        "title": "RebalanceAction"
+      },
+      "RebalanceConstraints": {
+        "properties": {
+          "max_single_weight": {
+            "type": "number",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Max Single Weight",
+            "description": "단일 종목 최대 비중",
+            "default": 0.5
+          },
+          "min_trade_krw": {
+            "anyOf": [
+              {
+                "type": "number",
+                "minimum": 0.0
+              },
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+              }
+            ],
+            "title": "Min Trade Krw",
+            "description": "최소 거래액(KRW)",
+            "default": "100000"
+          },
+          "allow_fractional": {
+            "type": "boolean",
+            "title": "Allow Fractional",
+            "description": "소수점 수량 허용 (주식은 기본 False 권장)",
+            "default": true
+          }
+        },
+        "type": "object",
+        "title": "RebalanceConstraints"
+      },
+      "RebalanceMeta": {
+        "properties": {
+          "latency_ms": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Latency Ms"
+          },
+          "gates": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object",
+            "title": "Gates"
+          },
+          "evidence_snippets": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Evidence Snippets"
+          }
+        },
+        "type": "object",
+        "required": [
+          "gates"
+        ],
+        "title": "RebalanceMeta"
+      },
+      "RebalanceRequest": {
+        "properties": {
+          "target_allocation": {
+            "$ref": "#/components/schemas/TargetAllocation"
+          },
+          "constraints": {
+            "$ref": "#/components/schemas/RebalanceConstraints"
+          }
+        },
+        "type": "object",
+        "required": [
+          "target_allocation"
+        ],
+        "title": "RebalanceRequest"
+      },
+      "RebalanceResponse": {
+        "properties": {
+          "request_id": {
+            "type": "string",
+            "title": "Request Id"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "ok",
+              "degraded",
+              "error"
+            ],
+            "title": "Status"
+          },
+          "current_allocation": {
+            "additionalProperties": {
+              "type": "number"
+            },
+            "type": "object",
+            "title": "Current Allocation"
+          },
+          "target_allocation": {
+            "additionalProperties": {
+              "type": "number"
+            },
+            "type": "object",
+            "title": "Target Allocation"
+          },
+          "drift": {
+            "additionalProperties": {
+              "type": "number"
+            },
+            "type": "object",
+            "title": "Drift"
+          },
+          "actions": {
+            "items": {
+              "$ref": "#/components/schemas/RebalanceAction"
+            },
+            "type": "array",
+            "title": "Actions"
+          },
+          "expected_allocation": {
+            "additionalProperties": {
+              "type": "number"
+            },
+            "type": "object",
+            "title": "Expected Allocation"
+          },
+          "summary": {
+            "$ref": "#/components/schemas/RebalanceSummary"
+          },
+          "llm_analysis": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/LLMAnalysis"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "meta": {
+            "$ref": "#/components/schemas/RebalanceMeta"
+          }
+        },
+        "type": "object",
+        "required": [
+          "request_id",
+          "status",
+          "current_allocation",
+          "target_allocation",
+          "drift",
+          "actions",
+          "expected_allocation",
+          "summary",
+          "meta"
+        ],
+        "title": "RebalanceResponse"
+      },
+      "RebalanceSummary": {
+        "properties": {
+          "total_trades": {
+            "type": "integer",
+            "title": "Total Trades"
+          },
+          "total_sell_value_krw": {
+            "type": "string",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Total Sell Value Krw"
+          },
+          "total_buy_value_krw": {
+            "type": "string",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Total Buy Value Krw"
+          },
+          "rebalance_cost_estimate_krw": {
+            "type": "string",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Rebalance Cost Estimate Krw"
+          }
+        },
+        "type": "object",
+        "required": [
+          "total_trades",
+          "total_sell_value_krw",
+          "total_buy_value_krw",
+          "rebalance_cost_estimate_krw"
+        ],
+        "title": "RebalanceSummary"
+      },
+      "ServiceStatus": {
+        "properties": {
+          "db": {
+            "type": "string",
+            "title": "Db"
+          },
+          "redis": {
+            "type": "string",
+            "title": "Redis"
+          }
+        },
+        "type": "object",
+        "required": [
+          "db",
+          "redis"
+        ],
+        "title": "ServiceStatus"
+      },
+      "SnapshotResponse": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "user_id": {
+            "type": "string",
+            "title": "User Id"
+          },
+          "snapshot_date": {
+            "type": "string",
+            "title": "Snapshot Date"
+          },
+          "total_value_krw": {
+            "type": "string",
+            "title": "Total Value Krw"
+          },
+          "total_pnl_krw": {
+            "type": "string",
+            "title": "Total Pnl Krw"
+          },
+          "asset_class_breakdown": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Asset Class Breakdown"
+          },
+          "holdings_detail": {
+            "items": {},
+            "type": "array",
+            "title": "Holdings Detail"
+          },
+          "created_at": {
+            "type": "string",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "user_id",
+          "snapshot_date",
+          "total_value_krw",
+          "total_pnl_krw",
+          "asset_class_breakdown",
+          "holdings_detail",
+          "created_at"
+        ],
+        "title": "SnapshotResponse"
+      },
+      "Symbol": {
+        "properties": {
+          "symbol": {
+            "type": "string",
+            "title": "Symbol",
+            "description": "티커 심볼 (예: AAPL, KRW-BTC)"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name",
+            "description": "자산 이름"
+          },
+          "asset_class": {
+            "type": "string",
+            "title": "Asset Class",
+            "description": "stock | crypto | fx | macro"
+          },
+          "exchange": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Exchange",
+            "description": "거래소 코드"
+          },
+          "market": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Market",
+            "description": "upbit | binance | yahoo | naver_kr"
+          }
+        },
+        "type": "object",
+        "required": [
+          "symbol",
+          "name",
+          "asset_class"
+        ],
+        "title": "Symbol"
+      },
+      "SymbolInfo": {
+        "properties": {
+          "symbol": {
+            "type": "string",
+            "title": "Symbol"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "asset_class": {
+            "type": "string",
+            "title": "Asset Class"
+          },
+          "exchange": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Exchange"
+          },
+          "market": {
+            "type": "string",
+            "title": "Market"
+          },
+          "currency": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Currency"
+          }
+        },
+        "type": "object",
+        "required": [
+          "symbol",
+          "name",
+          "asset_class",
+          "market"
+        ],
+        "title": "SymbolInfo",
+        "description": "심볼 검색 결과"
+      },
+      "SymbolRef": {
+        "properties": {
+          "market": {
+            "type": "string",
+            "title": "Market",
+            "description": "upbit | binance | yahoo | naver_kr"
+          },
+          "code": {
+            "type": "string",
+            "title": "Code",
+            "description": "티커/코드. 예: KRW-BTC, AAPL"
+          }
+        },
+        "type": "object",
+        "required": [
+          "market",
+          "code"
+        ],
+        "title": "SymbolRef",
+        "description": "업로드 없이 심볼만으로 분석할 때 사용하는 참조."
+      },
+      "TargetAllocation": {
+        "properties": {
+          "stock_kr": {
+            "type": "number",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Stock Kr",
+            "default": 0.0
+          },
+          "stock_us": {
+            "type": "number",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Stock Us",
+            "default": 0.0
+          },
+          "crypto": {
+            "type": "number",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Crypto",
+            "default": 0.0
+          },
+          "cash": {
+            "type": "number",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Cash",
+            "default": 0.0
+          },
+          "fx": {
+            "type": "number",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Fx",
+            "default": 0.0
+          }
+        },
+        "type": "object",
+        "title": "TargetAllocation",
+        "description": "자산군별 목표 비중. 합계 1.0 (±0.001 허용)."
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      },
+      "WatchlistItemCreate": {
+        "properties": {
+          "market": {
+            "type": "string",
+            "title": "Market",
+            "description": "upbit | binance | yahoo | naver_kr"
+          },
+          "code": {
+            "type": "string",
+            "title": "Code",
+            "description": "심볼/코드 (예: KRW-BTC, AAPL)"
+          },
+          "memo": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Memo"
+          }
+        },
+        "type": "object",
+        "required": [
+          "market",
+          "code"
+        ],
+        "title": "WatchlistItemCreate"
+      },
+      "WatchlistItemResponse": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "market": {
+            "type": "string",
+            "title": "Market"
+          },
+          "code": {
+            "type": "string",
+            "title": "Code"
+          },
+          "memo": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Memo"
+          },
+          "created_at": {
+            "type": "string",
+            "title": "Created At",
+            "description": "ISO-8601 UTC"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "market",
+          "code",
+          "created_at"
+        ],
+        "title": "WatchlistItemResponse"
+      }
+    }
+  }
+}

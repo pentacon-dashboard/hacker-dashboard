@@ -1,0 +1,74 @@
+{
+  "id": "rebalance_crypto_heavy",
+  "kind": "rebalance",
+  "description": "crypto 74% → 목표 30% 축소. 시드 데이터 반영. AAPL 매수, KRW-BTC 매도.",
+  "input": {
+    "actions": [
+      {
+        "action": "sell",
+        "market": "upbit",
+        "code": "KRW-BTC",
+        "asset_class": "crypto",
+        "quantity": "0.02",
+        "estimated_value_krw": "1700000",
+        "reason": "crypto 비중 74% → 목표 30%. 가장 비중이 큰 KRW-BTC부터 일부 매도"
+      },
+      {
+        "action": "buy",
+        "market": "yahoo",
+        "code": "AAPL",
+        "asset_class": "stock_us",
+        "quantity": "3",
+        "estimated_value_krw": "850000",
+        "reason": "stock_us 목표까지 +21.0% 부족. 기존 보유 종목 AAPL 추가 매수로 다변화 유지"
+      }
+    ],
+    "drift": {
+      "stock_kr": -0.13,
+      "stock_us": -0.21,
+      "crypto": 0.44,
+      "cash": -0.1,
+      "fx": 0.0
+    },
+    "current_allocation": {
+      "stock_kr": 0.07,
+      "stock_us": 0.19,
+      "crypto": 0.74,
+      "cash": 0.0,
+      "fx": 0.0
+    },
+    "target_allocation": {
+      "stock_kr": 0.2,
+      "stock_us": 0.4,
+      "crypto": 0.3,
+      "cash": 0.1,
+      "fx": 0.0
+    },
+    "constraints": {
+      "max_single_weight": 0.5,
+      "min_trade_krw": "100000",
+      "allow_fractional": true
+    }
+  },
+  "expected": {
+    "shortcut": false,
+    "headline_contains_any": ["코인", "crypto", "축소", "비중"],
+    "narrative_must_include_codes": ["KRW-BTC", "AAPL"],
+    "narrative_must_not_include_codes": ["NVDA", "DOGE", "ETH", "TSLA"],
+    "warnings_min_count": 0,
+    "warnings_max_count": 3,
+    "confidence_range": [0.6, 0.95],
+    "forbidden_terms": ["보장", "무조건", "투자 조언", "확실히 오른다"]
+  },
+  "expected_gates": {
+    "schema_gate": "pass",
+    "domain_gate": "pass",
+    "critique_gate": "pass"
+  },
+  "mock_analyzer_output": {
+    "headline": "코인 비중 74% → 30% 축소, 주식 보강 권장",
+    "narrative": "crypto 비중이 목표 대비 44%p 초과되어 집중 리스크가 큽니다. KRW-BTC 약 170만원을 매도해 비중을 낮추고, stock_us 가 21%p 부족하므로 AAPL 3주 매수로 다변화를 회복합니다. stock_kr 도 13%p 부족하지만 기존 holdings 범위 내 조정만 가능합니다.",
+    "warnings": ["KRW-BTC 매도 양도소득세 검토 필요", "거래 수수료 누적 유의"],
+    "confidence": 0.82
+  }
+}

@@ -1,0 +1,95 @@
+name: Contract Test (Standalone)
+
+# ci.yml 의 contract job 과 별개로, openapi.json 이 직접 변경됐을 때 단독 실행
+on:
+  push:
+    paths:
+      - "shared/openapi.json"
+      - "backend/app/**"
+  workflow_dispatch:
+
+jobs:
+  schemathesis:
+    name: Schemathesis Contract
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: hacker
+          POSTGRES_PASSWORD: hacker
+          POSTGRES_DB: hacker_dashboard_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U hacker"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 3s
+          --health-retries 5
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          version: "latest"
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+
+      - name: Install backend dependencies
+        working-directory: backend
+        run: uv sync --all-extras
+
+      - name: Start backend & wait for /health
+        working-directory: backend
+        env:
+          DATABASE_URL: postgresql+asyncpg://hacker:hacker@localhost:5432/hacker_dashboard_test
+          REDIS_URL: redis://localhost:6379/0
+          ANTHROPIC_API_KEY: placeholder-ci
+        run: |
+          uv run uvicorn app.main:app --host 0.0.0.0 --port 8000 &
+          for i in $(seq 1 30); do
+            if curl -sf http://localhost:8000/health; then break; fi
+            sleep 1
+          done
+
+      - name: Export OpenAPI
+        working-directory: backend
+        env:
+          DATABASE_URL: postgresql+asyncpg://hacker:hacker@localhost:5432/hacker_dashboard_test
+          REDIS_URL: redis://localhost:6379/0
+          ANTHROPIC_API_KEY: placeholder-ci
+        run: uv run python -m app.export_openapi > ../shared/openapi.json
+
+      - name: Schemathesis — all checks
+        working-directory: backend
+        run: |
+          uv run schemathesis run ../shared/openapi.json \
+            --base-url http://localhost:8000 \
+            --checks all \
+            --hypothesis-deadline=none \
+            --show-errors-tracebacks \
+            --junit-xml=../contract-results.xml
+
+      - name: Upload contract results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: contract-junit
+          path: contract-results.xml

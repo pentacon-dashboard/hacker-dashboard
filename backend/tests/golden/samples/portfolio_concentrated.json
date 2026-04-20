@@ -1,0 +1,58 @@
+{
+  "id": "portfolio_concentrated",
+  "description": "단일 코인 90% 집중 — HHI 매우 높음, 강력한 리밸런싱 제안",
+  "input": {
+    "data": [
+      {"market": "upbit", "code": "KRW-BTC", "quantity": 1.5, "avg_cost": 50000000, "currency": "KRW", "current_price_krw": 60000000, "value_krw": 90000000, "cost_krw": 75000000, "asset_class": "crypto"},
+      {"market": "naver_kr", "code": "005930", "quantity": 100, "avg_cost": 70000, "currency": "KRW", "current_price_krw": 75000, "value_krw": 7500000, "cost_krw": 7000000, "asset_class": "stock_kr"},
+      {"market": "cash", "code": "KRW", "quantity": 2500000, "avg_cost": 1, "currency": "KRW", "current_price_krw": 1, "value_krw": 2500000, "cost_krw": 2500000, "asset_class": "cash"}
+    ]
+  },
+  "expected_asset_class": "portfolio",
+  "expected_router_reason_keyword": "portfolio",
+  "expected_gates": {
+    "schema_gate": "pass",
+    "domain_gate": "pass",
+    "critique_gate": "pass"
+  },
+  "expected_metrics": {
+    "hhi_min": 0.6,
+    "top_class_weight_min": 0.85,
+    "diversification_score_max": 60
+  },
+  "mock_analyzer_output": {
+    "asset_class": "portfolio",
+    "headline": "3종·3자산군이나 crypto 비중 90% — 집중 위험 매우 높음",
+    "narrative": "KRW-BTC 단일 종목이 평가액의 90% 를 차지해 HHI 0.82 로 극단적인 집중 상태. 하락 시 손실 변동성이 커 리밸런싱이 시급. 원화 중심으로 통화 리스크는 낮지만 자산군 리스크는 존중 높음.",
+    "summary": "단일 코인 집중 포트폴리오 — HHI 0.82, crypto 90%",
+    "highlights": [
+      "crypto 비중 90%",
+      "HHI 0.82 로 집중 위험 높음",
+      "자산군 3종 중 1종에 편중"
+    ],
+    "metrics": {
+      "hhi": 0.82,
+      "diversification_score": 30,
+      "asset_class_breakdown": {"crypto": 0.9, "stock_kr": 0.075, "cash": 0.025},
+      "currency_exposure": {"KRW": 1.0}
+    },
+    "signals": [
+      {"kind": "rebalance", "strength": "high", "rationale": "crypto 비중 90.0% → 45% 수준으로 축소해 집중 위험 완화"},
+      {"kind": "fx_hedge", "strength": "low", "rationale": "비원화 노출 0.0% — 현수준 허용"},
+      {"kind": "diversify", "strength": "medium", "rationale": "보유 종목 3종 — 5종 이상으로 확대해 개별주 리스크 감소"}
+    ],
+    "evidence": [
+      {"claim": "crypto 0.90", "rows": [0]},
+      {"claim": "HHI 0.82", "rows": [0, 1, 2]}
+    ],
+    "confidence": 0.9
+  },
+  "mock_critique": {
+    "verdict": "pass",
+    "per_claim": [
+      {"claim": "crypto 0.90", "status": "supported"},
+      {"claim": "HHI 0.82", "status": "supported"}
+    ],
+    "reason": "all claims supported"
+  }
+}

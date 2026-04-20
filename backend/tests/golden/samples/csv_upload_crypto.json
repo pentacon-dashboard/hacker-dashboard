@@ -1,0 +1,48 @@
+{
+  "id": "csv_upload_crypto",
+  "description": "CSV 업로드 — 업비트 KRW-BTC/KRW-ETH 섞인 암호화폐 시세",
+  "input": {
+    "data": [
+      {
+        "rows": [
+          {"symbol": "KRW-BTC", "date": "2024-04-01", "close": 95000000, "volume": 2100},
+          {"symbol": "KRW-ETH", "date": "2024-04-01", "close": 4200000, "volume": 5300},
+          {"symbol": "KRW-BTC", "date": "2024-04-02", "close": 96500000, "volume": 2300},
+          {"symbol": "KRW-ETH", "date": "2024-04-02", "close": 4300000, "volume": 4900}
+        ],
+        "columns": ["symbol", "date", "close", "volume"],
+        "source": "csv_upload"
+      }
+    ]
+  },
+  "expected_asset_class": "crypto",
+  "expected_router_reason_keyword": "heuristic",
+  "expected_heuristic": true,
+  "expected_gates": {
+    "schema_gate": "pass",
+    "domain_gate": "pass",
+    "critique_gate": "pass"
+  },
+  "mock_analyzer_output": {
+    "asset_class": "crypto",
+    "summary": "CSV 업로드 KRW-BTC/ETH 2일간 소폭 상승.",
+    "highlights": [
+      "KRW-BTC 종가 95000000 → 96500000",
+      "KRW-ETH 종가 4200000 → 4300000"
+    ],
+    "metrics": {
+      "latest_price": 96500000,
+      "period_return_pct": 1.58,
+      "volatility_pct": 1.1,
+      "quote_currency": "KRW"
+    },
+    "evidence": [
+      {"claim": "KRW-BTC 95000000 → 96500000", "rows": [0, 2]}
+    ]
+  },
+  "mock_critique": {
+    "verdict": "pass",
+    "per_claim": [{"claim": "KRW-BTC 95000000 → 96500000", "status": "supported"}],
+    "reason": "all claims supported"
+  }
+}

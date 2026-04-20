@@ -1,0 +1,142 @@
+name: Lighthouse Performance Audit
+
+# 수동 또는 main 병합 시 실행
+on:
+  push:
+    branches: [main]
+    paths:
+      - "frontend/**"
+  workflow_dispatch:
+    inputs:
+      base_url:
+        description: "측정 대상 URL (기본값: http://localhost:3000)"
+        required: false
+        default: "http://localhost:3000"
+
+jobs:
+  lighthouse:
+    name: Lighthouse CI
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Build frontend (static mock mode)
+        working-directory: frontend
+        env:
+          # BE 없이 정적 빌드 — 점수 측정 목적
+          NEXT_PUBLIC_API_BASE: http://localhost:8000
+        run: npm run build
+
+      - name: Start frontend server
+        working-directory: frontend
+        env:
+          PORT: 3000
+        run: |
+          npm run start &
+          for i in $(seq 1 30); do
+            if curl -sf http://localhost:3000; then break; fi
+            sleep 1
+          done
+
+      - name: Install Lighthouse CLI
+        run: npm install -g @lhci/cli lighthouse
+
+      - name: Run Lighthouse — 홈 (/)
+        run: |
+          mkdir -p docs/perf
+          lighthouse http://localhost:3000/ \
+            --output=json \
+            --output-path=docs/perf/lighthouse-week3-home.json \
+            --chrome-flags="--headless --no-sandbox --disable-gpu" \
+            --quiet || true
+
+      - name: Run Lighthouse — 워치리스트 (/watchlist)
+        run: |
+          lighthouse http://localhost:3000/watchlist \
+            --output=json \
+            --output-path=docs/perf/lighthouse-week3-watchlist.json \
+            --chrome-flags="--headless --no-sandbox --disable-gpu" \
+            --quiet || true
+
+      - name: Run Lighthouse — 종목상세 (/symbol/upbit/KRW-BTC)
+        run: |
+          lighthouse http://localhost:3000/symbol/upbit/KRW-BTC \
+            --output=json \
+            --output-path=docs/perf/lighthouse-week3-symbol-detail.json \
+            --chrome-flags="--headless --no-sandbox --disable-gpu" \
+            --quiet || true
+
+      - name: Run Lighthouse — 포트폴리오 (/portfolio)
+        run: |
+          lighthouse http://localhost:3000/portfolio \
+            --output=json \
+            --output-path=docs/perf/lighthouse-week3-portfolio.json \
+            --chrome-flags="--headless --no-sandbox --disable-gpu" \
+            --quiet || true
+
+      - name: Generate summary table
+        run: |
+          node - <<'EOF'
+          const fs = require('fs');
+          const path = require('path');
+
+          const pages = [
+            { key: 'home', label: '/ (홈)', file: 'lighthouse-week3-home.json' },
+            { key: 'watchlist', label: '/watchlist', file: 'lighthouse-week3-watchlist.json' },
+            { key: 'symbol-detail', label: '/symbol/upbit/KRW-BTC', file: 'lighthouse-week3-symbol-detail.json' },
+            { key: 'portfolio', label: '/portfolio', file: 'lighthouse-week3-portfolio.json' },
+          ];
+
+          let rows = [];
+          for (const { label, file } of pages) {
+            const fp = `docs/perf/${file}`;
+            if (!fs.existsSync(fp)) {
+              rows.push(`| ${label} | N/A | N/A | N/A | N/A |`);
+              continue;
+            }
+            const report = JSON.parse(fs.readFileSync(fp, 'utf-8'));
+            const cats = report.categories || {};
+            const score = (key) => {
+              const cat = cats[key];
+              return cat ? Math.round(cat.score * 100) : 'N/A';
+            };
+            rows.push(`| ${label} | ${score('performance')} | ${score('accessibility')} | ${score('best-practices')} | ${score('seo')} |`);
+          }
+
+          const md = [
+            '# Lighthouse Week-3 요약',
+            '',
+            `측정일: ${new Date().toISOString().split('T')[0]}`,
+            '',
+            '| 페이지 | Performance | Accessibility | Best Practices | SEO |',
+            '|--------|-------------|---------------|----------------|-----|',
+            ...rows,
+            '',
+            '> 목표: Performance 90+, Accessibility 90+',
+          ].join('\n');
+
+          fs.mkdirSync('docs/perf', { recursive: true });
+          fs.writeFileSync('docs/perf/week3-summary.md', md);
+          console.log(md);
+          EOF
+
+      - name: Upload Lighthouse reports
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: lighthouse-reports
+          path: docs/perf/
+          retention-days: 30

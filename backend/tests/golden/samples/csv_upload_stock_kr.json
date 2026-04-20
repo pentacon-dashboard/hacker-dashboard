@@ -1,0 +1,47 @@
+{
+  "id": "csv_upload_stock_kr",
+  "description": "CSV 업로드 — 삼성전자/SK하이닉스 KOSPI 시세",
+  "input": {
+    "data": [
+      {
+        "rows": [
+          {"symbol": "005930.KS", "date": "2024-03-04", "open": 73000, "high": 74200, "low": 72800, "close": 74000, "volume": 12500000},
+          {"symbol": "000660.KS", "date": "2024-03-04", "open": 152000, "high": 155500, "low": 151000, "close": 155000, "volume": 2100000},
+          {"symbol": "005930.KS", "date": "2024-03-05", "open": 74000, "high": 75100, "low": 73500, "close": 74800, "volume": 11000000},
+          {"symbol": "000660.KS", "date": "2024-03-05", "open": 155000, "high": 157000, "low": 153500, "close": 156500, "volume": 2300000}
+        ],
+        "columns": ["symbol", "date", "open", "high", "low", "close", "volume"],
+        "source": "csv_upload"
+      }
+    ]
+  },
+  "expected_asset_class": "stock",
+  "expected_router_reason_keyword": "heuristic",
+  "expected_heuristic": true,
+  "expected_gates": {
+    "schema_gate": "pass",
+    "domain_gate": "pass",
+    "critique_gate": "pass"
+  },
+  "mock_analyzer_output": {
+    "asset_class": "stock",
+    "summary": "삼성전자 74000→74800, SK하이닉스 155000→156500 소폭 상승.",
+    "highlights": [
+      "005930.KS 종가 74000 → 74800 (+1.08%)",
+      "000660.KS 종가 155000 → 156500 (+0.97%)"
+    ],
+    "metrics": {
+      "latest_price": 74800,
+      "period_return_pct": 1.08,
+      "volatility_pct": 0.6
+    },
+    "evidence": [
+      {"claim": "005930.KS 74000 → 74800", "rows": [0, 2]}
+    ]
+  },
+  "mock_critique": {
+    "verdict": "pass",
+    "per_claim": [{"claim": "005930.KS 74000 → 74800", "status": "supported"}],
+    "reason": "all claims supported"
+  }
+}

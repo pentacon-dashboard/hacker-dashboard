@@ -1,0 +1,28 @@
+{
+  "id": "edge_critique_hallucinated",
+  "description": "근거 허위 주장 — critique gate 가 fail",
+  "input": {
+    "data": [
+      {"symbol": "AAPL", "date": "2024-01-02", "close": 185.64}
+    ]
+  },
+  "expected_asset_class": "stock",
+  "expected_router_reason_keyword": "AAPL",
+  "expected_gates": {
+    "schema_gate": "pass",
+    "domain_gate": "pass",
+    "critique_gate": "fail"
+  },
+  "mock_analyzer_output": {
+    "asset_class": "stock",
+    "summary": "AAPL 종가 999.99 (허위)",
+    "highlights": ["없는 수치 999.99 를 인용"],
+    "metrics": {"latest_close": 999.99},
+    "evidence": [{"claim": "종가 999.99", "rows": [0]}]
+  },
+  "mock_critique": {
+    "verdict": "fail",
+    "per_claim": [{"claim": "종가 999.99", "status": "hallucinated"}],
+    "reason": "입력 데이터의 종가는 185.64 인데 999.99 를 인용함"
+  }
+}

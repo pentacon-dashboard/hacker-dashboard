@@ -1,0 +1,50 @@
+{
+  "id": "rebalance_balanced",
+  "kind": "rebalance",
+  "description": "이미 목표 비중 달성 — actions=[], drift 모두 |0.005| 미만. LLM 호출 없이 지름길 응답.",
+  "input": {
+    "actions": [],
+    "drift": {
+      "stock_kr": 0.002,
+      "stock_us": -0.003,
+      "crypto": 0.001,
+      "cash": 0.0,
+      "fx": 0.0
+    },
+    "current_allocation": {
+      "stock_kr": 0.202,
+      "stock_us": 0.397,
+      "crypto": 0.301,
+      "cash": 0.1,
+      "fx": 0.0
+    },
+    "target_allocation": {
+      "stock_kr": 0.2,
+      "stock_us": 0.4,
+      "crypto": 0.3,
+      "cash": 0.1,
+      "fx": 0.0
+    },
+    "constraints": {
+      "max_single_weight": 0.5,
+      "min_trade_krw": "100000",
+      "allow_fractional": true
+    }
+  },
+  "expected": {
+    "shortcut": true,
+    "headline_contains_any": ["이미 목표", "도달", "불필요"],
+    "narrative_must_include_codes": [],
+    "narrative_must_not_include_codes": ["AAPL", "NVDA", "BTC", "DOGE"],
+    "warnings_min_count": 0,
+    "warnings_max_count": 0,
+    "confidence_range": [0.9, 1.0],
+    "forbidden_terms": ["보장", "무조건", "투자 조언"]
+  },
+  "expected_gates": {
+    "schema_gate": "pass",
+    "domain_gate": "pass",
+    "critique_gate": "pass"
+  },
+  "mock_analyzer_output": null
+}

@@ -1,0 +1,416 @@
+[
+  {
+    "id": "crypto_binance",
+    "ok": true,
+    "actual_asset_class": "crypto",
+    "expected_asset_class": "crypto",
+    "actual_router_reason": "입력 심볼(ETH/USDT...) 패턴 매칭 → crypto (heuristic)",
+    "expected_router_reason_keyword": "ETH/USDT",
+    "actual_gates": {
+      "schema_gate": "pass",
+      "domain_gate": "pass",
+      "critique_gate": "pass"
+    },
+    "expected_gates": {
+      "schema_gate": "pass",
+      "domain_gate": "pass",
+      "critique_gate": "pass"
+    }
+  },
+  {
+    "id": "crypto_btcusd",
+    "ok": true,
+    "actual_asset_class": "crypto",
+    "expected_asset_class": "crypto",
+    "actual_router_reason": "입력 심볼(BTC-USD...) 패턴 매칭 → crypto (heuristic)",
+    "expected_router_reason_keyword": "BTC-USD",
+    "actual_gates": {
+      "schema_gate": "pass",
+      "domain_gate": "pass",
+      "critique_gate": "pass"
+    },
+    "expected_gates": {
+      "schema_gate": "pass",
+      "domain_gate": "pass",
+      "critique_gate": "pass"
+    }
+  },
+  {
+    "id": "crypto_upbit",
+    "ok": true,
+    "actual_asset_class": "crypto",
+    "expected_asset_class": "crypto",
+    "actual_router_reason": "입력 심볼(KRW-BTC...) 패턴 매칭 → crypto (heuristic)",
+    "expected_router_reason_keyword": "KRW-BTC",
+    "actual_gates": {
+      "schema_gate": "pass",
+      "domain_gate": "pass",
+      "critique_gate": "pass"
+    },
+    "expected_gates": {
+      "schema_gate": "pass",
+      "domain_gate": "pass",
+      "critique_gate": "pass"
+    }
+  },
+  {
+    "id": "crypto_with_portfolio_concentration",
+    "ok": true,
+    "actual_asset_class": "crypto",
+    "expected_asset_class": "crypto",
+    "actual_router_reason": "입력 심볼(KRW-BTC...) 패턴 매칭 → crypto (heuristic)",
+    "expected_router_reason_keyword": "KRW-BTC",
+    "actual_gates": {
+      "schema_gate": "pass",
+      "domain_gate": "pass",
+      "critique_gate": "pass"
+    },
+    "expected_gates": {
+      "schema_gate": "pass",
+      "domain_gate": "pass",
+      "critique_gate": "pass"
+    }
+  },
+  {
+    "id": "csv_upload_crypto",
+    "ok": true,
+    "actual_asset_class": "crypto",
+    "expected_asset_class": "crypto",
+    "actual_router_reason": "CSV 헤더·셀값 분석 → crypto (heuristic)",
+    "expected_router_reason_keyword": "heuristic",
+    "actual_gates": {
+      "schema_gate": "pass",
+      "domain_gate": "pass",
+      "critique_gate": "pass"
+    },
+    "expected_gates": {
+      "schema_gate": "pass",
+      "domain_gate": "pass",
+      "critique_gate": "pass"
+    }
+  },
+  {
+    "id": "csv_upload_mixed",
+    "ok": true,
+    "actual_asset_class": "mixed",
+    "expected_asset_class": "mixed",
+    "actual_router_reason": "CSV 헤더·셀값에서 복수 자산군(crypto, stock) 감지 → mixed (heuristic)",
+    "expected_router_reason_keyword": "mixed",
+    "actual_gates": {
+      "schema_gate": "pass",
+      "domain_gate": "pass",
+      "critique_gate": "pass"
+    },
+    "expected_gates": {
+      "schema_gate": "pass",
+      "domain_gate": "pass",
+      "critique_gate": "pass"
+    }
+  },
+  {
+    "id": "csv_upload_portfolio",
+    "ok": true,
+    "actual_asset_class": "portfolio",
+    "expected_asset_class": "portfolio",
+    "actual_router_reason": "CSV 헤더에 portfolio 시그니처(['avg_cost', 'code', 'currency', 'market', 'quantity']) 감지 → portfolio (heuristic)",
+    "expected_router_reason_keyword": "portfolio",
+    "actual_gates": {
+      "schema_gate": "pass",
+      "domain_gate": "pass",
+      "critique_gate": "pass"
+    },
+    "expected_gates": {
+      "schema_gate": "pass",
+      "domain_gate": "pass",
+      "critique_gate": "pass"
+    }
+  },
+  {
+    "id": "csv_upload_stock_kr",
+    "ok": true,
+    "actual_asset_class": "stock",
+    "expected_asset_class": "stock",
+    "actual_router_reason": "CSV 헤더·셀값 분석 → stock (heuristic)",
+    "expected_router_reason_keyword": "heuristic",
+    "actual_gates": {
+      "schema_gate": "pass",
+      "domain_gate": "pass",
+      "critique_gate": "pass"
+    },
+    "expected_gates": {
+      "schema_gate": "pass",
+      "domain_gate": "pass",
+      "critique_gate": "pass"
+    }
+  },
+  {
+    "id": "edge_critique_hallucinated",
+    "ok": true,
+    "actual_asset_class": "stock",
+    "expected_asset_class": "stock",
+    "actual_router_reason": "입력 심볼(AAPL...) 패턴 매칭 → stock (heuristic)",
+    "expected_router_reason_keyword": "AAPL",
+    "actual_gates": {
+      "schema_gate": "pass",
+      "domain_gate": "pass",
+      "critique_gate": "fail"
+    },
+    "expected_gates": {
+      "schema_gate": "pass",
+      "domain_gate": "pass",
+      "critique_gate": "fail"
+    }
+  },
+  {
+    "id": "edge_empty_input",
+    "ok": true,
+    "actual_asset_class": "stock",
+    "expected_asset_class": "stock",
+    "actual_router_reason": "입력 심볼(AAPL...) 패턴 매칭 → stock (heuristic)",
+    "expected_router_reason_keyword": "AAPL",
+    "actual_gates": {
+      "schema_gate": "fail",
+      "domain_gate": "pending",
+      "critique_gate": "pending"
+    },
+    "expected_gates": {
+      "schema_gate": "fail",
+      "domain_gate": "pending",
+      "critique_gate": "pending"
+    }
+  },
+  {
+    "id": "edge_future_date",
+    "ok": true,
+    "actual_asset_class": "stock",
+    "expected_asset_class": "stock",
+    "actual_router_reason": "입력 심볼(AAPL...) 패턴 매칭 → stock (heuristic)",
+    "expected_router_reason_keyword": "AAPL",
+    "actual_gates": {
+      "schema_gate": "pass",
+      "domain_gate": "fail",
+      "critique_gate": "pending"
+    },
+    "expected_gates": {
+      "schema_gate": "pass",
+      "domain_gate": "fail",
+      "critique_gate": "pending"
+    }
+  },
+  {
+    "id": "edge_negative_price",
+    "ok": true,
+    "actual_asset_class": "stock",
+    "expected_asset_class": "stock",
+    "actual_router_reason": "입력 심볼(AAPL...) 패턴 매칭 → stock (heuristic)",
+    "expected_router_reason_keyword": "AAPL",
+    "actual_gates": {
+      "schema_gate": "pass",
+      "domain_gate": "fail",
+      "critique_gate": "pending"
+    },
+    "expected_gates": {
+      "schema_gate": "pass",
+      "domain_gate": "fail",
+      "critique_gate": "pending"
+    }
+  },
+  {
+    "id": "fx_eurusd",
+    "ok": true,
+    "actual_asset_class": "fx",
+    "expected_asset_class": "fx",
+    "actual_router_reason": "입력 심볼(EURUSD=X...) 패턴 매칭 → fx (heuristic)",
+    "expected_router_reason_keyword": "EURUSD=X",
+    "actual_gates": {
+      "schema_gate": "pass",
+      "domain_gate": "pass",
+      "critique_gate": "pass"
+    },
+    "expected_gates": {
+      "schema_gate": "pass",
+      "domain_gate": "pass",
+      "critique_gate": "pass"
+    }
+  },
+  {
+    "id": "fx_usdkrw",
+    "ok": true,
+    "actual_asset_class": "fx",
+    "expected_asset_class": "fx",
+    "actual_router_reason": "입력 심볼(USDKRW=X...) 패턴 매칭 → fx (heuristic)",
+    "expected_router_reason_keyword": "USDKRW=X",
+    "actual_gates": {
+      "schema_gate": "pass",
+      "domain_gate": "pass",
+      "critique_gate": "pass"
+    },
+    "expected_gates": {
+      "schema_gate": "pass",
+      "domain_gate": "pass",
+      "critique_gate": "pass"
+    }
+  },
+  {
+    "id": "macro_cpi",
+    "ok": true,
+    "actual_asset_class": "macro",
+    "expected_asset_class": "macro",
+    "actual_router_reason": "입력 컬럼에 매크로 지표(cpi/gdp 등) 감지 → macro (heuristic)",
+    "expected_router_reason_keyword": "macro",
+    "actual_gates": {
+      "schema_gate": "pass",
+      "domain_gate": "pass",
+      "critique_gate": "pass"
+    },
+    "expected_gates": {
+      "schema_gate": "pass",
+      "domain_gate": "pass",
+      "critique_gate": "pass"
+    }
+  },
+  {
+    "id": "mixed",
+    "ok": true,
+    "actual_asset_class": "mixed",
+    "expected_asset_class": "mixed",
+    "actual_router_reason": "복수 자산군(crypto, stock) 심볼 공존 감지 → mixed (heuristic)",
+    "expected_router_reason_keyword": "mixed",
+    "actual_gates": {
+      "schema_gate": "pass",
+      "domain_gate": "pass",
+      "critique_gate": "pass"
+    },
+    "expected_gates": {
+      "schema_gate": "pass",
+      "domain_gate": "pass",
+      "critique_gate": "pass"
+    }
+  },
+  {
+    "id": "mixed_stock_crypto",
+    "ok": true,
+    "actual_asset_class": "mixed",
+    "expected_asset_class": "mixed",
+    "actual_router_reason": "복수 자산군(crypto, stock) 심볼 공존 감지 → mixed (heuristic)",
+    "expected_router_reason_keyword": "mixed",
+    "actual_gates": {
+      "schema_gate": "pass",
+      "domain_gate": "pass",
+      "critique_gate": "pass"
+    },
+    "expected_gates": {
+      "schema_gate": "pass",
+      "domain_gate": "pass",
+      "critique_gate": "pass"
+    }
+  },
+  {
+    "id": "portfolio_balanced",
+    "ok": true,
+    "actual_asset_class": "portfolio",
+    "expected_asset_class": "portfolio",
+    "actual_router_reason": "holdings 형태 감지(market/code/quantity/avg_cost, n=6) → portfolio (heuristic)",
+    "expected_router_reason_keyword": "portfolio",
+    "actual_gates": {
+      "schema_gate": "pass",
+      "domain_gate": "pass",
+      "critique_gate": "pass"
+    },
+    "expected_gates": {
+      "schema_gate": "pass",
+      "domain_gate": "pass",
+      "critique_gate": "pass"
+    }
+  },
+  {
+    "id": "portfolio_concentrated",
+    "ok": true,
+    "actual_asset_class": "portfolio",
+    "expected_asset_class": "portfolio",
+    "actual_router_reason": "holdings 형태 감지(market/code/quantity/avg_cost, n=3) → portfolio (heuristic)",
+    "expected_router_reason_keyword": "portfolio",
+    "actual_gates": {
+      "schema_gate": "pass",
+      "domain_gate": "pass",
+      "critique_gate": "pass"
+    },
+    "expected_gates": {
+      "schema_gate": "pass",
+      "domain_gate": "pass",
+      "critique_gate": "pass"
+    }
+  },
+  {
+    "id": "portfolio_multi_currency",
+    "ok": true,
+    "actual_asset_class": "portfolio",
+    "expected_asset_class": "portfolio",
+    "actual_router_reason": "holdings 형태 감지(market/code/quantity/avg_cost, n=5) → portfolio (heuristic)",
+    "expected_router_reason_keyword": "portfolio",
+    "actual_gates": {
+      "schema_gate": "pass",
+      "domain_gate": "pass",
+      "critique_gate": "pass"
+    },
+    "expected_gates": {
+      "schema_gate": "pass",
+      "domain_gate": "pass",
+      "critique_gate": "pass"
+    }
+  },
+  {
+    "id": "stock_kr",
+    "ok": true,
+    "actual_asset_class": "stock",
+    "expected_asset_class": "stock",
+    "actual_router_reason": "입력 심볼(005930.KS...) 패턴 매칭 → stock (heuristic)",
+    "expected_router_reason_keyword": "005930.KS",
+    "actual_gates": {
+      "schema_gate": "pass",
+      "domain_gate": "pass",
+      "critique_gate": "pass"
+    },
+    "expected_gates": {
+      "schema_gate": "pass",
+      "domain_gate": "pass",
+      "critique_gate": "pass"
+    }
+  },
+  {
+    "id": "stock_us",
+    "ok": true,
+    "actual_asset_class": "stock",
+    "expected_asset_class": "stock",
+    "actual_router_reason": "입력 심볼(TSLA...) 패턴 매칭 → stock (heuristic)",
+    "expected_router_reason_keyword": "TSLA",
+    "actual_gates": {
+      "schema_gate": "pass",
+      "domain_gate": "pass",
+      "critique_gate": "pass"
+    },
+    "expected_gates": {
+      "schema_gate": "pass",
+      "domain_gate": "pass",
+      "critique_gate": "pass"
+    }
+  },
+  {
+    "id": "stock_with_portfolio",
+    "ok": true,
+    "actual_asset_class": "stock",
+    "expected_asset_class": "stock",
+    "actual_router_reason": "입력 심볼(AAPL...) 패턴 매칭 → stock (heuristic)",
+    "expected_router_reason_keyword": "AAPL",
+    "actual_gates": {
+      "schema_gate": "pass",
+      "domain_gate": "pass",
+      "critique_gate": "pass"
+    },
+    "expected_gates": {
+      "schema_gate": "pass",
+      "domain_gate": "pass",
+      "critique_gate": "pass"
+    }
+  }
+]

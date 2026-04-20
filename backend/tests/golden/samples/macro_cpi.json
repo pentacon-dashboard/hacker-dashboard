@@ -1,0 +1,54 @@
+{
+  "id": "macro_cpi",
+  "description": "소비자물가지수(CPI) 12개월 — 완만한 상승",
+  "input": {
+    "data": [
+      {"date": "2024-01-01", "cpi": 3.0},
+      {"date": "2024-02-01", "cpi": 3.1},
+      {"date": "2024-03-01", "cpi": 3.2},
+      {"date": "2024-04-01", "cpi": 3.3},
+      {"date": "2024-05-01", "cpi": 3.2},
+      {"date": "2024-06-01", "cpi": 3.25},
+      {"date": "2024-07-01", "cpi": 3.3},
+      {"date": "2024-08-01", "cpi": 3.35},
+      {"date": "2024-09-01", "cpi": 3.3},
+      {"date": "2024-10-01", "cpi": 3.35},
+      {"date": "2024-11-01", "cpi": 3.4},
+      {"date": "2024-12-01", "cpi": 3.4}
+    ]
+  },
+  "expected_asset_class": "macro",
+  "expected_router_reason_keyword": "macro",
+  "expected_gates": {
+    "schema_gate": "pass",
+    "domain_gate": "pass",
+    "critique_gate": "pass"
+  },
+  "mock_analyzer_output": {
+    "asset_class": "macro",
+    "headline": "CPI 3.0 → 3.4 (+0.4p) 12개월 완만한 상승",
+    "narrative": "소비자물가지수가 12개월간 0.4 포인트 상승하여 인플레이션 둔화 속도가 느림. 중간 소폭 조정(3.3→3.2)은 있었으나 방향은 우상향 유지.",
+    "summary": "CPI 12개월 +0.4p 완만한 상승",
+    "highlights": [
+      "CPI 첫 값 3.0, 최근 값 3.4",
+      "절대 변화 +0.4",
+      "방향 up"
+    ],
+    "metrics": {
+      "cpi_first": 3.0,
+      "cpi_last": 3.4,
+      "cpi_change_abs": 0.4,
+      "cpi_change_pct": 13.33
+    },
+    "signals": [
+      {"kind": "trend", "strength": "medium", "rationale": "CPI 방향 up, 12개월 절대 변화 +0.4"}
+    ],
+    "evidence": [{"claim": "CPI 3.0 → 3.4", "rows": [0, 11]}],
+    "confidence": 0.7
+  },
+  "mock_critique": {
+    "verdict": "pass",
+    "per_claim": [{"claim": "CPI 3.0 → 3.4", "status": "supported"}],
+    "reason": "all claims supported"
+  }
+}

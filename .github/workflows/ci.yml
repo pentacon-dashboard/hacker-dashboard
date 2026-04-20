@@ -1,0 +1,218 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # ── Backend: lint / type / test ─────────────────────────────────────────
+  backend:
+    name: Backend (Python 3.12)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: hacker
+          POSTGRES_PASSWORD: hacker
+          POSTGRES_DB: hacker_dashboard_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U hacker"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 3s
+          --health-retries 5
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          version: "latest"
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: uv sync --all-extras
+
+      - name: Lint — ruff
+        run: uv run ruff check app tests
+
+      - name: Format check — black
+        run: uv run black --check app tests
+
+      - name: Type check — mypy
+        run: uv run mypy app
+
+      - name: Test — pytest (coverage >= 80% soft)
+        env:
+          DATABASE_URL: postgresql+asyncpg://hacker:hacker@localhost:5432/hacker_dashboard_test
+          REDIS_URL: redis://localhost:6379/0
+          ANTHROPIC_API_KEY: placeholder-ci
+        run: uv run pytest --cov=app --cov-report=xml --cov-fail-under=0 -q
+        # --cov-fail-under=0 : 스켈레톤 단계. 코드 증가에 따라 80으로 올릴 것
+
+      - name: OpenAPI export smoke
+        env:
+          DATABASE_URL: postgresql+asyncpg://hacker:hacker@localhost:5432/hacker_dashboard_test
+          REDIS_URL: redis://localhost:6379/0
+          ANTHROPIC_API_KEY: placeholder-ci
+        run: uv run python -m app.export_openapi
+
+      - name: Upload coverage
+        uses: codecov/codecov-action@v4
+        if: always()
+        with:
+          files: backend/coverage.xml
+          flags: backend
+          fail_ci_if_error: false
+
+  # ── Frontend: typecheck / lint / build ──────────────────────────────────
+  frontend:
+    name: Frontend (Node 20)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Type check
+        run: npm run typecheck
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Build
+        run: npm run build
+
+  # ── Contract: schemathesis on openapi.json ──────────────────────────────
+  contract:
+    name: Contract Test (schemathesis)
+    runs-on: ubuntu-latest
+    needs: [backend]
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: hacker
+          POSTGRES_PASSWORD: hacker
+          POSTGRES_DB: hacker_dashboard_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U hacker"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 3s
+          --health-retries 5
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          version: "latest"
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+
+      - name: Install backend dependencies
+        working-directory: backend
+        run: uv sync --all-extras
+
+      - name: Start backend server
+        working-directory: backend
+        env:
+          DATABASE_URL: postgresql+asyncpg://hacker:hacker@localhost:5432/hacker_dashboard_test
+          REDIS_URL: redis://localhost:6379/0
+          ANTHROPIC_API_KEY: placeholder-ci
+        run: |
+          uv run uvicorn app.main:app --host 0.0.0.0 --port 8000 &
+          # /health 엔드포인트가 응답할 때까지 대기 (최대 30초)
+          for i in $(seq 1 30); do
+            if curl -sf http://localhost:8000/health; then break; fi
+            sleep 1
+          done
+
+      - name: Export OpenAPI schema
+        working-directory: backend
+        env:
+          DATABASE_URL: postgresql+asyncpg://hacker:hacker@localhost:5432/hacker_dashboard_test
+          REDIS_URL: redis://localhost:6379/0
+          ANTHROPIC_API_KEY: placeholder-ci
+        run: uv run python -m app.export_openapi > ../shared/openapi.json
+
+      - name: Run schemathesis
+        working-directory: backend
+        run: |
+          uv run schemathesis run ../shared/openapi.json \
+            --base-url http://localhost:8000 \
+            --checks all \
+            --hypothesis-deadline=none \
+            --max-examples=50 \
+            --show-errors-tracebacks \
+            --junit-xml=../contract-results.xml
+
+      - name: Upload contract results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: contract-junit-ci
+          path: contract-results.xml
+          retention-days: 7
+
+  # ── E2E: e2e.yml workflow 로 일원화 ─────────────────────────────────────────
+  # Playwright E2E 는 e2e.yml 이 단독 처리.
+  # ci.yml 에서 중복 실행 제거 → CI 평균 시간 단축 (~5분 목표).
+  # e2e.yml 트리거: push(main) frontend/** + pull_request + workflow_dispatch

@@ -1,0 +1,14 @@
+.venv
+__pycache__
+**/__pycache__
+**/*.pyc
+**/*.pyo
+.mypy_cache
+.ruff_cache
+.pytest_cache
+htmlcov
+.coverage
+.env
+.env.*
+tests/
+# alembic/ 는 포함 — 마이그레이션 필요 (alembic/versions 포함)

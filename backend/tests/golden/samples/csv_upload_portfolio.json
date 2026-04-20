@@ -1,0 +1,55 @@
+{
+  "id": "csv_upload_portfolio",
+  "description": "CSV 업로드 — holdings 시그니처(market/code/quantity/avg_cost/currency)",
+  "input": {
+    "data": [
+      {
+        "rows": [
+          {"market": "yahoo", "code": "AAPL", "quantity": 10, "avg_cost": 150, "currency": "USD"},
+          {"market": "yahoo", "code": "MSFT", "quantity": 5, "avg_cost": 300, "currency": "USD"},
+          {"market": "naver_kr", "code": "005930", "quantity": 100, "avg_cost": 70000, "currency": "KRW"},
+          {"market": "upbit", "code": "KRW-BTC", "quantity": 0.05, "avg_cost": 50000000, "currency": "KRW"},
+          {"market": "cash", "code": "KRW", "quantity": 4000000, "avg_cost": 1, "currency": "KRW"}
+        ],
+        "columns": ["market", "code", "quantity", "avg_cost", "currency"],
+        "source": "csv_upload"
+      }
+    ]
+  },
+  "expected_asset_class": "portfolio",
+  "expected_router_reason_keyword": "portfolio",
+  "expected_heuristic": true,
+  "expected_gates": {
+    "schema_gate": "pass",
+    "domain_gate": "pass",
+    "critique_gate": "pass"
+  },
+  "mock_analyzer_output": {
+    "asset_class": "portfolio",
+    "headline": "5종·다자산군 CSV 업로드 포트폴리오",
+    "summary": "주식(US/KR)·크립토·현금 혼합 구성.",
+    "highlights": [
+      "AAPL + MSFT USD 주식 2종",
+      "KRW-BTC 크립토 1종",
+      "KRW 현금 비중 포함"
+    ],
+    "metrics": {
+      "hhi": 0.32,
+      "diversification_score": 65
+    },
+    "signals": [
+      {"kind": "diversified", "strength": "low", "rationale": "자산군 분산 양호"},
+      {"kind": "fx_hedge", "strength": "low", "rationale": "USD 노출 일부"},
+      {"kind": "monitor", "strength": "low", "rationale": "5종 구성 분기 리뷰"}
+    ],
+    "evidence": [
+      {"claim": "AAPL 10주 @150 USD", "rows": [0]}
+    ],
+    "confidence": 0.75
+  },
+  "mock_critique": {
+    "verdict": "pass",
+    "per_claim": [{"claim": "AAPL 10주 @150 USD", "status": "supported"}],
+    "reason": "all claims supported"
+  }
+}

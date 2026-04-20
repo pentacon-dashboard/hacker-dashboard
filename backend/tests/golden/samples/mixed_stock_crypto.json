@@ -1,0 +1,52 @@
+{
+  "id": "mixed_stock_crypto",
+  "description": "주식(AAPL) + 코인(KRW-BTC) 혼합 시계열 — 각각 서브 analyzer 병렬 실행",
+  "input": {
+    "data": [
+      {"symbol": "AAPL", "date": "2024-04-01", "open": 170, "high": 172, "low": 169, "close": 171, "volume": 80000000},
+      {"symbol": "KRW-BTC", "date": "2024-04-01", "open": 58000000, "high": 60100000, "low": 57800000, "close": 59500000, "volume": 2500},
+      {"symbol": "AAPL", "date": "2024-04-02", "open": 171, "high": 174, "low": 170.5, "close": 173.5, "volume": 82000000},
+      {"symbol": "KRW-BTC", "date": "2024-04-02", "open": 59500000, "high": 61200000, "low": 59100000, "close": 60800000, "volume": 2800},
+      {"symbol": "AAPL", "date": "2024-04-03", "open": 173, "high": 175, "low": 172, "close": 174.2, "volume": 79000000},
+      {"symbol": "KRW-BTC", "date": "2024-04-03", "open": 60800000, "high": 62500000, "low": 60200000, "close": 62000000, "volume": 3100}
+    ]
+  },
+  "expected_asset_class": "mixed",
+  "expected_router_reason_keyword": "mixed",
+  "expected_gates": {
+    "schema_gate": "pass",
+    "domain_gate": "pass",
+    "critique_gate": "pass"
+  },
+  "mock_analyzer_output": {
+    "asset_class": "mixed",
+    "headline": "복합 자산군 요약 (crypto, stock) — 총 2개 서브분석 병합",
+    "narrative": "[crypto] 업비트 KRW-BTC 3일 상승 [stock] AAPL 3일 상승",
+    "summary": "복합 자산군 요약 (crypto, stock) — 총 2개 서브분석 병합",
+    "highlights": [
+      "[stock] AAPL 종가 171 → 174.2",
+      "[crypto] KRW-BTC 종가 59500000 → 62000000"
+    ],
+    "metrics": {
+      "stock__latest_close": 174.2,
+      "crypto__latest_price": 62000000
+    },
+    "signals": [
+      {"kind": "trend", "strength": "medium", "rationale": "[stock] MA 상승"},
+      {"kind": "trend", "strength": "medium", "rationale": "[crypto] 우상향 3일 연속"}
+    ],
+    "evidence": [
+      {"claim": "AAPL 171 → 174.2", "rows": [0, 4]},
+      {"claim": "KRW-BTC 59500000 → 62000000", "rows": [1, 5]}
+    ],
+    "confidence": 0.7
+  },
+  "mock_critique": {
+    "verdict": "pass",
+    "per_claim": [
+      {"claim": "AAPL 171 → 174.2", "status": "supported"},
+      {"claim": "KRW-BTC 59500000 → 62000000", "status": "supported"}
+    ],
+    "reason": "all claims supported"
+  }
+}

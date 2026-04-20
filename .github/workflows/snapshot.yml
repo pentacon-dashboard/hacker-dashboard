@@ -1,0 +1,92 @@
+name: Daily Portfolio Snapshot
+
+# 매일 23:55 KST (= UTC 14:55) 에 포트폴리오 스냅샷 기록
+on:
+  schedule:
+    - cron: "55 14 * * *"
+  workflow_dispatch:
+    inputs:
+      user_id:
+        description: "스냅샷 대상 user_id (기본값: demo)"
+        required: false
+        default: "demo"
+
+jobs:
+  snapshot:
+    name: Take Portfolio Snapshot
+    runs-on: ubuntu-latest
+    # 이 워크플로가 실패해도 다른 워크플로에 영향을 주지 않음
+    continue-on-error: true
+    timeout-minutes: 10
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: hacker
+          POSTGRES_PASSWORD: hacker
+          POSTGRES_DB: hacker_dashboard
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U hacker"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 3s
+          --health-retries 5
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          version: "latest"
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install backend dependencies
+        working-directory: backend
+        run: uv sync --all-extras
+
+      - name: Run Alembic migrations
+        working-directory: backend
+        env:
+          DATABASE_URL: postgresql+asyncpg://hacker:hacker@localhost:5432/hacker_dashboard
+          REDIS_URL: redis://localhost:6379/0
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY || 'placeholder-ci' }}
+        run: |
+          uv run alembic upgrade head || echo "마이그레이션 스킵 (테이블 이미 존재하거나 alembic 없음)"
+
+      - name: Take portfolio snapshot
+        working-directory: backend
+        env:
+          DATABASE_URL: postgresql+asyncpg://hacker:hacker@localhost:5432/hacker_dashboard
+          REDIS_URL: redis://localhost:6379/0
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY || 'placeholder-ci' }}
+          SNAPSHOT_USER_ID: ${{ github.event.inputs.user_id || 'demo' }}
+        run: |
+          uv run python -m app.services.portfolio_snapshot
+        continue-on-error: true
+
+      - name: Upload snapshot log
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: snapshot-log-${{ github.run_id }}
+          path: backend/snapshot.log
+          retention-days: 7
+          # 파일이 없어도 실패하지 않음
+          if-no-files-found: ignore

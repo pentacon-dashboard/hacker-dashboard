@@ -1,0 +1,89 @@
+{
+  "id": "stock_with_portfolio",
+  "description": "AAPL OHLC + portfolio_context(AAPL 5주 보유) — 개인화 분석",
+  "input": {
+    "data": [
+      {"symbol": "AAPL", "date": "2024-01-02", "open": 187.15, "high": 188.44, "low": 183.89, "close": 185.64, "volume": 82488700},
+      {"symbol": "AAPL", "date": "2024-01-03", "open": 184.22, "high": 185.88, "low": 183.43, "close": 184.25, "volume": 58414500},
+      {"symbol": "AAPL", "date": "2024-01-04", "open": 182.15, "high": 183.09, "low": 180.88, "close": 181.91, "volume": 71983600},
+      {"symbol": "AAPL", "date": "2024-01-05", "open": 181.99, "high": 182.76, "low": 180.17, "close": 181.18, "volume": 62303300},
+      {"symbol": "AAPL", "date": "2024-01-08", "open": 182.09, "high": 185.60, "low": 181.50, "close": 185.56, "volume": 59144500}
+    ],
+    "query": "내 AAPL 보유분 관점에서 최근 흐름 분석",
+    "portfolio_context": {
+      "holdings": [
+        {
+          "market": "yahoo",
+          "code": "AAPL",
+          "quantity": "5",
+          "avg_cost": "185",
+          "currency": "USD",
+          "current_value_krw": "1237067",
+          "pnl_pct": 0.3
+        },
+        {
+          "market": "naver_kr",
+          "code": "005930",
+          "quantity": "20",
+          "avg_cost": "70000",
+          "currency": "KRW",
+          "current_value_krw": "1500000",
+          "pnl_pct": 7.14
+        }
+      ],
+      "total_value_krw": "2737067",
+      "asset_class_breakdown": {"stock_us": 0.45, "stock_kr": 0.55},
+      "matched_holding": {
+        "market": "yahoo",
+        "code": "AAPL",
+        "quantity": "5",
+        "avg_cost": "185",
+        "currency": "USD",
+        "current_value_krw": "1237067",
+        "pnl_pct": 0.3
+      }
+    }
+  },
+  "expected_asset_class": "stock",
+  "expected_router_reason_keyword": "AAPL",
+  "expected_gates": {
+    "schema_gate": "pass",
+    "domain_gate": "pass",
+    "critique_gate": "pass"
+  },
+  "mock_analyzer_output": {
+    "asset_class": "stock",
+    "headline": "AAPL 5일 -0.04% — 보유 5주 평가손익 +0.3%",
+    "narrative": "AAPL 은 5일간 185.64 에서 185.56 으로 거의 횡보했고 하단 181.18 을 찍은 뒤 회복. 현재 5주 보유 중, 평균단가 185 달러, 평가손익 +0.3% 수준으로 매수가 부근에 머무르고 있다. 포트폴리오 내 AAPL 비중은 약 45% 로 단일 종목 집중 리스크를 확인할 필요가 있다.",
+    "summary": "AAPL 5일간 횡보. 사용자 보유 5주는 매수가 근처 +0.3%.",
+    "highlights": [
+      "2024-01-02 종가 185.64 → 2024-01-08 종가 185.56",
+      "기간 최저 181.18 (2024-01-05)",
+      "현재 5주 보유, 평균단가 185 달러, 평가손익 +0.3%"
+    ],
+    "metrics": {
+      "latest_close": 185.56,
+      "period_return_pct": -0.04,
+      "volatility_pct": 1.1,
+      "ma_20": null,
+      "ma_60": null,
+      "max_drawdown_pct": -2.4
+    },
+    "signals": [
+      {"kind": "risk", "strength": "high", "rationale": "포트폴리오 내 비중 45% — 집중도 리스크"}
+    ],
+    "evidence": [
+      {"claim": "종가 185.64 → 185.56", "rows": [0, 4]},
+      {"source": "portfolio.matched_holding", "claim": "AAPL 5주 보유, 평균단가 185"}
+    ],
+    "confidence": 0.75
+  },
+  "mock_critique": {
+    "verdict": "pass",
+    "per_claim": [
+      {"claim": "종가 185.64 → 185.56", "status": "supported"},
+      {"claim": "AAPL 5주 보유, 평균단가 185", "status": "supported"}
+    ],
+    "reason": "all claims supported"
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "id": "crypto_binance",
+  "description": "바이낸스 ETH/USDT 일별",
+  "input": {
+    "data": [
+      {"symbol": "ETH/USDT", "date": "2024-03-01", "open": 3380.5, "high": 3420.0, "low": 3355.2, "close": 3395.8, "volume": 185000},
+      {"symbol": "ETH/USDT", "date": "2024-03-02", "open": 3395.8, "high": 3450.4, "low": 3380.1, "close": 3430.2, "volume": 210000}
+    ]
+  },
+  "expected_asset_class": "crypto",
+  "expected_router_reason_keyword": "ETH/USDT",
+  "expected_gates": {
+    "schema_gate": "pass",
+    "domain_gate": "pass",
+    "critique_gate": "pass"
+  },
+  "mock_analyzer_output": {
+    "asset_class": "crypto",
+    "summary": "ETH/USDT는 2일간 3395.80에서 3430.20으로 상승.",
+    "highlights": [
+      "2024-03-01 종가 3395.80 USDT",
+      "2024-03-02 종가 3430.20 USDT",
+      "2일 누적 거래량 395000 ETH"
+    ],
+    "metrics": {
+      "latest_price": 3430.20,
+      "period_return_pct": 1.01,
+      "volatility_pct": 0.7,
+      "quote_currency": "USDT"
+    },
+    "evidence": [
+      {"claim": "3395.80 → 3430.20", "rows": [0, 1]}
+    ]
+  },
+  "mock_critique": {
+    "verdict": "pass",
+    "per_claim": [{"claim": "3395.80 → 3430.20", "status": "supported"}],
+    "reason": "all claims supported"
+  }
+}

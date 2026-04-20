@@ -1,0 +1,59 @@
+{
+  "id": "portfolio_multi_currency",
+  "description": "KRW/USD/USDT 3통화 섞임 — 환헤지 고민",
+  "input": {
+    "data": [
+      {"market": "yahoo", "code": "AAPL", "quantity": 20, "avg_cost": 150, "currency": "USD", "current_price_krw": 220000, "value_krw": 4400000, "cost_krw": 4000000, "asset_class": "stock_us"},
+      {"market": "yahoo", "code": "NVDA", "quantity": 5, "avg_cost": 400, "currency": "USD", "current_price_krw": 700000, "value_krw": 3500000, "cost_krw": 2700000, "asset_class": "stock_us"},
+      {"market": "binance", "code": "BTCUSDT", "quantity": 0.1, "avg_cost": 40000, "currency": "USDT", "current_price_krw": 60000000, "value_krw": 6000000, "cost_krw": 5500000, "asset_class": "crypto"},
+      {"market": "binance", "code": "ETHUSDT", "quantity": 2, "avg_cost": 2000, "currency": "USDT", "current_price_krw": 3200000, "value_krw": 6400000, "cost_krw": 5500000, "asset_class": "crypto"},
+      {"market": "naver_kr", "code": "005930", "quantity": 50, "avg_cost": 70000, "currency": "KRW", "current_price_krw": 75000, "value_krw": 3750000, "cost_krw": 3500000, "asset_class": "stock_kr"}
+    ]
+  },
+  "expected_asset_class": "portfolio",
+  "expected_router_reason_keyword": "portfolio",
+  "expected_gates": {
+    "schema_gate": "pass",
+    "domain_gate": "pass",
+    "critique_gate": "pass"
+  },
+  "expected_metrics": {
+    "currencies_min": 3,
+    "non_krw_min": 0.7
+  },
+  "mock_analyzer_output": {
+    "asset_class": "portfolio",
+    "headline": "5종·3자산군 — 비원화 통화 노출 84% (USD+USDT), 환헤지 권장",
+    "narrative": "USD 36%, USDT 52% 의 통화 노출로 원화 대비 환위험이 크다. 자산군은 크립토·미국주식 중심으로 분산되어 있지만 통화 쏠림이 강함. 낙폭 방어보다 환변동 대응이 우선 과제.",
+    "summary": "5종 다통화 포트폴리오, 비원화 노출 84%",
+    "highlights": [
+      "통화 3종 (KRW, USD, USDT)",
+      "비원화 노출 84%",
+      "crypto 비중 52%"
+    ],
+    "metrics": {
+      "hhi": 0.4,
+      "diversification_score": 65,
+      "asset_class_breakdown": {"stock_us": 0.33, "crypto": 0.52, "stock_kr": 0.16},
+      "currency_exposure": {"KRW": 0.16, "USD": 0.33, "USDT": 0.52}
+    },
+    "signals": [
+      {"kind": "rebalance", "strength": "medium", "rationale": "crypto 비중 51.7% → 45% 수준으로 축소 검토"},
+      {"kind": "fx_hedge", "strength": "high", "rationale": "비원화 노출 84% — 환헤지 또는 KRW 비중 확대 권장"},
+      {"kind": "monitor", "strength": "low", "rationale": "5종·3자산군, MDD 데이터 부재 — 분기 리뷰 권장"}
+    ],
+    "evidence": [
+      {"claim": "USD 0.33", "rows": [0, 1]},
+      {"claim": "USDT 0.52", "rows": [2, 3]}
+    ],
+    "confidence": 0.78
+  },
+  "mock_critique": {
+    "verdict": "pass",
+    "per_claim": [
+      {"claim": "USD 0.33", "status": "supported"},
+      {"claim": "USDT 0.52", "status": "supported"}
+    ],
+    "reason": "all claims supported"
+  }
+}

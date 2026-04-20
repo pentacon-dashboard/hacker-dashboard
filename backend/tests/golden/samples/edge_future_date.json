@@ -1,0 +1,23 @@
+{
+  "id": "edge_future_date",
+  "description": "미래 날짜 — domain gate 가 걸러야 함",
+  "input": {
+    "data": [
+      {"symbol": "AAPL", "date": "2099-01-02", "close": 185.64}
+    ]
+  },
+  "expected_asset_class": "stock",
+  "expected_router_reason_keyword": "AAPL",
+  "expected_gates": {
+    "schema_gate": "pass",
+    "domain_gate": "fail",
+    "critique_gate": "pending"
+  },
+  "mock_analyzer_output": {
+    "asset_class": "stock",
+    "summary": "AAPL 미래 시세.",
+    "highlights": ["2099-01-02 종가 185.64"],
+    "metrics": {"latest_close": 185.64},
+    "evidence": [{"claim": "미래 종가 185.64", "rows": [0]}]
+  }
+}

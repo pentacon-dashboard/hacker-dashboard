@@ -1,0 +1,91 @@
+{
+  "id": "crypto_with_portfolio_concentration",
+  "description": "KRW-BTC 분석 + portfolio_context(BTC 0.5개가 포트폴리오의 85%) — 집중도 리스크",
+  "input": {
+    "data": [
+      {"symbol": "KRW-BTC", "date": "2024-02-01", "open": 58000000, "high": 60100000, "low": 57800000, "close": 59500000, "volume": 2500},
+      {"symbol": "KRW-BTC", "date": "2024-02-02", "open": 59500000, "high": 61200000, "low": 59100000, "close": 60800000, "volume": 2800},
+      {"symbol": "KRW-BTC", "date": "2024-02-03", "open": 60800000, "high": 62500000, "low": 60200000, "close": 62000000, "volume": 3100},
+      {"symbol": "KRW-BTC", "date": "2024-02-04", "open": 62000000, "high": 63200000, "low": 61400000, "close": 62800000, "volume": 2900},
+      {"symbol": "KRW-BTC", "date": "2024-02-05", "open": 62800000, "high": 64100000, "low": 62100000, "close": 63500000, "volume": 3300}
+    ],
+    "query": "내 BTC 보유 관점에서 최근 흐름 점검",
+    "portfolio_context": {
+      "holdings": [
+        {
+          "market": "upbit",
+          "code": "KRW-BTC",
+          "quantity": "0.5",
+          "avg_cost": "50000000",
+          "currency": "KRW",
+          "current_value_krw": "31750000",
+          "pnl_pct": 27.0
+        },
+        {
+          "market": "naver_kr",
+          "code": "005930",
+          "quantity": "75",
+          "avg_cost": "70000",
+          "currency": "KRW",
+          "current_value_krw": "5602941",
+          "pnl_pct": 6.72
+        }
+      ],
+      "total_value_krw": "37352941",
+      "asset_class_breakdown": {"crypto": 0.85, "stock_kr": 0.15},
+      "matched_holding": {
+        "market": "upbit",
+        "code": "KRW-BTC",
+        "quantity": "0.5",
+        "avg_cost": "50000000",
+        "currency": "KRW",
+        "current_value_krw": "31750000",
+        "pnl_pct": 27.0
+      }
+    }
+  },
+  "expected_asset_class": "crypto",
+  "expected_router_reason_keyword": "KRW-BTC",
+  "expected_gates": {
+    "schema_gate": "pass",
+    "domain_gate": "pass",
+    "critique_gate": "pass"
+  },
+  "mock_analyzer_output": {
+    "asset_class": "crypto",
+    "headline": "KRW-BTC 5일 +6.7% — 보유 0.5개 평가손익 +27%, 포트폴리오 비중 85%",
+    "narrative": "KRW-BTC 는 5일간 59,500,000 → 63,500,000 원으로 약 +6.7% 상승. 현재 0.5개 보유 중, 평균단가 50,000,000 원, 평가손익 +27% 수준으로 강한 매수 우위. 다만 포트폴리오 내 비중 85% 로 단일 코인 집중도가 매우 높아 하락 전환 시 변동성 충격이 크다.",
+    "summary": "KRW-BTC 5일 상승 +6.7%. 보유 0.5개 (+27%) 이지만 포트폴리오 85% 편중.",
+    "highlights": [
+      "2024-02-01 종가 59500000 → 2024-02-05 종가 63500000",
+      "현재 0.5 BTC 보유, 평균단가 50000000, 평가손익 +27%",
+      "포트폴리오 내 crypto 비중 85% — 집중도 리스크"
+    ],
+    "metrics": {
+      "latest_price": 63500000,
+      "period_return_pct": 6.72,
+      "volatility_pct": 1.6,
+      "max_drawdown_pct": 0.0,
+      "ma_20": null,
+      "ma_60": null,
+      "quote_currency": "KRW"
+    },
+    "signals": [
+      {"kind": "trend", "strength": "medium", "rationale": "5일 종가 일관 상승, 상단 갱신 지속"},
+      {"kind": "risk", "strength": "high", "rationale": "포트폴리오 내 비중 85% — 집중도 리스크"}
+    ],
+    "evidence": [
+      {"claim": "59500000 → 63500000", "rows": [0, 4]},
+      {"source": "portfolio.matched_holding", "claim": "KRW-BTC 0.5개 보유, 평균단가 50000000, 평가손익 +27%"}
+    ],
+    "confidence": 0.8
+  },
+  "mock_critique": {
+    "verdict": "pass",
+    "per_claim": [
+      {"claim": "59500000 → 63500000", "status": "supported"},
+      {"claim": "KRW-BTC 0.5개 보유, 평균단가 50000000, 평가손익 +27%", "status": "supported"}
+    ],
+    "reason": "all claims supported"
+  }
+}

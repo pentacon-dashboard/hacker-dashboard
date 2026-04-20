@@ -1,0 +1,52 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.hypothesis/
+.coverage
+coverage.xml
+htmlcov/
+.venv/
+venv/
+
+# Node
+node_modules/
+.next/
+out/
+dist/
+build/
+*.tsbuildinfo
+.turbo/
+
+# Frontend tooling
+frontend/.vercel/
+frontend/playwright-report/
+frontend/test-results/
+frontend/coverage/
+
+# Env & secrets
+.env
+.env.*
+!.env.example
+*.pem
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Claude Code harness workspace
+# 실행 중 산출물은 로컬에만. 사람용 요약은 docs/harness-runs/에 복사되어 트래킹됨.
+.claude/harness/
+.claude/scheduled_tasks.lock
+
+# Misc
+tmp_out.json
+*.log

@@ -1,0 +1,44 @@
+# 공통 제외 목록 (루트 .dockerignore)
+**/.env
+**/.env.*
+**/.env.local
+**/.env.*.local
+
+# 프론트엔드
+frontend/node_modules
+frontend/.next
+frontend/out
+frontend/.turbo
+
+# 백엔드
+backend/.venv
+backend/__pycache__
+backend/**/__pycache__
+backend/**/*.pyc
+backend/**/*.pyo
+backend/.mypy_cache
+backend/.ruff_cache
+backend/.pytest_cache
+backend/htmlcov
+backend/.coverage
+
+# Git / CI
+.git
+.github
+**/.gitkeep
+
+# 데모 시드 (빌드 컨텍스트 불필요)
+demo/
+
+# 문서
+docs/
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db

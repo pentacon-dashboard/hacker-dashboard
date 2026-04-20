@@ -1,0 +1,24 @@
+{
+  "id": "edge_negative_price",
+  "description": "음수 가격 — domain gate 가 걸러야 함",
+  "input": {
+    "data": [
+      {"symbol": "AAPL", "date": "2024-01-02", "close": 185.64},
+      {"symbol": "AAPL", "date": "2024-01-03", "close": -1.0}
+    ]
+  },
+  "expected_asset_class": "stock",
+  "expected_router_reason_keyword": "AAPL",
+  "expected_gates": {
+    "schema_gate": "pass",
+    "domain_gate": "fail",
+    "critique_gate": "pending"
+  },
+  "mock_analyzer_output": {
+    "asset_class": "stock",
+    "summary": "AAPL 2일치 시세.",
+    "highlights": ["종가 185.64", "종가 -1.0 (이상치)"],
+    "metrics": {"latest_close": -1.0},
+    "evidence": [{"claim": "종가 -1.0", "rows": [1]}]
+  }
+}

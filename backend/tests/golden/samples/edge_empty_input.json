@@ -1,0 +1,19 @@
+{
+  "id": "edge_empty_input",
+  "description": "빈 analyzer_output — schema gate 가 걸러야 함",
+  "input": {
+    "data": [
+      {"symbol": "AAPL", "date": "2024-01-02", "close": 185.64}
+    ]
+  },
+  "expected_asset_class": "stock",
+  "expected_router_reason_keyword": "AAPL",
+  "expected_gates": {
+    "schema_gate": "fail",
+    "domain_gate": "pending",
+    "critique_gate": "pending"
+  },
+  "mock_analyzer_output": {
+    "asset_class": "stock"
+  }
+}

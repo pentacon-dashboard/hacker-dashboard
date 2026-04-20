@@ -1,0 +1,41 @@
+{
+  "id": "stock_us",
+  "description": "Tesla 3일 시세",
+  "input": {
+    "data": [
+      {"symbol": "TSLA", "date": "2024-04-01", "open": 175.22, "high": 178.50, "low": 174.10, "close": 177.80, "volume": 92000000},
+      {"symbol": "TSLA", "date": "2024-04-02", "open": 177.90, "high": 180.25, "low": 176.30, "close": 179.40, "volume": 88000000},
+      {"symbol": "TSLA", "date": "2024-04-03", "open": 179.50, "high": 182.00, "low": 178.80, "close": 181.20, "volume": 95000000}
+    ]
+  },
+  "expected_asset_class": "stock",
+  "expected_router_reason_keyword": "TSLA",
+  "expected_gates": {
+    "schema_gate": "pass",
+    "domain_gate": "pass",
+    "critique_gate": "pass"
+  },
+  "mock_analyzer_output": {
+    "asset_class": "stock",
+    "summary": "TSLA는 3일간 177.80달러에서 181.20달러로 상승.",
+    "highlights": [
+      "2024-04-01 종가 177.80달러",
+      "2024-04-03 종가 181.20달러",
+      "3일간 고가 182.00달러(2024-04-03)"
+    ],
+    "metrics": {
+      "latest_close": 181.20,
+      "period_return_pct": 1.91,
+      "volatility_pct": 0.8,
+      "ma_20": null
+    },
+    "evidence": [
+      {"claim": "종가 177.80 → 181.20", "rows": [0, 2]}
+    ]
+  },
+  "mock_critique": {
+    "verdict": "pass",
+    "per_claim": [{"claim": "종가 177.80 → 181.20", "status": "supported"}],
+    "reason": "all claims supported"
+  }
+}

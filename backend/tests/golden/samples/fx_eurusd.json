@@ -1,0 +1,34 @@
+{
+  "id": "fx_eurusd",
+  "description": "EUR/USD 환율",
+  "input": {
+    "data": [
+      {"symbol": "EURUSD=X", "date": "2024-04-10", "close": 1.0742},
+      {"symbol": "EURUSD=X", "date": "2024-04-11", "close": 1.0721}
+    ]
+  },
+  "expected_asset_class": "fx",
+  "expected_router_reason_keyword": "EURUSD=X",
+  "expected_gates": {
+    "schema_gate": "pass",
+    "domain_gate": "pass",
+    "critique_gate": "pass"
+  },
+  "mock_analyzer_output": {
+    "asset_class": "fx",
+    "summary": "EUR/USD 2일간 1.0742 → 1.0721 하락.",
+    "highlights": ["2024-04-10 종가 1.0742", "2024-04-11 종가 1.0721"],
+    "metrics": {
+      "latest_rate": 1.0721,
+      "period_change_pct": -0.20,
+      "base_currency": "EUR",
+      "quote_currency": "USD"
+    },
+    "evidence": [{"claim": "1.0742 → 1.0721", "rows": [0, 1]}]
+  },
+  "mock_critique": {
+    "verdict": "pass",
+    "per_claim": [{"claim": "1.0742 → 1.0721", "status": "supported"}],
+    "reason": "all claims supported"
+  }
+}
