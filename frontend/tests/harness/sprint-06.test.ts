@@ -8,12 +8,22 @@ const run = (cmd: string, timeout = 300_000) =>
   execSync(cmd, { cwd: FE_ROOT, stdio: "pipe", timeout });
 
 describe("sprint-06 acceptance — full FE ci green", () => {
-  it("lint + typecheck + unit tests + build all pass", () => {
+  it("lint passes", () => {
     run("npm run lint");
+  }, 120_000);
+
+  it("typecheck passes", () => {
     run("npm run typecheck");
-    run("npm run test -- --run");
+  }, 120_000);
+
+  it("unit tests pass", () => {
+    // sprint-06 자신을 제외하고 실행 (재귀 subprocess 방지)
+    run('npm run test -- --run --exclude="**/harness/sprint-06*"');
+  }, 600_000);
+
+  it("build passes", () => {
     run("npm run build");
-  });
+  }, 300_000);
 
   it("test:e2e npm script exists", () => {
     const pkg = JSON.parse(readFileSync(resolve(FE_ROOT, "package.json"), "utf-8"));

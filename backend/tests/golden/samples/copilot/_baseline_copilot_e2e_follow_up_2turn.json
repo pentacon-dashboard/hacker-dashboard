@@ -1,0 +1,328 @@
+[
+  {
+    "type": "plan.ready",
+    "plan": {
+      "session_id": "s-fake",
+      "steps": [
+        {
+          "step_id": "a",
+          "agent": "portfolio",
+          "inputs": {
+            "symbol": "TSLA"
+          },
+          "depends_on": [],
+          "gate_policy": {
+            "schema_check": true,
+            "domain": true,
+            "critique": true
+          }
+        },
+        {
+          "step_id": "b",
+          "agent": "comparison",
+          "inputs": {
+            "symbols": [
+              "TSLA",
+              "MSFT"
+            ]
+          },
+          "depends_on": [],
+          "gate_policy": {
+            "schema_check": true,
+            "domain": true,
+            "critique": true
+          }
+        }
+      ],
+      "gate_results": {
+        "schema": "pass",
+        "domain": "pass",
+        "critique": "pass"
+      }
+    }
+  },
+  {
+    "type": "step.start",
+    "step_id": "a"
+  },
+  {
+    "type": "step.token",
+    "step_id": "a",
+    "text": "portfolio 분석 중..."
+  },
+  {
+    "type": "step.start",
+    "step_id": "b"
+  },
+  {
+    "type": "step.token",
+    "step_id": "b",
+    "text": "comparison 분석 중..."
+  },
+  {
+    "type": "step.gate",
+    "step_id": "a",
+    "gate": "schema",
+    "status": "pass",
+    "reason": null
+  },
+  {
+    "type": "step.gate",
+    "step_id": "a",
+    "gate": "domain",
+    "status": "pass",
+    "reason": null
+  },
+  {
+    "type": "step.gate",
+    "step_id": "a",
+    "gate": "critique",
+    "status": "pass",
+    "reason": null
+  },
+  {
+    "type": "step.result",
+    "step_id": "a",
+    "card": {
+      "type": "text",
+      "content": "포트폴리오 분석 결과 (stub): {'symbol': 'TSLA'}",
+      "degraded": false
+    }
+  },
+  {
+    "type": "step.gate",
+    "step_id": "b",
+    "gate": "schema",
+    "status": "pass",
+    "reason": null
+  },
+  {
+    "type": "step.gate",
+    "step_id": "b",
+    "gate": "domain",
+    "status": "pass",
+    "reason": null
+  },
+  {
+    "type": "step.gate",
+    "step_id": "b",
+    "gate": "critique",
+    "status": "pass",
+    "reason": null
+  },
+  {
+    "type": "step.result",
+    "step_id": "b",
+    "card": {
+      "type": "comparison_table",
+      "symbols": [
+        "TSLA",
+        "MSFT"
+      ],
+      "metrics": [
+        "return_3m_pct",
+        "volatility_pct",
+        "pe_ratio",
+        "market_cap_usd"
+      ],
+      "rows": [
+        {
+          "symbol": "TSLA",
+          "metrics": {
+            "return_3m_pct": -2,
+            "volatility_pct": 18,
+            "pe_ratio": 23,
+            "market_cap_usd": 9000000000
+          }
+        },
+        {
+          "symbol": "MSFT",
+          "metrics": {
+            "return_3m_pct": 4,
+            "volatility_pct": 24,
+            "pe_ratio": null,
+            "market_cap_usd": 5000000000
+          }
+        }
+      ],
+      "summary": "Comparison of TSLA, MSFT across return, volatility, and valuation metrics."
+    }
+  },
+  {
+    "type": "step.gate",
+    "step_id": "final",
+    "gate": "schema",
+    "status": "pass",
+    "reason": null
+  },
+  {
+    "type": "step.gate",
+    "step_id": "final",
+    "gate": "domain",
+    "status": "pass",
+    "reason": null
+  },
+  {
+    "type": "step.gate",
+    "step_id": "final",
+    "gate": "critique",
+    "status": "pass",
+    "reason": null
+  },
+  {
+    "type": "final.card",
+    "card": {
+      "type": "text",
+      "content": "[a] 포트폴리오 분석 결과 (stub): {'symbol': 'TSLA'}\n\n[b] {'type': 'comparison_table', 'symbols': ['TSLA', 'MSFT'], 'metrics': ['return_3m_pct', 'volatility_pct', 'pe_ratio', 'market_cap_usd'], 'rows': [{'symbol': 'TSLA', 'metrics': {'return_3m_pct': -2, 'volatility_pct': 18, 'pe_ratio': 23, 'market_cap_usd': 9000000000}}, {'symbol': 'MSFT', 'metrics': {'return_3m_pct': 4, 'volatility_pct': 24, 'pe_ratio': None, 'market_cap_usd': 5000000000}}], 'summary': 'Comparison of TSLA, MSFT across return, volatility, and valuation metrics.'}",
+      "degraded": false
+    }
+  },
+  {
+    "type": "done",
+    "session_id": "golden-follow_up_2turn"
+  },
+  {
+    "type": "plan.ready",
+    "plan": {
+      "session_id": "s-fake",
+      "steps": [
+        {
+          "step_id": "a",
+          "agent": "news-rag",
+          "inputs": {
+            "symbol": "TSLA"
+          },
+          "depends_on": [],
+          "gate_policy": {
+            "schema_check": true,
+            "domain": true,
+            "critique": true
+          }
+        }
+      ],
+      "gate_results": {
+        "schema": "pass",
+        "domain": "pass",
+        "critique": "pass"
+      }
+    }
+  },
+  {
+    "type": "step.start",
+    "step_id": "a"
+  },
+  {
+    "type": "step.token",
+    "step_id": "a",
+    "text": "news-rag 분석 중..."
+  },
+  {
+    "type": "step.gate",
+    "step_id": "a",
+    "gate": "schema",
+    "status": "pass",
+    "reason": null
+  },
+  {
+    "type": "step.gate",
+    "step_id": "a",
+    "gate": "domain",
+    "status": "pass",
+    "reason": null
+  },
+  {
+    "type": "step.gate",
+    "step_id": "a",
+    "gate": "critique",
+    "status": "pass",
+    "reason": null
+  },
+  {
+    "type": "step.result",
+    "step_id": "a",
+    "card": {
+      "type": "text",
+      "content": "Summary of news for query: ''\n\n\nBased on [Tesla Q1 2026 Deliveries Miss Estimates: 422,875 Vehicles Delivered]: Tesla Inc. (TSLA) delivered 422,875 vehicles in the first quarter of 2026, falling short of analyst expectations of approximately 450,000 units. The electric vehicle maker also produced 433,371 vehicl\n\nBased on [Ethereum Pectra Upgrade Successfully Activated: Staking Limits Raised to 2048 ETH]: The Ethereum (ETH) network successfully activated the Pectra upgrade at slot 8,626,176 on January 15, 2026, marking one of the most significant protocol changes since the Merge in September 2022. The \n\nBased on [Apple Q1 2026 Earnings Beat: Revenue $124B, EPS $2.40]: dividend by 5% to $0.26 per share.\n\nAnalysts reacted positively to the results. 'Apple has demonstrated once again that it can execute at the highest level,' wrote Morgan Stanley analyst Erik Woodring",
+      "citations": [
+        {
+          "doc_id": 7,
+          "chunk_id": 18,
+          "source_url": "https://example.com/news/tsla-delivery-q1-2026",
+          "title": "Tesla Q1 2026 Deliveries Miss Estimates: 422,875 Vehicles Delivered",
+          "published_at": "2026-04-02T16:00:00Z",
+          "excerpt": "Tesla Inc. (TSLA) delivered 422,875 vehicles in the first quarter of 2026, falling short of analyst expectations of approximately 450,000 units. The electric vehicle maker also produced 433,371 vehicles during the quarter. The delivery miss sent TSLA shares down more than 7% in premarket trading on Wednesday.\n\nThe Q1 2026 deliveries represent a 6.8% decline compared to Q1 2025's 466,140 deliveries, marking the second consecutive quarter of year-over-year declines. The shortfall has reignited concerns about ",
+          "score": 1.7726468693329152e-09
+        },
+        {
+          "doc_id": 3,
+          "chunk_id": 7,
+          "source_url": "https://example.com/news/ethereum-pectra-upgrade-2026",
+          "title": "Ethereum Pectra Upgrade Successfully Activated: Staking Limits Raised to 2048 ETH",
+          "published_at": "2026-01-15T14:00:00Z",
+          "excerpt": "The Ethereum (ETH) network successfully activated the Pectra upgrade at slot 8,626,176 on January 15, 2026, marking one of the most significant protocol changes since the Merge in September 2022. The upgrade went live without major issues, with the network processing transactions normally within minutes of the activation.\n\nPectra combines two previously planned upgrade sets: Prague (execution layer) and Electra (consensus layer). The upgrade introduces several key improvements that have been eagerly anticip",
+          "score": 1.7726468693880855e-09
+        },
+        {
+          "doc_id": 1,
+          "chunk_id": 2,
+          "source_url": "https://example.com/news/aapl-q1-2026-earnings",
+          "title": "Apple Q1 2026 Earnings Beat: Revenue $124B, EPS $2.40",
+          "published_at": "2026-01-30T21:00:00Z",
+          "excerpt": "dividend by 5% to $0.26 per share.\n\nAnalysts reacted positively to the results. 'Apple has demonstrated once again that it can execute at the highest level,' wrote Morgan Stanley analyst Erik Woodring, who maintained an Overweight rating with a $250 price target. 'The combination of strong iPhone demand and accelerating Services growth is exactly what investors were hoping for.'\n\nShares of AAPL rose approximately 3.2% in after-hours trading following the earnings release. The stock has gained 18.4% year-to-",
+          "score": 1.219933561948241e-06
+        },
+        {
+          "doc_id": 6,
+          "chunk_id": 17,
+          "source_url": "https://example.com/news/nvda-blackwell-ultra-launch-2026",
+          "title": "NVIDIA Launches Blackwell Ultra GPU: Doubles AI Training Performance Over H100",
+          "published_at": "2026-02-20T18:00:00Z",
+          "excerpt": "a launch solidifies NVIDIA's leadership position for at least the next 18-24 months.'\n\nThe company also announced a 10-for-1 stock split effective March 15, 2026, following the pattern of the 2024 split that made shares more accessible to retail investors.",
+          "score": 1.4072159946949865
+        },
+        {
+          "doc_id": 4,
+          "chunk_id": 10,
+          "source_url": "https://example.com/news/fed-rate-decision-march-2026",
+          "title": "Fed Holds Rates Steady at 4.25-4.50%, Signals Two Cuts in 2026",
+          "published_at": "2026-03-19T18:30:00Z",
+          "excerpt": "The Federal Open Market Committee (FOMC) voted unanimously on Wednesday to maintain the federal funds rate at its target range of 4.25% to 4.50%, in line with market expectations. The decision follows two consecutive 25-basis-point cuts in September and November 2025, which brought rates down from the peak of 5.25-5.50% maintained for over a year.\n\nIn the accompanying statement, the Committee acknowledged that 'economic activity has continued to expand at a solid pace' while noting that 'inflation remains s",
+          "score": 1.4142083483858066
+        }
+      ]
+    }
+  },
+  {
+    "type": "step.gate",
+    "step_id": "final",
+    "gate": "schema",
+    "status": "pass",
+    "reason": null
+  },
+  {
+    "type": "step.gate",
+    "step_id": "final",
+    "gate": "domain",
+    "status": "pass",
+    "reason": null
+  },
+  {
+    "type": "step.gate",
+    "step_id": "final",
+    "gate": "critique",
+    "status": "pass",
+    "reason": null
+  },
+  {
+    "type": "final.card",
+    "card": {
+      "type": "text",
+      "content": "[a] Summary of news for query: ''\n\n\nBased on [Tesla Q1 2026 Deliveries Miss Estimates: 422,875 Vehicles Delivered]: Tesla Inc. (TSLA) delivered 422,875 vehicles in the first quarter of 2026, falling short of analyst expectations of approximately 450,000 units. The electric vehicle maker also produced 433,371 vehicl\n\nBased on [Ethereum Pectra Upgrade Successfully Activated: Staking Limits Raised to 2048 ETH]: The Ethereum (ETH) network successfully activated the Pectra upgrade at slot 8,626,176 on January 15, 2026, marking one of the most significant protocol changes since the Merge in September 2022. The \n\nBased on [Apple Q1 2026 Earnings Beat: Revenue $124B, EPS $2.40]: dividend by 5% to $0.26 per share.\n\nAnalysts reacted positively to the results. 'Apple has demonstrated once again that it can execute at the highest level,' wrote Morgan Stanley analyst Erik Woodring",
+      "degraded": false
+    }
+  },
+  {
+    "type": "done",
+    "session_id": "golden-follow_up_2turn"
+  }
+]

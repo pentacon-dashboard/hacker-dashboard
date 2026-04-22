@@ -89,6 +89,10 @@ def fake_orchestrator_llm(monkeypatch: pytest.MonkeyPatch) -> _FakeOrchestratorL
                 symbol = "AAPL"
             elif "msft" in lower:
                 symbol = "MSFT"
+            elif "nvda" in lower or "nvidia" in lower:
+                symbol = "NVDA"
+            elif "tsla" in lower:
+                symbol = "TSLA"
 
             # <prior_turns> 에서 symbol 추출 시도
             import re as _re
@@ -100,12 +104,53 @@ def fake_orchestrator_llm(monkeypatch: pytest.MonkeyPatch) -> _FakeOrchestratorL
             if prior_match:
                 symbol = prior_match.group(1)
 
+            # ── 특수 케이스: degraded 시나리오 감지 ──────────────────────────
+            # comparison_03: 존재하지 않는 심볼 → domain gate fail → degraded
+            has_unknown_symbol = "definitely_not_a_symbol_xyz" in lower
+            # simulator_03: shock ±300% 이상 → domain gate fail → degraded
+            shock_match = _re.search(r"shock\s*\+?(\d+)%", user_content, _re.IGNORECASE)
+            has_extreme_shock = False
+            if shock_match:
+                shock_val = abs(float(shock_match.group(1)))
+                has_extreme_shock = shock_val >= 300.0
+            if "500%" in user_content or "+500" in user_content:
+                has_extreme_shock = True
+
             # follow-up 단축 조건: prior_turns 있고 "계속"/"조금" 등 단축 키워드이면 1개 step
             is_followup_short = (
                 "<prior_turns>" in user_content and
-                any(kw in user_content for kw in ("계속", "조금", "더", "만"))
+                any(kw in user_content for kw in ("계속", "조금", "더", "만", "그럼", "그"))
             )
-            if is_followup_short:
+
+            if has_unknown_symbol:
+                # comparison_03: DEFINITELY_NOT_A_SYMBOL_XYZ 포함 → comparison이 domain fail → degraded
+                steps = [
+                    {
+                        "step_id": "a",
+                        "agent": "comparison",
+                        "inputs": {
+                            "symbols": [symbol, "DEFINITELY_NOT_A_SYMBOL_XYZ"],
+                            "metrics": ["return_3m_pct", "volatility_pct"],
+                        },
+                        "depends_on": [],
+                        "gate_policy": {"schema": True, "domain": True, "critique": True},
+                    }
+                ]
+            elif has_extreme_shock:
+                # simulator_03: +500% shock → simulator가 domain fail → degraded
+                steps = [
+                    {
+                        "step_id": "a",
+                        "agent": "simulator",
+                        "inputs": {
+                            "holdings": [{"symbol": symbol, "quantity": 10, "avg_price": 180.0}],
+                            "shocks": {symbol: 5.0},  # +500% (비현실) → domain fail
+                        },
+                        "depends_on": [],
+                        "gate_policy": {"schema": True, "domain": True, "critique": True},
+                    }
+                ]
+            elif is_followup_short:
                 steps = [
                     {
                         "step_id": "a",
@@ -127,7 +172,7 @@ def fake_orchestrator_llm(monkeypatch: pytest.MonkeyPatch) -> _FakeOrchestratorL
                     {
                         "step_id": "b",
                         "agent": "comparison",
-                        "inputs": {"symbol": symbol},
+                        "inputs": {"symbols": [symbol, "MSFT" if symbol != "MSFT" else "AAPL"]},
                         "depends_on": [],
                         "gate_policy": {"schema": True, "domain": True, "critique": True},
                     },

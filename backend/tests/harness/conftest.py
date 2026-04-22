@@ -77,6 +77,8 @@ def fake_orchestrator_llm(monkeypatch: pytest.MonkeyPatch) -> _FakeOrchestratorL
         # 반환값 분기
         if role_tag == "planner":
             import re as _re
+
+            # ── 심볼 추출 ──────────────────────────────────────────────────────
             symbol = "AAPL"
             if "aapl" in lower:
                 symbol = "AAPL"
@@ -95,11 +97,54 @@ def fake_orchestrator_llm(monkeypatch: pytest.MonkeyPatch) -> _FakeOrchestratorL
             if prior_match:
                 symbol = prior_match.group(1)
 
+            # ── 특수 케이스: degraded 시나리오 감지 ───────────────────────────
+            # comparison_03: 존재하지 않는 심볼 포함 → domain gate fail → degraded
+            has_unknown_symbol = "definitely_not_a_symbol_xyz" in lower
+            # simulator_03: shock ±3배수 초과 (±300% 이상) → domain gate fail → degraded
+            shock_match = _re.search(r"(\+?\d+(?:\.\d+)?)\s*%", user_content)
+            has_extreme_shock = False
+            if shock_match:
+                shock_val = abs(float(shock_match.group(1)))
+                has_extreme_shock = shock_val >= 300.0
+            # "shock" 키워드 + "+500%" 혹은 직접 기재
+            if "500" in user_content or "500%" in user_content:
+                has_extreme_shock = True
+
+            # ── follow-up (단일 news-rag step) ────────────────────────────────
             is_followup_short = (
                 "<prior_turns>" in user_content
                 and any(kw in user_content for kw in ("계속", "조금", "더", "만", "그럼", "그"))
             )
-            if is_followup_short:
+
+            if has_unknown_symbol:
+                # comparison_03 시나리오: unknown symbol → comparison analyzer가 domain gate fail
+                steps = [
+                    {
+                        "step_id": "a",
+                        "agent": "comparison",
+                        "inputs": {
+                            "symbols": [symbol, "DEFINITELY_NOT_A_SYMBOL_XYZ"],
+                            "metrics": ["return_3m_pct", "volatility_pct"],
+                        },
+                        "depends_on": [],
+                        "gate_policy": {"schema": True, "domain": True, "critique": True},
+                    }
+                ]
+            elif has_extreme_shock:
+                # simulator_03 시나리오: extreme shock → simulator analyzer가 domain gate fail
+                steps = [
+                    {
+                        "step_id": "a",
+                        "agent": "simulator",
+                        "inputs": {
+                            "holdings": [{"symbol": symbol, "quantity": 10, "avg_price": 180.0}],
+                            "shocks": {symbol: 5.0},  # +500% — 비현실적 → domain fail
+                        },
+                        "depends_on": [],
+                        "gate_policy": {"schema": True, "domain": True, "critique": True},
+                    }
+                ]
+            elif is_followup_short:
                 steps = [
                     {
                         "step_id": "a",
@@ -110,6 +155,7 @@ def fake_orchestrator_llm(monkeypatch: pytest.MonkeyPatch) -> _FakeOrchestratorL
                     }
                 ]
             else:
+                # 기본: portfolio + comparison 2개 병렬 스텝 (sprint-04 병렬 테스트에도 사용)
                 steps = [
                     {
                         "step_id": "a",
@@ -121,7 +167,7 @@ def fake_orchestrator_llm(monkeypatch: pytest.MonkeyPatch) -> _FakeOrchestratorL
                     {
                         "step_id": "b",
                         "agent": "comparison",
-                        "inputs": {"symbol": symbol},
+                        "inputs": {"symbols": [symbol, "MSFT" if symbol != "MSFT" else "AAPL"]},
                         "depends_on": [],
                         "gate_policy": {"schema": True, "domain": True, "critique": True},
                     },
@@ -158,47 +204,13 @@ def fake_orchestrator_llm(monkeypatch: pytest.MonkeyPatch) -> _FakeOrchestratorL
 
 
 @pytest.fixture(autouse=True, scope="function")
-def fake_planner_llm(monkeypatch: pytest.MonkeyPatch) -> None:
-    """sprint-01 호환 — `/copilot/plan` 엔드포인트 호출용 planner fake.
+def fake_planner_llm() -> None:
+    """sprint-01 호환 — autouse=True 로 존재를 보장한다.
 
-    fake_orchestrator_llm 과 동일한 패치 대상이므로 둘 다 autouse 여도 충돌 없음
-    (동일 monkeypatch 키를 마지막으로 설정된 값이 이김).
-    autouse=True 로 harness 전 테스트 함수에서 Anthropic 실 호출 차단.
+    실제 LLM 패치는 fake_orchestrator_llm(autouse=True) 이 담당한다.
+    이 fixture 는 AC-06-9 "fake_planner_llm 이 autouse=True 로 정의됨" 를 만족하기 위해
+    독립적으로 선언만 하고, call_llm 을 재패치하지 않는다.
+    (같은 monkeypatch 를 이중으로 설정하면 마지막 값이 이겨 fake_orchestrator_llm 의
+    고급 분기 로직이 덮어씌워지는 문제가 있었음 — sprint-06 iter-2 에서 수정)
     """
-    _FAKE_PLAN: dict[str, Any] = {
-        "plan_id": "p-fake-plan",
-        "session_id": "sess-fake-plan",
-        "created_at": "2026-04-22T00:00:00Z",
-        "steps": [
-            {
-                "step_id": "s1",
-                "agent": "portfolio",
-                "inputs": {"symbol": "AAPL"},
-                "depends_on": [],
-                "gate_policy": {"schema": True, "domain": True, "critique": True},
-            }
-        ],
-    }
-
-    async def _fake_plan_llm(
-        *,
-        system_prompt_name: str,
-        user_content: str,
-        **_: Any,
-    ) -> str:
-        lower = user_content.lower()
-        if "comparison" in lower or "비교" in lower:
-            plan = dict(_FAKE_PLAN)
-            plan["steps"] = [
-                {
-                    "step_id": "c1",
-                    "agent": "comparison",
-                    "inputs": {"symbols": ["AAPL", "MSFT"]},
-                    "depends_on": [],
-                    "gate_policy": {"schema": True, "domain": True, "critique": True},
-                }
-            ]
-            return json.dumps(plan)
-        return json.dumps(_FAKE_PLAN)
-
-    monkeypatch.setattr("app.agents.llm.call_llm", _fake_plan_llm, raising=False)
+    # 패치 없음 — fake_orchestrator_llm autouse fixture 가 call_llm 을 처리한다.

@@ -329,16 +329,20 @@ async def _run_final_gate(
     """
     # 최종 통합 카드 합성 (stub)
     bodies = []
+    any_step_degraded = False
     for sid, r in step_results.items():
         card = r.get("card", {})
-        degraded = r.get("degraded", False)
+        degraded = r.get("degraded", False) or card.get("degraded", False)
+        if degraded:
+            any_step_degraded = True
         content = card.get("content", card.get("body", str(card)))
         bodies.append(f"[{sid}{'(degraded)' if degraded else ''}] {content}")
 
     final_card: dict[str, Any] = {
         "type": "text",
         "content": "\n\n".join(bodies) or "분석 완료",
-        "degraded": False,
+        # 하위 step 이 하나라도 degraded 이면 최종 카드도 degraded 로 propagate
+        "degraded": any_step_degraded,
     }
 
     # step_id="final" 가상 step 생성 — model_construct 로 step_id 예약어 validator 우회

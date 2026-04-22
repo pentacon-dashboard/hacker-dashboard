@@ -92,10 +92,19 @@ def test_golden_coverage_is_ten() -> None:
 
 
 def test_harness_contracts_still_green() -> None:
-    """AC-06-8: sprint-01~06 harness 전체가 sprint-06 통합 브랜치에서 green."""
+    """AC-06-8: sprint-01~06 harness 전체가 sprint-06 통합 브랜치에서 green.
+
+    --lf/--ff 제거: 처음 실행이거나 모두 pass 시 exit 5 (no tests ran) 가 되어
+    false-fail 이 발생하는 문제를 방지한다.
+    """
     result = subprocess.run(
         ["uv", "run", "pytest", "-q",
-         "tests/harness/", "--lf", "--ff", "--tb=short"],
+         "tests/harness/sprint_01_contract.py",
+         "tests/harness/sprint_02_contract.py",
+         "tests/harness/sprint_03_contract.py",
+         "tests/harness/sprint_04_contract.py",
+         "tests/harness/sprint_05_contract.py",
+         "--tb=short"],
         cwd=REPO_ROOT / "backend",
         capture_output=True, text=True, timeout=600,
     )

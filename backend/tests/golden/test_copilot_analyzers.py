@@ -24,9 +24,19 @@ os.environ.setdefault("COPILOT_NEWS_MODE", "stub")
 
 
 def _load_copilot_samples() -> list[tuple[str, dict[str, Any]]]:
+    """_baseline_copilot_*.json 중 "agent" 키를 갖는 단일 오브젝트만 로드.
+
+    _baseline_copilot_e2e_*.json 은 SSE 이벤트 배열 형식이므로 제외한다.
+    """
     out: list[tuple[str, dict[str, Any]]] = []
     for path in sorted(_SAMPLES_DIR.glob("_baseline_copilot_*.json")):
+        # e2e baseline 파일(배열 형식)은 test_copilot_end_to_end.py 에서 처리하므로 건너뜀
+        if "_e2e_" in path.name:
+            continue
         data = json.loads(path.read_text(encoding="utf-8"))
+        # 단일 오브젝트이고 "agent" 필드가 있는 것만 사용
+        if not isinstance(data, dict) or "agent" not in data:
+            continue
         out.append((data["id"], data))
     return out
 

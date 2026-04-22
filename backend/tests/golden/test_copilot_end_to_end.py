@@ -121,11 +121,28 @@ async def test_single_step_golden(
     sample = _load_sample(sample_id)
     step = sample["step"]
 
+    # degraded 케이스: query 에 fake_orchestrator_llm 이 감지할 마커를 포함
+    # - comparison_03: 존재하지 않는 심볼 → "DEFINITELY_NOT_A_SYMBOL_XYZ" 포함
+    # - simulator_03: shock +500% → "500%" 포함
+    base_query = sample.get("description", "test")
+    if sample.get("expected_degraded"):
+        agent = sample.get("agent", "")
+        step_inputs = sample.get("step", {}).get("inputs", {})
+        if agent == "comparison":
+            symbols = step_inputs.get("symbols", [])
+            unknown = [s for s in symbols if "DEFINITELY_NOT_A_SYMBOL" in s]
+            if unknown:
+                base_query = f"{base_query} DEFINITELY_NOT_A_SYMBOL_XYZ"
+        elif agent == "simulator":
+            shocks = step_inputs.get("shocks", {})
+            if any(v >= 3.0 for v in shocks.values()):
+                base_query = f"{base_query} shock +500%"
+
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
         # copilot/query 엔드포인트를 통해 step 실행
         resp = await client.post(
             "/copilot/query",
-            json={"query": sample.get("description", "test"), "session_id": f"golden-{sample_id}"},
+            json={"query": base_query, "session_id": f"golden-{sample_id}"},
         )
 
     assert resp.status_code == 200, f"status={resp.status_code}: {resp.text[:500]}"

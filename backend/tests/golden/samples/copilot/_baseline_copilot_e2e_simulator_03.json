@@ -1,0 +1,113 @@
+[
+  {
+    "type": "plan.ready",
+    "plan": {
+      "session_id": "s-fake",
+      "steps": [
+        {
+          "step_id": "a",
+          "agent": "simulator",
+          "inputs": {
+            "holdings": [
+              {
+                "symbol": "AAPL",
+                "quantity": 10,
+                "avg_price": 180.0
+              }
+            ],
+            "shocks": {
+              "AAPL": 5.0
+            }
+          },
+          "depends_on": [],
+          "gate_policy": {
+            "schema_check": true,
+            "domain": true,
+            "critique": true
+          }
+        }
+      ],
+      "gate_results": {
+        "schema": "pass",
+        "domain": "pass",
+        "critique": "pass"
+      }
+    }
+  },
+  {
+    "type": "step.start",
+    "step_id": "a"
+  },
+  {
+    "type": "step.token",
+    "step_id": "a",
+    "text": "simulator 분석 중..."
+  },
+  {
+    "type": "step.gate",
+    "step_id": "a",
+    "gate": "schema",
+    "status": "pass",
+    "reason": null
+  },
+  {
+    "type": "step.gate",
+    "step_id": "a",
+    "gate": "domain",
+    "status": "pass",
+    "reason": null
+  },
+  {
+    "type": "step.gate",
+    "step_id": "a",
+    "gate": "critique",
+    "status": "pass",
+    "reason": null
+  },
+  {
+    "type": "step.result",
+    "step_id": "a",
+    "card": {
+      "type": "simulator_result",
+      "base_value": 0.0,
+      "shocked_value": 0.0,
+      "twr_change_pct": 0.0,
+      "scenarios": [],
+      "sensitivity": {},
+      "degraded": true
+    }
+  },
+  {
+    "type": "step.gate",
+    "step_id": "final",
+    "gate": "schema",
+    "status": "pass",
+    "reason": null
+  },
+  {
+    "type": "step.gate",
+    "step_id": "final",
+    "gate": "domain",
+    "status": "pass",
+    "reason": null
+  },
+  {
+    "type": "step.gate",
+    "step_id": "final",
+    "gate": "critique",
+    "status": "pass",
+    "reason": null
+  },
+  {
+    "type": "final.card",
+    "card": {
+      "type": "text",
+      "content": "[a(degraded)] {'type': 'simulator_result', 'base_value': 0.0, 'shocked_value': 0.0, 'twr_change_pct': 0.0, 'scenarios': [], 'sensitivity': {}, 'degraded': True}",
+      "degraded": true
+    }
+  },
+  {
+    "type": "done",
+    "session_id": "golden-simulator_03"
+  }
+]
