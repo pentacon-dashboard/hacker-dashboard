@@ -756,6 +756,94 @@
         }
       }
     },
+    "/copilot/plan": {
+      "post": {
+        "tags": [
+          "copilot"
+        ],
+        "summary": "NL Query → CopilotPlan",
+        "description": "자연어 질의를 받아 멀티-스텝 에이전트 실행 계획(CopilotPlan)을 반환한다. LLM(copilot_planner_system)이 plan을 생성하고 3단 게이트(schema/domain/critique)를 통과한 결과만 반환. SSE 스트리밍 없이 단일 JSON 응답 (디버그/테스트용).",
+        "operationId": "create_copilot_plan_copilot_plan_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CopilotPlanRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CopilotPlan"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/copilot/query": {
+      "post": {
+        "tags": [
+          "copilot"
+        ],
+        "summary": "자연어 질의 → SSE 스트림",
+        "description": "자연어 질의를 받아 멀티-스텝 에이전트 오케스트레이션을 실행하고 결과를 Server-Sent Events 로 스트리밍한다. 각 이벤트는 `data: <JSON>\\n\\n` 포맷 (data-only SSE). JSON 은 CopilotEvent discriminated union.",
+        "operationId": "query_copilot_copilot_query_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/QueryRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              },
+              "text/event-stream": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Server-Sent Events. 각 이벤트는 `data: <JSON>\\n\\n` 포맷. JSON 은 CopilotEvent discriminated union. 이벤트 타입: plan.ready | step.start | step.token | step.gate | step.result | final.card | error | done"
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/search/news": {
       "get": {
         "tags": [
@@ -914,172 +1002,10 @@
           }
         }
       }
-    },
-    "/copilot/plan": {
-      "post": {
-        "tags": [
-          "copilot"
-        ],
-        "summary": "NL Query → CopilotPlan",
-        "description": "자연어 질의를 받아 멀티-스텝 에이전트 실행 계획(CopilotPlan)을 반환한다. LLM(copilot_planner_system)이 plan을 생성하고 3단 게이트(schema/domain/critique)를 통과한 결과만 반환. SSE 스트리밍 없이 단일 JSON 응답 (디버그/테스트용).",
-        "operationId": "create_copilot_plan_copilot_plan_post",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CopilotPlanRequest"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CopilotPlan"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
     }
   },
   "components": {
     "schemas": {
-      "Citation": {
-        "properties": {
-          "doc_id": {
-            "type": "integer",
-            "title": "Doc Id",
-            "description": "Document 테이블 PK"
-          },
-          "chunk_id": {
-            "type": "integer",
-            "title": "Chunk Id",
-            "description": "DocumentChunk 테이블 PK"
-          },
-          "source_url": {
-            "type": "string",
-            "title": "Source Url",
-            "description": "원문 URL"
-          },
-          "title": {
-            "type": "string",
-            "title": "Title",
-            "description": "문서 제목"
-          },
-          "published_at": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Published At",
-            "description": "발행일 ISO-8601"
-          },
-          "excerpt": {
-            "type": "string",
-            "title": "Excerpt",
-            "description": "관련 청크 텍스트 발췌"
-          },
-          "score": {
-            "type": "number",
-            "title": "Score",
-            "description": "L2 거리 기반 유사도 점수 (낮을수록 가까움)"
-          }
-        },
-        "type": "object",
-        "required": [
-          "doc_id",
-          "chunk_id",
-          "source_url",
-          "title",
-          "excerpt",
-          "score"
-        ],
-        "title": "Citation",
-        "description": "RAG 검색 결과의 단일 인용 항목."
-      },
-      "IngestRequest": {
-        "properties": {
-          "source_url": {
-            "type": "string",
-            "title": "Source Url",
-            "description": "원문 URL"
-          },
-          "title": {
-            "type": "string",
-            "title": "Title",
-            "description": "문서 제목",
-            "default": ""
-          },
-          "published_at": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Published At",
-            "description": "발행일 ISO-8601"
-          },
-          "text": {
-            "type": "string",
-            "title": "Text",
-            "description": "전문 텍스트 (512자 이상 권장)"
-          }
-        },
-        "type": "object",
-        "required": [
-          "source_url",
-          "text"
-        ],
-        "title": "IngestRequest",
-        "description": "POST /search/news/ingest 요청 본문."
-      },
-      "IngestResponse": {
-        "properties": {
-          "document_id": {
-            "type": "integer",
-            "title": "Document Id"
-          },
-          "chunk_count": {
-            "type": "integer",
-            "title": "Chunk Count"
-          },
-          "is_new": {
-            "type": "boolean",
-            "title": "Is New"
-          }
-        },
-        "type": "object",
-        "required": [
-          "document_id",
-          "chunk_count",
-          "is_new"
-        ],
-        "title": "IngestResponse",
-        "description": "POST /search/news/ingest 응답."
-      },
       "AnalyzeContext": {
         "properties": {
           "ohlc": {
@@ -1336,89 +1262,62 @@
         "type": "object",
         "title": "CacheMetrics"
       },
-      "CopilotCard": {
-        "title": "CopilotCard",
-        "description": "Copilot 서브-에이전트 출력 카드 discriminated union (6종 variant).",
-        "oneOf": [
-          {
-            "type": "object",
-            "title": "TextCard",
-            "properties": {
-              "type": {"const": "text", "type": "string"},
-              "content": {"type": "string", "title": "Content"},
-              "citations": {"type": "array", "items": {"type": "object"}, "title": "Citations"},
-              "degraded": {"type": "boolean", "default": false, "title": "Degraded"}
-            },
-            "required": ["type", "content"]
+      "Citation": {
+        "properties": {
+          "doc_id": {
+            "type": "integer",
+            "title": "Doc Id",
+            "description": "Document 테이블 PK"
           },
-          {
-            "type": "object",
-            "title": "ChartCard",
-            "properties": {
-              "type": {"const": "chart", "type": "string"},
-              "title": {"type": "string", "title": "Title"},
-              "series": {"type": "array", "items": {"type": "object"}, "title": "Series"},
-              "annotations": {"type": "array", "items": {"type": "object"}, "title": "Annotations"},
-              "degraded": {"type": "boolean", "default": false, "title": "Degraded"}
-            },
-            "required": ["type", "title", "series"]
+          "chunk_id": {
+            "type": "integer",
+            "title": "Chunk Id",
+            "description": "DocumentChunk 테이블 PK"
           },
-          {
-            "type": "object",
-            "title": "ScorecardCard",
-            "properties": {
-              "type": {"const": "scorecard", "type": "string"},
-              "title": {"type": "string", "title": "Title"},
-              "rows": {"type": "array", "items": {"type": "object"}, "title": "Rows"},
-              "degraded": {"type": "boolean", "default": false, "title": "Degraded"}
-            },
-            "required": ["type", "title", "rows"]
+          "source_url": {
+            "type": "string",
+            "title": "Source Url",
+            "description": "원문 URL"
           },
-          {
-            "type": "object",
-            "title": "CitationCard",
-            "properties": {
-              "type": {"const": "citation", "type": "string"},
-              "doc_id": {"type": "integer", "title": "Doc Id"},
-              "chunk_id": {"type": "integer", "title": "Chunk Id"},
-              "source_url": {"type": "string", "title": "Source Url"},
-              "title": {"type": "string", "title": "Title"},
-              "published_at": {"anyOf": [{"type": "string"}, {"type": "null"}], "title": "Published At"},
-              "excerpt": {"type": "string", "title": "Excerpt"},
-              "score": {"type": "number", "title": "Score"},
-              "degraded": {"type": "boolean", "default": false, "title": "Degraded"}
-            },
-            "required": ["type", "doc_id", "chunk_id", "source_url", "title", "excerpt", "score"]
+          "title": {
+            "type": "string",
+            "title": "Title",
+            "description": "문서 제목"
           },
-          {
-            "type": "object",
-            "title": "ComparisonTableCard",
-            "properties": {
-              "type": {"const": "comparison_table", "type": "string"},
-              "symbols": {"type": "array", "items": {"type": "string"}, "title": "Symbols"},
-              "metrics": {"type": "array", "items": {"type": "string"}, "title": "Metrics"},
-              "rows": {"type": "array", "items": {"type": "object"}, "title": "Rows"},
-              "summary": {"type": "string", "default": "", "title": "Summary"},
-              "degraded": {"type": "boolean", "default": false, "title": "Degraded"}
-            },
-            "required": ["type", "symbols", "metrics", "rows"]
+          "published_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Published At",
+            "description": "발행일 ISO-8601"
           },
-          {
-            "type": "object",
-            "title": "SimulatorResultCard",
-            "properties": {
-              "type": {"const": "simulator_result", "type": "string"},
-              "base_value": {"type": "number", "title": "Base Value"},
-              "shocked_value": {"type": "number", "title": "Shocked Value"},
-              "twr_change_pct": {"type": "number", "title": "Twr Change Pct"},
-              "scenarios": {"type": "array", "items": {"type": "object"}, "title": "Scenarios"},
-              "sensitivity": {"type": "object", "title": "Sensitivity"},
-              "degraded": {"type": "boolean", "default": false, "title": "Degraded"}
-            },
-            "required": ["type", "base_value", "shocked_value", "twr_change_pct", "scenarios"]
+          "excerpt": {
+            "type": "string",
+            "title": "Excerpt",
+            "description": "관련 청크 텍스트 발췌"
+          },
+          "score": {
+            "type": "number",
+            "title": "Score",
+            "description": "L2 거리 기반 유사도 점수 (낮을수록 가까움)"
           }
+        },
+        "type": "object",
+        "required": [
+          "doc_id",
+          "chunk_id",
+          "source_url",
+          "title",
+          "excerpt",
+          "score"
         ],
-        "discriminator": {"propertyName": "type"}
+        "title": "Citation",
+        "description": "RAG 검색 결과의 단일 인용 항목.\n\nplan.md 기준:\n  doc_id, chunk_id, source_url, title, published_at, excerpt, score"
       },
       "CopilotPlan": {
         "properties": {
@@ -1813,6 +1712,69 @@
         "type": "object",
         "title": "HoldingUpdate"
       },
+      "IngestRequest": {
+        "properties": {
+          "source_url": {
+            "type": "string",
+            "title": "Source Url",
+            "description": "원문 URL"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title",
+            "description": "문서 제목",
+            "default": ""
+          },
+          "published_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Published At",
+            "description": "발행일 ISO-8601"
+          },
+          "text": {
+            "type": "string",
+            "title": "Text",
+            "description": "전문 텍스트 (512자 이상 권장)"
+          }
+        },
+        "type": "object",
+        "required": [
+          "source_url",
+          "text"
+        ],
+        "title": "IngestRequest",
+        "description": "POST /search/news/ingest 요청 본문."
+      },
+      "IngestResponse": {
+        "properties": {
+          "document_id": {
+            "type": "integer",
+            "title": "Document Id"
+          },
+          "chunk_count": {
+            "type": "integer",
+            "title": "Chunk Count"
+          },
+          "is_new": {
+            "type": "boolean",
+            "title": "Is New"
+          }
+        },
+        "type": "object",
+        "required": [
+          "document_id",
+          "chunk_count",
+          "is_new"
+        ],
+        "title": "IngestResponse",
+        "description": "POST /search/news/ingest 응답."
+      },
       "LLMAnalysis": {
         "properties": {
           "headline": {
@@ -1951,6 +1913,53 @@
         ],
         "title": "PortfolioSummary",
         "description": "GET /portfolio/summary 응답."
+      },
+      "QueryRequest": {
+        "properties": {
+          "query": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Query",
+            "description": "자연어 질의"
+          },
+          "session_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Session Id",
+            "description": "기존 세션 ID (옵션)"
+          },
+          "context": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Context",
+            "description": "추가 컨텍스트 (옵션)"
+          },
+          "_harness_step_delay_ms": {
+            "type": "integer",
+            "title": "Harness Step Delay Ms",
+            "description": "[harness-only] 각 step 실행 전 지연 ms. 병렬 결정론적 테스트용.",
+            "default": 0
+          }
+        },
+        "type": "object",
+        "required": [
+          "query"
+        ],
+        "title": "QueryRequest",
+        "description": "POST /copilot/query 요청 본문.\n\n`harness_step_delay_ms` (JSON 키: `_harness_step_delay_ms`):\n숨김 파라미터. OpenAPI 스키마 제외. 오케스트레이터가 각 step 진입 시\n`asyncio.sleep(delay_ms / 1000)` 으로 변환. 결정론적 병렬 테스트용."
       },
       "Quote": {
         "properties": {
