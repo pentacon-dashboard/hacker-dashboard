@@ -373,6 +373,30 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/copilot/session/{session_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * 세션 메모리 조회
+         * @description 세션 메모리를 조회한다. 세션이 없거나 TTL 만료 시 404 를 반환한다. 응답에 최근 50턴 이하의 SessionTurn 목록과 ActiveContext 가 포함된다.
+         */
+        get: operations["get_session_copilot_session__session_id__get"];
+        put?: never;
+        post?: never;
+        /**
+         * 세션 삭제
+         * @description 세션과 모든 턴을 삭제한다. 이후 GET 은 404 를 반환한다.
+         */
+        delete: operations["delete_session_copilot_session__session_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/search/news": {
         parameters: {
             query?: never;
@@ -417,6 +441,18 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /**
+         * ActiveContext
+         * @description Planner 에게 전달할 follow-up 컨텍스트.
+         *
+         *     planner 오케스트레이터는 이 객체를 user role 메시지로 병합한다 (system 오염 금지).
+         */
+        ActiveContext: {
+            /** Prior Turns */
+            prior_turns: components["schemas"]["PriorTurn"][];
+            /** User Query */
+            user_query: string;
+        };
         /**
          * AnalyzeContext
          * @description 선택적 부가 컨텍스트. 현재는 OHLC 프리패치 결과만.
@@ -900,37 +936,19 @@ export interface components {
             holdings: components["schemas"]["HoldingDetail"][];
         };
         /**
-         * QueryRequest
-         * @description POST /copilot/query 요청 본문.
+         * PriorTurn
+         * @description 이전 턴 요약 (follow-up 컨텍스트 주입용).
          *
-         *     `harness_step_delay_ms` (JSON 키: `_harness_step_delay_ms`):
-         *     숨김 파라미터. OpenAPI 스키마 제외. 오케스트레이터가 각 step 진입 시
-         *     `asyncio.sleep(delay_ms / 1000)` 으로 변환. 결정론적 병렬 테스트용.
+         *     raw LLM 출력 / full plan / raw tool output 포함 금지.
+         *     query 는 sanitized 원문, summary 는 final.card 요약만 포함.
          */
-        QueryRequest: {
-            /**
-             * Query
-             * @description 자연어 질의
-             */
+        PriorTurn: {
+            /** Turn Id */
+            turn_id: string;
+            /** Query */
             query: string;
-            /**
-             * Session Id
-             * @description 기존 세션 ID (옵션)
-             */
-            session_id?: string | null;
-            /**
-             * Context
-             * @description 추가 컨텍스트 (옵션)
-             */
-            context?: {
-                [key: string]: unknown;
-            } | null;
-            /**
-             * Harness Step Delay Ms
-             * @description [harness-only] 각 step 실행 전 지연 ms. 병렬 결정론적 테스트용.
-             * @default 0
-             */
-            _harness_step_delay_ms: number;
+            /** Summary */
+            summary: string;
         };
         /** Quote */
         Quote: {
@@ -1075,6 +1093,46 @@ export interface components {
             db: string;
             /** Redis */
             redis: string;
+        };
+        /**
+         * SessionResponse
+         * @description GET /copilot/session/{session_id} 응답.
+         */
+        SessionResponse: {
+            /** Session Id */
+            session_id: string;
+            /** Turns */
+            turns: components["schemas"]["SessionTurn"][];
+            active_context?: components["schemas"]["ActiveContext"] | null;
+        };
+        /**
+         * SessionTurn
+         * @description 단일 세션 턴 — done 이벤트 직전에 저장된다.
+         */
+        SessionTurn: {
+            /** Turn Id */
+            turn_id: string;
+            /** Query */
+            query: string;
+            /** Plan Id */
+            plan_id?: string | null;
+            /** Final Card */
+            final_card?: {
+                [key: string]: unknown;
+            } | null;
+            /** Citations */
+            citations?: {
+                [key: string]: unknown;
+            }[];
+            /**
+             * Created At
+             * @default
+             */
+            created_at: string;
+            /** Active Context */
+            active_context?: {
+                [key: string]: unknown;
+            } | null;
         };
         /** SnapshotResponse */
         SnapshotResponse: {
@@ -1233,6 +1291,42 @@ export interface components {
              * @description ISO-8601 UTC
              */
             created_at: string;
+        };
+        /**
+         * _InternalQueryRequest
+         * @description 내부 전용 확장 — OpenAPI 미노출.
+         *
+         *     `_harness_step_delay_ms` : 오케스트레이터가 각 step 진입 시
+         *     `asyncio.sleep(delay_ms / 1000)` 으로 변환. 결정론적 병렬 테스트용.
+         *
+         *     FastAPI 라우트 파라미터에 이 클래스를 사용하면 `_InternalQueryRequest` 가
+         *     OpenAPI components/schemas 에 등록된다. openapi_extra 의 requestBody override 로
+         *     외부에는 `QueryRequest` 스키마만 노출한다.
+         */
+        _InternalQueryRequest: {
+            /**
+             * Query
+             * @description 자연어 질의
+             */
+            query: string;
+            /**
+             * Session Id
+             * @description 기존 세션 ID (옵션)
+             */
+            session_id?: string | null;
+            /**
+             * Context
+             * @description 추가 컨텍스트 (옵션)
+             */
+            context?: {
+                [key: string]: unknown;
+            } | null;
+            /**
+             * Harness Step Delay Ms
+             * @description [harness-only] 각 step 실행 전 지연 ms. 병렬 결정론적 테스트용.
+             * @default 0
+             */
+            _harness_step_delay_ms: number;
         };
     };
     responses: never;
@@ -1807,7 +1901,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["QueryRequest"];
+                "application/json": components["schemas"]["_InternalQueryRequest"];
             };
         };
         responses: {
@@ -1821,6 +1915,66 @@ export interface operations {
                     /** @description Server-Sent Events. 각 이벤트는 `data: <JSON>\n\n` 포맷. JSON 은 CopilotEvent discriminated union. 이벤트 타입: plan.ready | step.start | step.token | step.gate | step.result | final.card | error | done */
                     "text/event-stream": string;
                 };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_session_copilot_session__session_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                session_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SessionResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_session_copilot_session__session_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                session_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Validation Error */
             422: {

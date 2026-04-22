@@ -1,4 +1,5 @@
 """Copilot API 라우터 — sprint-01: POST /copilot/plan, sprint-04: POST /copilot/query (SSE).
+sprint-05: GET/DELETE /copilot/session/{session_id}.
 
 SSE 스트리밍(/copilot/query) 은 sprint-04 에서 추가.
 포맷: data-only SSE (`data: {json}\\n\\n`), `event:` 라인 없음 (revision 2 결정).
@@ -9,12 +10,14 @@ import uuid as _uuid
 from collections.abc import AsyncGenerator
 from typing import Any
 
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
 from app.agents.planner import build_copilot_plan
-from app.schemas.copilot import CopilotPlan, CopilotPlanRequest
+from app.schemas.copilot import CopilotPlan, CopilotPlanRequest, SessionResponse
+from app.services.copilot.context import build_active_context
+from app.services.session import get_session_store
 
 router = APIRouter(prefix="/copilot", tags=["copilot"])
 
@@ -170,3 +173,57 @@ async def query_copilot(body: _InternalQueryRequest) -> StreamingResponse:
             "Connection": "keep-alive",
         },
     )
+
+
+# ── GET /copilot/session/{session_id} (sprint-05) ────────────────────────────
+
+
+@router.get(
+    "/session/{session_id}",
+    response_model=SessionResponse,
+    summary="세션 메모리 조회",
+    description=(
+        "세션 메모리를 조회한다. 세션이 없거나 TTL 만료 시 404 를 반환한다. "
+        "응답에 최근 50턴 이하의 SessionTurn 목록과 ActiveContext 가 포함된다."
+    ),
+)
+async def get_session(session_id: str) -> SessionResponse:
+    """GET /copilot/session/{session_id} — 세션 메모리 조회."""
+    store = get_session_store()
+
+    # 존재 여부 확인 (InMemorySessionStore: exists() 사용, 그 외: get_turns 결과로 판단)
+    if hasattr(store, "exists"):
+        if not store.exists(session_id):
+            raise HTTPException(status_code=404, detail=f"session {session_id!r} not found or expired")
+        turns = await store.get_turns(session_id, limit=50)
+    else:
+        turns = await store.get_turns(session_id, limit=50)
+        if not turns:
+            raise HTTPException(status_code=404, detail=f"session {session_id!r} not found or expired")
+
+    active_ctx = await build_active_context(
+        session_id=session_id,
+        user_query="",
+        store=store,
+    )
+
+    return SessionResponse(
+        session_id=session_id,
+        turns=turns,
+        active_context=active_ctx,
+    )
+
+
+# ── DELETE /copilot/session/{session_id} (sprint-05) ─────────────────────────
+
+
+@router.delete(
+    "/session/{session_id}",
+    status_code=204,
+    summary="세션 삭제",
+    description="세션과 모든 턴을 삭제한다. 이후 GET 은 404 를 반환한다.",
+)
+async def delete_session(session_id: str) -> None:
+    """DELETE /copilot/session/{session_id} — 세션 삭제."""
+    store = get_session_store()
+    await store.clear(session_id)

@@ -1,15 +1,16 @@
-"""Copilot SSE 오케스트레이터 — sprint-04.
+"""Copilot SSE 오케스트레이터 — sprint-04/05.
 
 POST /copilot/query 에서 호출된다.
 planner → DAG 위상 정렬 → 병렬 step 실행 → 3단 게이트 → 최종 통합 게이트
 
 설계 결정 (contract.md revision 2):
-- SSE 포맷: data-only (`data: {json}\\n\\n`), `event:` 라인 없음
+- SSE 포맷: data-only (`data: {json}\n\n`), `event:` 라인 없음
 - planner 는 `build_copilot_plan` 직접 import (HTTP 자기호출 금지)
 - step_id "final" 은 최종 통합 게이트 전용 예약어
 - done emit 직전 SessionTurn 영속화
 - `_harness_step_delay_ms` 로 결정론적 병렬 테스트 가능
 - COPILOT_FORCE_FAIL_STEP 환경변수로 특정 step 강제 실패 (테스트용)
+- sprint-05: 매 턴 active_context 조립 → planner 호출 → 매 스텝 3단 게이트 재실행 (캐시 금지)
 """
 from __future__ import annotations
 
@@ -25,6 +26,7 @@ import app.agents.llm as _llm_module
 from app.agents.llm import extract_json
 from app.agents.planner import build_copilot_plan
 from app.schemas.copilot import (
+    ActiveContext,
     ChartCard,
     CitationCard,
     ComparisonTableCard,
@@ -32,10 +34,13 @@ from app.schemas.copilot import (
     CopilotStep,
     GatePolicy,
     ScorecardCard,
+    SessionTurn,
     SimulatorResultCard,
     TextCard,
 )
-from app.services.session.memory_store import SessionTurn, get_session_store, make_turn_id
+from app.services.copilot.context import build_active_context, format_context_for_planner
+from app.services.session import get_session_store
+from app.services.session.memory_store import make_turn_id
 
 # ── SSE 헬퍼 ──────────────────────────────────────────────────────────────────
 
@@ -87,7 +92,10 @@ def _domain_gate(card: dict[str, Any], step: CopilotStep) -> tuple[str, str]:
 
 
 async def _critique_gate(card: dict[str, Any], step: CopilotStep, *, is_final: bool = False) -> tuple[str, str]:
-    """Critique gate: LLM self-critique (unavailable 시 pass)."""
+    """Critique gate: LLM self-critique (unavailable 시 pass).
+
+    sprint-05: 매 턴 호출 시마다 새로 실행 (캐시 금지).
+    """
     instruction = (
         "위 copilot card 가 사용자 질의에 적합하고 사실에 기반한 내용인지 평가하라. "
     )
@@ -183,6 +191,7 @@ async def _execute_step(
     """단일 step 을 실행하고 이벤트를 queue 에 넣는다.
 
     반환: {"step_id": ..., "card": ..., "degraded": bool}
+    sprint-05: 게이트는 매번 새로 실행 (캐시 금지).
     """
     if delay_ms > 0:
         await asyncio.sleep(delay_ms / 1000)
@@ -200,7 +209,7 @@ async def _execute_step(
     gate_results = outcome.get("gate_results", {})
     forced_fail = outcome.get("forced_fail", False)
 
-    # 게이트 이벤트 방출
+    # 게이트 이벤트 방출 (매번 새로 실행 — 캐시 금지)
     gate_policy = step.gate_policy
     degraded = False
 
@@ -314,7 +323,10 @@ async def _run_final_gate(
     query: str,
     queue: asyncio.Queue[bytes],
 ) -> dict[str, Any]:
-    """모든 step 결과를 합성해 최종 통합 카드를 만들고 step_id='final' 게이트를 실행한다."""
+    """모든 step 결과를 합성해 최종 통합 카드를 만들고 step_id='final' 게이트를 실행한다.
+
+    sprint-05: 세션 컨텍스트를 썼더라도 매번 전부 재실행 (캐시 금지).
+    """
     # 최종 통합 카드 합성 (stub)
     bodies = []
     for sid, r in step_results.items():
@@ -338,7 +350,7 @@ async def _run_final_gate(
         depends_on=[],
     )
 
-    # schema gate
+    # schema gate (매번 새로 실행)
     schema_status, schema_reason = _schema_gate(final_card, final_step)
     await queue.put(_sse({
         "type": "step.gate",
@@ -348,7 +360,7 @@ async def _run_final_gate(
         "reason": schema_reason if schema_status == "fail" else None,
     }))
 
-    # domain gate
+    # domain gate (매번 새로 실행)
     domain_status, domain_reason = _domain_gate(final_card, final_step)
     await queue.put(_sse({
         "type": "step.gate",
@@ -358,7 +370,7 @@ async def _run_final_gate(
         "reason": domain_reason if domain_status == "fail" else None,
     }))
 
-    # critique gate
+    # critique gate (매번 새로 실행)
     critique_status, critique_reason = await _critique_gate(final_card, final_step, is_final=True)
     await queue.put(_sse({
         "type": "step.gate",
@@ -386,14 +398,28 @@ async def stream_copilot_query(
     """SSE 스트림 비동기 제너레이터.
 
     caller (FastAPI StreamingResponse) 가 `async for chunk in stream_copilot_query(...)` 로 소비.
+
+    sprint-05 변경:
+    - 매 턴 시작 시 active_context 조립 (세션 메모리에서 직전 3턴 읽기)
+    - planner 에 active_context 전달 (user role 메시지로 병합)
+    - 매 스텝 + 최종 게이트 캐시 없이 재실행
     """
     resolved_session_id = session_id or str(uuid.uuid4())
     turn_id = make_turn_id()
 
+    # ── sprint-05: active_context 조립 ─────────────────────────────────────
+    store = get_session_store()
+    active_context: ActiveContext = await build_active_context(
+        session_id=session_id,  # 신규 세션이면 None 전달
+        user_query=query,
+        store=store,
+    )
+    context_str = format_context_for_planner(active_context)
+
     # ── 플랜 생성 ────────────────────────────────────────────────────────────
     try:
         plan: CopilotPlan = await build_copilot_plan(
-            query=query,
+            query=context_str,  # follow-up 컨텍스트 포함 질의
             session_id=resolved_session_id,
         )
     except Exception as exc:  # noqa: BLE001
@@ -452,7 +478,7 @@ async def stream_copilot_query(
             else:
                 step_results[step.step_id] = result  # type: ignore[assignment]
 
-    # ── 최종 통합 게이트 ─────────────────────────────────────────────────────
+    # ── 최종 통합 게이트 (매번 캐시 없이 재실행) ───────────────────────────
     final_queue: asyncio.Queue[bytes] = asyncio.Queue()
     final_card = await _run_final_gate(step_results, query, final_queue)
 
@@ -462,15 +488,24 @@ async def stream_copilot_query(
     yield _sse({"type": "final.card", "card": final_card})
 
     # ── done 직전 SessionTurn 영속화 ────────────────────────────────────────
-    store = get_session_store()
-    store.save_turn(SessionTurn(
+    # summary 추출 (final_card 에서)
+    _summary = final_card.get("content") or final_card.get("body") or "분석 완료"
+    if len(_summary) > 400:
+        _summary = _summary[:400] + "…"
+
+    new_turn = SessionTurn(
         turn_id=turn_id,
-        session_id=resolved_session_id,
         query=query,
         plan_id=plan.plan_id,
         final_card=final_card,
         citations=[],
-    ))
+        active_context=active_context.model_dump(),
+    )
+
+    try:
+        await store.append_turn(resolved_session_id, new_turn)
+    except Exception:  # noqa: BLE001
+        pass  # 저장 실패는 스트림에 영향 없이 무시
 
     yield _sse({
         "type": "done",

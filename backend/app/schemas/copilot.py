@@ -213,3 +213,49 @@ class CopilotPlanRequest(BaseModel):
 
 # 하위 호환 alias — 내부 모듈이 CopilotPlanResponse 를 참조하는 경우를 위해 유지
 CopilotPlanResponse = CopilotPlan
+
+
+# ── sprint-05: 세션 메모리 스키마 ────────────────────────────────────────────
+
+
+class PriorTurn(BaseModel):
+    """이전 턴 요약 (follow-up 컨텍스트 주입용).
+
+    raw LLM 출력 / full plan / raw tool output 포함 금지.
+    query 는 sanitized 원문, summary 는 final.card 요약만 포함.
+    """
+
+    turn_id: str
+    query: str  # sanitized raw user query (length-capped)
+    summary: str  # final.card.summary 만 포함 (raw LLM 출력 금지)
+
+
+class ActiveContext(BaseModel):
+    """Planner 에게 전달할 follow-up 컨텍스트.
+
+    planner 오케스트레이터는 이 객체를 user role 메시지로 병합한다 (system 오염 금지).
+    """
+
+    prior_turns: list[PriorTurn]
+    user_query: str  # <user_query> 래핑된 현재 질의
+
+
+class SessionTurn(BaseModel):
+    """단일 세션 턴 — done 이벤트 직전에 저장된다."""
+
+    turn_id: str
+    query: str
+    plan_id: str | None = None
+    final_card: dict[str, Any] | None = None
+    citations: list[dict[str, Any]] = Field(default_factory=list)
+    created_at: str = Field(default="")
+    # active_context 는 저장용 (옵션)
+    active_context: dict[str, Any] | None = None
+
+
+class SessionResponse(BaseModel):
+    """GET /copilot/session/{session_id} 응답."""
+
+    session_id: str
+    turns: list[SessionTurn]
+    active_context: ActiveContext | None = None
