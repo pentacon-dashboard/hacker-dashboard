@@ -1,12 +1,13 @@
 """Copilot Planner 스키마.
 
 sprint-01: NL Query Planner — CopilotPlan, CopilotStep, GatePolicy 정의.
+sprint-03: CopilotCard discriminated union 확장 (6종 variant).
 """
 from __future__ import annotations
 
-from typing import Any, Literal
+from typing import Annotated, Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, RootModel
 
 # 9개 허용 에이전트 리터럴 (plan.md / contract.md 기준)
 CopilotStepAgent = Literal[
@@ -20,6 +21,135 @@ CopilotStepAgent = Literal[
     "simulator",
     "news-rag",
 ]
+
+
+# ─────────────────────── CopilotCard discriminated union ─────────────────────
+# plan.md 기준: text | chart | scorecard | citation | comparison_table | simulator_result
+
+
+class TextCard(BaseModel):
+    """일반 텍스트 분석 결과 카드."""
+
+    type: Literal["text"] = "text"
+    content: str
+    citations: list[dict[str, Any]] = Field(default_factory=list)
+    degraded: bool = False
+
+
+class ChartSeries(BaseModel):
+    label: str
+    data: list[float]
+    timestamps: list[str] = Field(default_factory=list)
+
+
+class ChartCard(BaseModel):
+    """시계열 차트 카드 (TradingView Lightweight Charts 호환)."""
+
+    type: Literal["chart"] = "chart"
+    title: str
+    series: list[ChartSeries]
+    annotations: list[dict[str, Any]] = Field(default_factory=list)
+    degraded: bool = False
+
+
+class ScorecardRow(BaseModel):
+    label: str
+    value: str | float
+    unit: str = ""
+    delta: float | None = None
+
+
+class ScorecardCard(BaseModel):
+    """주요 지표 스코어카드 카드."""
+
+    type: Literal["scorecard"] = "scorecard"
+    title: str
+    rows: list[ScorecardRow]
+    degraded: bool = False
+
+
+class CitationCard(BaseModel):
+    """뉴스/공시 단일 인용 카드."""
+
+    type: Literal["citation"] = "citation"
+    doc_id: int
+    chunk_id: int
+    source_url: str
+    title: str
+    published_at: str | None = None
+    excerpt: str
+    score: float
+    degraded: bool = False
+
+
+class ComparisonRow(BaseModel):
+    symbol: str
+    metrics: dict[str, Any]
+
+
+class ComparisonTableCard(BaseModel):
+    """N종목 비교 테이블 카드."""
+
+    type: Literal["comparison_table"] = "comparison_table"
+    symbols: list[str]
+    metrics: list[str]
+    rows: list[ComparisonRow]
+    summary: str = ""
+    degraded: bool = False
+
+
+class ScenarioRow(BaseModel):
+    symbol: str
+    shock: float  # multiplier (0.8 = -20%)
+    new_value: float
+    delta_pct: float
+
+
+class SimulatorResultCard(BaseModel):
+    """what-if 시나리오 시뮬레이터 카드."""
+
+    type: Literal["simulator_result"] = "simulator_result"
+    base_value: float
+    shocked_value: float
+    twr_change_pct: float
+    scenarios: list[ScenarioRow]
+    sensitivity: dict[str, float] = Field(default_factory=dict)
+    degraded: bool = False
+
+
+# Pydantic v2 discriminated union — type 필드로 구분.
+# RootModel + Annotated Union 으로 model_json_schema() 를 지원한다.
+_CopilotCardUnion = Annotated[
+    TextCard | ChartCard | ScorecardCard | CitationCard | ComparisonTableCard | SimulatorResultCard,
+    Field(discriminator="type"),
+]
+
+
+class CopilotCard(RootModel[_CopilotCardUnion]):
+    """Copilot 서브-에이전트 출력 카드 discriminated union.
+
+    6종 variant: text | chart | scorecard | citation | comparison_table | simulator_result.
+    Pydantic v2 RootModel 로 감싸 model_json_schema() / model_validate() 를 지원.
+    """
+
+    @classmethod
+    def model_json_schema(cls, **kwargs: Any) -> dict[str, Any]:  # type: ignore[override]
+        schema = super().model_json_schema(**kwargs)
+        # RootModel 은 'anyOf' 를 root 에 두지 않고 '$defs' + '$ref' 구조를 씀.
+        # contract test 가 anyOf/oneOf 를 기대하므로 flatten.
+        if "anyOf" not in schema and "$defs" not in schema:
+            return schema
+        if "anyOf" in schema:
+            return schema
+        # $ref → anyOf 로 펼치기
+        defs = schema.get("$defs", {})
+        root_ref = schema.get("$ref")
+        if root_ref and root_ref.startswith("#/$defs/"):
+            def_key = root_ref.removeprefix("#/$defs/")
+            inner = defs.get(def_key, schema)
+            if "anyOf" in inner:
+                schema = {**schema, "anyOf": inner["anyOf"]}
+        return schema
 
 
 class GatePolicy(BaseModel):

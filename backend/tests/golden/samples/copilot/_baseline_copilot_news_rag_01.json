@@ -1,0 +1,24 @@
+{
+  "id": "copilot_news_rag_01",
+  "agent": "news-rag",
+  "description": "AAPL 어닝 뉴스 검색 — stub 모드에서 citations 반환",
+  "step": {
+    "step_id": "rag-01",
+    "agent": "news-rag",
+    "inputs": {
+      "query": "apple earnings revenue Q1 2026",
+      "symbols": ["AAPL"],
+      "k": 3
+    },
+    "depends_on": [],
+    "gate_policy": {"schema": true, "domain": true, "critique": true}
+  },
+  "expected_gate_results": {
+    "schema": "pass",
+    "domain": "pass",
+    "critique": "pass"
+  },
+  "expected_card_type": "text",
+  "expected_min_citations": 1,
+  "expected_degraded": false
+}

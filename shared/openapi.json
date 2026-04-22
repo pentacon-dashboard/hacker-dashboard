@@ -1336,6 +1336,90 @@
         "type": "object",
         "title": "CacheMetrics"
       },
+      "CopilotCard": {
+        "title": "CopilotCard",
+        "description": "Copilot 서브-에이전트 출력 카드 discriminated union (6종 variant).",
+        "oneOf": [
+          {
+            "type": "object",
+            "title": "TextCard",
+            "properties": {
+              "type": {"const": "text", "type": "string"},
+              "content": {"type": "string", "title": "Content"},
+              "citations": {"type": "array", "items": {"type": "object"}, "title": "Citations"},
+              "degraded": {"type": "boolean", "default": false, "title": "Degraded"}
+            },
+            "required": ["type", "content"]
+          },
+          {
+            "type": "object",
+            "title": "ChartCard",
+            "properties": {
+              "type": {"const": "chart", "type": "string"},
+              "title": {"type": "string", "title": "Title"},
+              "series": {"type": "array", "items": {"type": "object"}, "title": "Series"},
+              "annotations": {"type": "array", "items": {"type": "object"}, "title": "Annotations"},
+              "degraded": {"type": "boolean", "default": false, "title": "Degraded"}
+            },
+            "required": ["type", "title", "series"]
+          },
+          {
+            "type": "object",
+            "title": "ScorecardCard",
+            "properties": {
+              "type": {"const": "scorecard", "type": "string"},
+              "title": {"type": "string", "title": "Title"},
+              "rows": {"type": "array", "items": {"type": "object"}, "title": "Rows"},
+              "degraded": {"type": "boolean", "default": false, "title": "Degraded"}
+            },
+            "required": ["type", "title", "rows"]
+          },
+          {
+            "type": "object",
+            "title": "CitationCard",
+            "properties": {
+              "type": {"const": "citation", "type": "string"},
+              "doc_id": {"type": "integer", "title": "Doc Id"},
+              "chunk_id": {"type": "integer", "title": "Chunk Id"},
+              "source_url": {"type": "string", "title": "Source Url"},
+              "title": {"type": "string", "title": "Title"},
+              "published_at": {"anyOf": [{"type": "string"}, {"type": "null"}], "title": "Published At"},
+              "excerpt": {"type": "string", "title": "Excerpt"},
+              "score": {"type": "number", "title": "Score"},
+              "degraded": {"type": "boolean", "default": false, "title": "Degraded"}
+            },
+            "required": ["type", "doc_id", "chunk_id", "source_url", "title", "excerpt", "score"]
+          },
+          {
+            "type": "object",
+            "title": "ComparisonTableCard",
+            "properties": {
+              "type": {"const": "comparison_table", "type": "string"},
+              "symbols": {"type": "array", "items": {"type": "string"}, "title": "Symbols"},
+              "metrics": {"type": "array", "items": {"type": "string"}, "title": "Metrics"},
+              "rows": {"type": "array", "items": {"type": "object"}, "title": "Rows"},
+              "summary": {"type": "string", "default": "", "title": "Summary"},
+              "degraded": {"type": "boolean", "default": false, "title": "Degraded"}
+            },
+            "required": ["type", "symbols", "metrics", "rows"]
+          },
+          {
+            "type": "object",
+            "title": "SimulatorResultCard",
+            "properties": {
+              "type": {"const": "simulator_result", "type": "string"},
+              "base_value": {"type": "number", "title": "Base Value"},
+              "shocked_value": {"type": "number", "title": "Shocked Value"},
+              "twr_change_pct": {"type": "number", "title": "Twr Change Pct"},
+              "scenarios": {"type": "array", "items": {"type": "object"}, "title": "Scenarios"},
+              "sensitivity": {"type": "object", "title": "Sensitivity"},
+              "degraded": {"type": "boolean", "default": false, "title": "Degraded"}
+            },
+            "required": ["type", "base_value", "shocked_value", "twr_change_pct", "scenarios"]
+          }
+        ],
+        "discriminator": {"propertyName": "type"}
+      },
       "CopilotPlan": {
         "properties": {
           "plan_id": {

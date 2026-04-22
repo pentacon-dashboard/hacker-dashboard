@@ -594,6 +594,17 @@ export interface components {
          *     POST /copilot/plan 응답 스키마로도 사용됨.
          *     gate_results 는 3단 게이트 통과 여부 (옵션 필드).
          */
+        /**
+         * CopilotCard
+         * @description Copilot 서브-에이전트 출력 카드 discriminated union (6종 variant).
+         */
+        CopilotCard:
+            | { type: "text"; content: string; citations?: Record<string, unknown>[]; degraded?: boolean }
+            | { type: "chart"; title: string; series: Record<string, unknown>[]; annotations?: Record<string, unknown>[]; degraded?: boolean }
+            | { type: "scorecard"; title: string; rows: Record<string, unknown>[]; degraded?: boolean }
+            | { type: "citation"; doc_id: number; chunk_id: number; source_url: string; title: string; published_at?: string | null; excerpt: string; score: number; degraded?: boolean }
+            | { type: "comparison_table"; symbols: string[]; metrics: string[]; rows: Record<string, unknown>[]; summary?: string; degraded?: boolean }
+            | { type: "simulator_result"; base_value: number; shocked_value: number; twr_change_pct: number; scenarios: Record<string, unknown>[]; sensitivity?: Record<string, number>; degraded?: boolean };
         CopilotPlan: {
             /** Plan Id */
             plan_id: string;
