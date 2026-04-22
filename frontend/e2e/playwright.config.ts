@@ -41,12 +41,16 @@ export default defineConfig({
 
   // 로컬 개발: Next.js dev 서버를 자동으로 기동
   // CI 는 Docker Compose 전제이므로 webServer 블록 자체를 생략
+  // NEXT_PUBLIC_COPILOT_MOCK=1 주입: MSW SSE mock 활성화 (실 FastAPI 기동 불필요)
   ...(!isCI && {
     webServer: {
-      command: "npm run dev",
+      command: "NEXT_PUBLIC_COPILOT_MOCK=1 npm run dev",
       url: baseURL,
       reuseExistingServer: true,
       timeout: 120_000,
+      env: {
+        NEXT_PUBLIC_COPILOT_MOCK: "1",
+      },
     },
   }),
 });

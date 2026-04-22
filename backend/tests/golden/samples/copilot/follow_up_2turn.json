@@ -1,0 +1,32 @@
+{
+  "id": "follow_up_2turn",
+  "description": "2턴 follow-up 세션 — TSLA 분석 후 NVDA 비교 follow-up",
+  "session_id": "golden-follow_up_2turn",
+  "turns": [
+    {
+      "turn_id": "t1",
+      "user": "TSLA 최근 1년 분석",
+      "expected_plan_agents": ["portfolio"],
+      "expected_gate_results": {
+        "schema": "pass",
+        "domain": "pass",
+        "critique": "pass"
+      },
+      "expected_card_type": "text",
+      "expected_degraded": false
+    },
+    {
+      "turn_id": "t2",
+      "user": "그럼 NVDA는?",
+      "expected_plan_agents": ["news-rag"],
+      "expected_gate_results": {
+        "schema": "pass",
+        "domain": "pass",
+        "critique": "pass"
+      },
+      "expected_card_type": "text",
+      "expected_degraded": false,
+      "expected_session_carry": true
+    }
+  ]
+}

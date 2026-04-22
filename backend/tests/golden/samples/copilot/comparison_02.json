@@ -1,0 +1,23 @@
+{
+  "id": "copilot_comparison_02",
+  "agent": "comparison",
+  "description": "NVDA vs TSLA vs GOOGL 3종목 비교",
+  "step": {
+    "step_id": "cmp-02",
+    "agent": "comparison",
+    "inputs": {
+      "symbols": ["NVDA", "TSLA", "GOOGL"],
+      "metrics": ["return_3m_pct", "volatility_pct", "market_cap_usd"]
+    },
+    "depends_on": [],
+    "gate_policy": {"schema": true, "domain": true, "critique": true}
+  },
+  "expected_gate_results": {
+    "schema": "pass",
+    "domain": "pass",
+    "critique": "pass"
+  },
+  "expected_card_type": "comparison_table",
+  "expected_symbols": ["NVDA", "TSLA", "GOOGL"],
+  "expected_degraded": false
+}

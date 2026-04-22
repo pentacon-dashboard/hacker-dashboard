@@ -10,7 +10,8 @@
     "lint": "eslint .",
     "test": "vitest run",
     "test:watch": "vitest",
-    "gen:api": "openapi-typescript ../shared/openapi.json -o ../shared/types/api.ts"
+    "gen:api": "openapi-typescript ../shared/openapi.json -o ../shared/types/api.ts",
+    "test:e2e": "playwright test --config=e2e/playwright.config.ts"
   },
   "dependencies": {
     "@tanstack/react-query": "^5.62.7",
