@@ -2,7 +2,7 @@
 // 본 파일은 이전 하네스 런이 남긴 베이스라인 그린 stub 을 덮어쓴다.
 // 베이스라인(lint/typecheck/build) 은 contract.md 의 AC-01-0 게이트로 대체된다.
 import { describe, it, expectTypeOf } from "vitest";
-import type { components } from "@/shared/types/api"; // 프로젝트 alias 따름
+import type { components } from "@shared/types/api"; // tsconfig paths: @shared/* -> ../shared/*
 
 type CopilotPlan = components["schemas"]["CopilotPlan"];
 type CopilotStep = components["schemas"]["CopilotStep"];

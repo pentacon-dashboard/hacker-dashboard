@@ -12,9 +12,9 @@
 """
 from __future__ import annotations
 
+import datetime
 import json
 import uuid
-from datetime import datetime, timezone
 from typing import Any
 
 from pydantic import ValidationError
@@ -32,7 +32,7 @@ _ALLOWED_AGENTS = {
 # ── 내부 유틸 ──────────────────────────────────────────────────────────────
 
 def _now_iso() -> str:
-    return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    return datetime.datetime.now(datetime.UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
 def _make_plan_id() -> str:
@@ -186,7 +186,7 @@ async def build_copilot_plan(
                 gate_results["schema"] = f"fail: schema invalid after retry — {err2[:160]}"
                 return _fallback_response(resolved_session_id, gate_results)
         except (LLMUnavailableError, Exception):  # noqa: BLE001
-            gate_results["schema"] = f"fail: retry LLM error"
+            gate_results["schema"] = "fail: retry LLM error"
             return _fallback_response(resolved_session_id, gate_results)
 
     gate_results["schema"] = "pass"

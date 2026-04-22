@@ -567,6 +567,9 @@ export interface components {
         /**
          * GatePolicy
          * @description 각 step 에 적용할 3단 게이트 정책.
+         *
+         *     `schema` 는 Pydantic BaseModel 의 클래스메서드명과 충돌하므로
+         *     내부 필드명은 `schema_check` 를 사용하고 JSON alias 를 "schema" 로 유지한다.
          */
         GatePolicy: {
             /**

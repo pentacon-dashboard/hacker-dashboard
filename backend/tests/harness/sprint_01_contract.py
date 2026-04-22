@@ -83,6 +83,29 @@ async def _fake_call_llm(
     return json.dumps({"ok": True, "reason": "fake"})
 
 
+async def _fake_call_llm_unused_steps(
+    *,
+    system_prompt_name: str,
+    user_content: str,
+    model: str = "claude-sonnet-4-6",
+    max_tokens: int = 8192,
+    temperature: float = 0.2,
+) -> str:
+    """critique gate 가 verdict=fail(unused steps) 을 돌려주는 FakeClient.
+
+    플랜 생성은 정상, critique gate 호출 시에는 verdict=fail 을 반환해
+    unused steps 감지 경로를 테스트한다.
+    """
+    if system_prompt_name == "copilot_planner_system":
+        # 첫 호출(plan 생성) — 질의와 무관하게 비교 플랜 반환
+        parsed = json.loads(user_content) if user_content.startswith("{") else {}
+        if "instruction" not in parsed:
+            # 최초 plan 요청 (instruction 키 없음)
+            return json.dumps(_FAKE_PLAN_COMPARISON)
+    # critique gate 호출 — verdict=fail 로 "s2는 불필요" 시나리오 시뮬레이션
+    return json.dumps({"verdict": "fail", "reason": "step s2 is unused for this query"})
+
+
 @pytest.fixture
 def fake_planner_llm(monkeypatch: pytest.MonkeyPatch) -> None:
     """`backend.app.agents.llm.call_llm` 을 결정론적 FakeClient 로 교체.
@@ -211,6 +234,37 @@ def test_copilot_plan_passes_three_gates(fake_planner_llm: None) -> None:
         json={"query": "비트코인 1년 시뮬레이션"},
     )
     assert resp.status_code == 200, resp.text
+
+
+def test_critique_gate_detects_unused_steps(monkeypatch: pytest.MonkeyPatch) -> None:
+    """AC-01-6 회귀: critique gate 가 verdict=fail(unused steps) 을 반환하면
+    gate_results["critique"] 에 "fail" 이 기록되어야 한다 (plan 자체는 반환).
+
+    stub LLM 이 critique 호출에 {"verdict": "fail", "reason": "step s2 is unused..."} 를
+    반환하도록 monkeypatch 해 결정론적으로 fail 경로를 검증한다.
+    """
+    monkeypatch.setattr(
+        "app.agents.llm.call_llm",
+        _fake_call_llm_unused_steps,
+        raising=True,
+    )
+    from app.main import app  # type: ignore
+
+    client = TestClient(app)
+    resp = client.post(
+        "/copilot/plan",
+        json={"query": "간단한 주식 질의"},
+    )
+    assert resp.status_code == 200, resp.text
+    plan = resp.json()
+    # plan 은 반환되어야 하고 (critique fail = degraded, not 4xx)
+    assert "plan_id" in plan and "steps" in plan
+    # gate_results 에 critique fail 이 기록되어야 한다
+    gate_results = plan.get("gate_results", {})
+    assert "critique" in gate_results, "gate_results must contain 'critique' key"
+    assert "fail" in gate_results["critique"], (
+        f"expected 'fail' in critique gate result, got: {gate_results['critique']!r}"
+    )
 
 
 def test_openapi_in_sync() -> None:

@@ -6,7 +6,7 @@ from __future__ import annotations
 
 from typing import Any, Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 # 9개 허용 에이전트 리터럴 (plan.md / contract.md 기준)
 CopilotStepAgent = Literal[
@@ -23,9 +23,15 @@ CopilotStepAgent = Literal[
 
 
 class GatePolicy(BaseModel):
-    """각 step 에 적용할 3단 게이트 정책."""
+    """각 step 에 적용할 3단 게이트 정책.
 
-    schema: bool = True
+    `schema` 는 Pydantic BaseModel 의 클래스메서드명과 충돌하므로
+    내부 필드명은 `schema_check` 를 사용하고 JSON alias 를 "schema" 로 유지한다.
+    """
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    schema_check: bool = Field(True, alias="schema")
     domain: bool = True
     critique: bool = True
 
@@ -37,7 +43,7 @@ class CopilotStep(BaseModel):
     agent: CopilotStepAgent
     inputs: dict[str, Any] = Field(default_factory=dict)
     depends_on: list[str] = Field(default_factory=list)
-    gate_policy: GatePolicy = Field(default_factory=GatePolicy)
+    gate_policy: GatePolicy = Field(default_factory=lambda: GatePolicy.model_validate({"schema": True}))
 
 
 class CopilotPlan(BaseModel):
