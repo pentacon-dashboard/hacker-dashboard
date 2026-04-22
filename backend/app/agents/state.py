@@ -34,3 +34,13 @@ class AgentState(TypedDict, total=False):
     # 개인화 포트폴리오 컨텍스트 — include_portfolio_context=True 시 주입.
     # PortfolioContext.model_dump() 결과 또는 None.
     portfolio_context: dict[str, Any] | None
+
+    # ── sprint-01: Copilot Planner 확장 키 (기존 키 변경 금지) ─────────────
+    # plan.md AgentState 확장 명세 준수.
+    # copilot_plan 은 CopilotPlan.model_dump() dict 로 직렬화해서 저장한다
+    # (LangGraph StateGraph 가 런타임에 type_hints 를 resolve 하므로 순환 import 방지).
+    copilot_plan: dict[str, Any] | None        # CopilotPlan.model_dump()
+    copilot_step_results: dict[str, Any]       # step_id → CopilotCard.model_dump()
+    copilot_session_id: str | None
+    copilot_citations: list[dict[str, Any]]    # Citation list
+    copilot_turn_id: str | None

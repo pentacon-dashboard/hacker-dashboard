@@ -333,6 +333,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/copilot/plan": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * NL Query → CopilotPlan
+         * @description 자연어 질의를 받아 멀티-스텝 에이전트 실행 계획(CopilotPlan)을 반환한다. LLM(copilot_planner_system)이 plan을 생성하고 3단 게이트(schema/domain/critique)를 통과한 결과만 반환. SSE 스트리밍 없이 단일 JSON 응답 (디버그/테스트용).
+         */
+        post: operations["create_copilot_plan_copilot_plan_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -483,6 +503,90 @@ export interface components {
              * @default 0
              */
             output_tokens: number;
+        };
+        /**
+         * CopilotPlan
+         * @description 자연어 질의로부터 생성된 멀티-스텝 에이전트 실행 계획.
+         *
+         *     POST /copilot/plan 응답 스키마로도 사용됨.
+         *     gate_results 는 3단 게이트 통과 여부 (옵션 필드).
+         */
+        CopilotPlan: {
+            /** Plan Id */
+            plan_id: string;
+            /** Session Id */
+            session_id: string;
+            /** Steps */
+            steps: components["schemas"]["CopilotStep"][];
+            /** Created At */
+            created_at: string;
+            /**
+             * Gate Results
+             * @description schema/domain/critique gate 통과 여부
+             */
+            gate_results?: {
+                [key: string]: string;
+            };
+        };
+        /**
+         * CopilotPlanRequest
+         * @description POST /copilot/plan 요청 본문.
+         */
+        CopilotPlanRequest: {
+            /**
+             * Query
+             * @description 자연어 질의
+             */
+            query: string;
+            /**
+             * Session Id
+             * @description 기존 세션 ID (옵션)
+             */
+            session_id?: string | null;
+        };
+        /**
+         * CopilotStep
+         * @description 플랜의 단일 실행 단계.
+         */
+        CopilotStep: {
+            /** Step Id */
+            step_id: string;
+            /**
+             * Agent
+             * @enum {string}
+             */
+            agent: "stock" | "crypto" | "fx" | "macro" | "portfolio" | "rebalance" | "comparison" | "simulator" | "news-rag";
+            /** Inputs */
+            inputs?: {
+                [key: string]: unknown;
+            };
+            /** Depends On */
+            depends_on?: string[];
+            gate_policy?: components["schemas"]["GatePolicy"];
+        };
+        /**
+         * GatePolicy
+         * @description 각 step 에 적용할 3단 게이트 정책.
+         *
+         *     `schema` 는 Pydantic BaseModel 의 클래스메서드명과 충돌하므로
+         *     내부 필드명은 `schema_check` 를 사용하고 JSON alias 를 "schema" 로 유지한다.
+         */
+        GatePolicy: {
+            /**
+             * Schema
+             * @default true
+             */
+            schema: boolean;
+            /**
+             * Domain
+             * @default true
+             */
+            domain: boolean;
+            /**
+             * Critique
+             * @default true
+             */
+            critique: boolean;
         };
         /** HTTPValidationError */
         HTTPValidationError: {
@@ -1472,6 +1576,39 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["RebalanceResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_copilot_plan_copilot_plan_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CopilotPlanRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CopilotPlan"];
                 };
             };
             /** @description Validation Error */
