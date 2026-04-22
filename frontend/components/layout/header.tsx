@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useTheme } from "@/hooks/use-theme";
 import { Button } from "@/components/ui/button";
 import { getHealth } from "@/lib/api/health";
+import { CommandBar } from "@/components/layout/command-bar";
 
 type HealthStatus = "ok" | "error" | "pending";
 
@@ -49,6 +50,11 @@ export function Header() {
         <span className="text-sm font-semibold text-muted-foreground">
           금융 대시보드
         </span>
+      </div>
+
+      {/* Copilot 커맨드 바 */}
+      <div className="flex-1 flex justify-center px-4 max-w-lg">
+        <CommandBar />
       </div>
 
       <div className="flex items-center gap-3">
