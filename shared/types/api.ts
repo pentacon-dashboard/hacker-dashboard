@@ -333,7 +333,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/copilot/plan": {
+    "/search/news": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * 뉴스/공시 RAG 검색
+         * @description 자연어 질의 + 심볼 + 기간으로 pgvector 인덱스에서 top-k 청크를 검색해 Citation 배열로 반환한다. stub 모드에서는 결정론적으로 동작한다.
+         */
+        get: operations["get_search_news_search_news_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/search/news/ingest": {
         parameters: {
             query?: never;
             header?: never;
@@ -343,10 +363,10 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * NL Query → CopilotPlan
-         * @description 자연어 질의를 받아 멀티-스텝 에이전트 실행 계획(CopilotPlan)을 반환한다. LLM(copilot_planner_system)이 plan을 생성하고 3단 게이트(schema/domain/critique)를 통과한 결과만 반환. SSE 스트리밍 없이 단일 JSON 응답 (디버그/테스트용).
+         * 뉴스/공시 문서 적재 (internal/admin)
+         * @description URL 또는 텍스트를 pgvector에 적재한다. stub 모드에서는 in-memory 저장소에 적재한다. 동일 source_url 은 멱등 처리 (중복 청크 미생성).
          */
-        post: operations["create_copilot_plan_copilot_plan_post"];
+        post: operations["post_news_ingest_search_news_ingest_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -505,88 +525,48 @@ export interface components {
             output_tokens: number;
         };
         /**
-         * CopilotPlan
-         * @description 자연어 질의로부터 생성된 멀티-스텝 에이전트 실행 계획.
+         * Citation
+         * @description RAG 검색 결과의 단일 인용 항목.
          *
-         *     POST /copilot/plan 응답 스키마로도 사용됨.
-         *     gate_results 는 3단 게이트 통과 여부 (옵션 필드).
+         *     plan.md 기준:
+         *       doc_id, chunk_id, source_url, title, published_at, excerpt, score
          */
-        CopilotPlan: {
-            /** Plan Id */
-            plan_id: string;
-            /** Session Id */
-            session_id: string;
-            /** Steps */
-            steps: components["schemas"]["CopilotStep"][];
-            /** Created At */
-            created_at: string;
+        Citation: {
             /**
-             * Gate Results
-             * @description schema/domain/critique gate 통과 여부
+             * Doc Id
+             * @description Document 테이블 PK
              */
-            gate_results?: {
-                [key: string]: string;
-            };
-        };
-        /**
-         * CopilotPlanRequest
-         * @description POST /copilot/plan 요청 본문.
-         */
-        CopilotPlanRequest: {
+            doc_id: number;
             /**
-             * Query
-             * @description 자연어 질의
+             * Chunk Id
+             * @description DocumentChunk 테이블 PK
              */
-            query: string;
+            chunk_id: number;
             /**
-             * Session Id
-             * @description 기존 세션 ID (옵션)
+             * Source Url
+             * @description 원문 URL
              */
-            session_id?: string | null;
-        };
-        /**
-         * CopilotStep
-         * @description 플랜의 단일 실행 단계.
-         */
-        CopilotStep: {
-            /** Step Id */
-            step_id: string;
+            source_url: string;
             /**
-             * Agent
-             * @enum {string}
+             * Title
+             * @description 문서 제목
              */
-            agent: "stock" | "crypto" | "fx" | "macro" | "portfolio" | "rebalance" | "comparison" | "simulator" | "news-rag";
-            /** Inputs */
-            inputs?: {
-                [key: string]: unknown;
-            };
-            /** Depends On */
-            depends_on?: string[];
-            gate_policy?: components["schemas"]["GatePolicy"];
-        };
-        /**
-         * GatePolicy
-         * @description 각 step 에 적용할 3단 게이트 정책.
-         *
-         *     `schema` 는 Pydantic BaseModel 의 클래스메서드명과 충돌하므로
-         *     내부 필드명은 `schema_check` 를 사용하고 JSON alias 를 "schema" 로 유지한다.
-         */
-        GatePolicy: {
+            title: string;
             /**
-             * Schema
-             * @default true
+             * Published At
+             * @description 발행일 ISO-8601
              */
-            schema: boolean;
+            published_at?: string | null;
             /**
-             * Domain
-             * @default true
+             * Excerpt
+             * @description 관련 청크 텍스트 발췌
              */
-            domain: boolean;
+            excerpt: string;
             /**
-             * Critique
-             * @default true
+             * Score
+             * @description L2 거리 기반 유사도 점수 (낮을수록 가까움)
              */
-            critique: boolean;
+            score: number;
         };
         /** HTTPValidationError */
         HTTPValidationError: {
@@ -688,6 +668,45 @@ export interface components {
             quantity?: number | string | null;
             /** Avg Cost */
             avg_cost?: number | string | null;
+        };
+        /**
+         * IngestRequest
+         * @description POST /search/news/ingest 요청 본문.
+         */
+        IngestRequest: {
+            /**
+             * Source Url
+             * @description 원문 URL
+             */
+            source_url: string;
+            /**
+             * Title
+             * @description 문서 제목
+             * @default
+             */
+            title: string;
+            /**
+             * Published At
+             * @description 발행일 ISO-8601
+             */
+            published_at?: string | null;
+            /**
+             * Text
+             * @description 전문 텍스트 (512자 이상 권장)
+             */
+            text: string;
+        };
+        /**
+         * IngestResponse
+         * @description POST /search/news/ingest 응답.
+         */
+        IngestResponse: {
+            /** Document Id */
+            document_id: number;
+            /** Chunk Count */
+            chunk_count: number;
+            /** Is New */
+            is_new: boolean;
         };
         /** LLMAnalysis */
         LLMAnalysis: {
@@ -1589,7 +1608,47 @@ export interface operations {
             };
         };
     };
-    create_copilot_plan_copilot_plan_post: {
+    get_search_news_search_news_get: {
+        parameters: {
+            query: {
+                /** @description 자연어 검색 질의 */
+                query: string;
+                /** @description 쉼표 구분 티커 (AAPL,TSLA 등) */
+                symbols?: string | null;
+                /** @description 시작일 YYYY-MM-DD */
+                start_date?: string | null;
+                /** @description 종료일 YYYY-MM-DD */
+                end_date?: string | null;
+                /** @description 반환 최대 청크 수 */
+                k?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Citation"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    post_news_ingest_search_news_ingest_post: {
         parameters: {
             query?: never;
             header?: never;
@@ -1598,17 +1657,17 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["CopilotPlanRequest"];
+                "application/json": components["schemas"]["IngestRequest"];
             };
         };
         responses: {
             /** @description Successful Response */
-            200: {
+            201: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["CopilotPlan"];
+                    "application/json": components["schemas"]["IngestResponse"];
                 };
             };
             /** @description Validation Error */

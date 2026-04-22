@@ -4,7 +4,18 @@ from __future__ import annotations
 from datetime import date, datetime
 from decimal import Decimal
 
-from sqlalchemy import Date, DateTime, ForeignKey, Numeric, String, Text, UniqueConstraint, func
+from pgvector.sqlalchemy import Vector
+from sqlalchemy import (
+    Date,
+    DateTime,
+    ForeignKey,
+    Integer,
+    Numeric,
+    String,
+    Text,
+    UniqueConstraint,
+    func,
+)
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
@@ -22,7 +33,7 @@ class User(Base):
         DateTime(timezone=True), server_default=func.now()
     )
 
-    watchlist: Mapped[list["WatchlistItem"]] = relationship(back_populates="user")
+    watchlist: Mapped[list[WatchlistItem]] = relationship(back_populates="user")
 
 
 class WatchlistItem(Base):
@@ -85,3 +96,48 @@ class PortfolioSnapshot(Base):
     __table_args__ = (
         UniqueConstraint("user_id", "snapshot_date", name="uq_snapshot_user_date"),
     )
+
+
+# ---------------------------------------------------------------------------
+# sprint-02: News/Filing RAG 인프라
+# ---------------------------------------------------------------------------
+
+class Document(Base):
+    """뉴스·공시 원문 문서. source_url 을 유니크 키로 사용해 중복 적재를 방지한다."""
+
+    __tablename__ = "documents"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    source_url: Mapped[str] = mapped_column(String(2048), unique=True, nullable=False)
+    title: Mapped[str] = mapped_column(String(512), nullable=False, default="")
+    published_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+
+    chunks: Mapped[list[DocumentChunk]] = relationship(
+        "DocumentChunk", back_populates="document", cascade="all, delete-orphan"
+    )
+
+
+class DocumentChunk(Base):
+    """문서를 청킹한 단위. embedding VECTOR(1024) 컬럼에 벡터 저장."""
+
+    __tablename__ = "document_chunks"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    document_id: Mapped[int] = mapped_column(
+        ForeignKey("documents.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    chunk_index: Mapped[int] = mapped_column(Integer, nullable=False)
+    text: Mapped[str] = mapped_column(Text, nullable=False)
+    # pgvector VECTOR(1024)
+    embedding: Mapped[str | None] = mapped_column(
+        Vector(1024),
+        nullable=True,
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+
+    document: Mapped[Document] = relationship("Document", back_populates="chunks")
