@@ -2,12 +2,10 @@
 Golden 테스트 공용 fixture.
 
 전략:
-- 실제 anthropic SDK 는 내부적으로 httpx 를 쓴다.
-- `respx` 로 httpx 레벨 mocking 이 가능하지만, SDK 가 버전별로 transport 를
-  내부에서 래핑하는 방식이 달라 불안정할 수 있다.
-- 대신 **모듈 수준 DI** 를 쓴다: `app.agents.llm.set_client(FakeClient())` 로
-  가짜 클라이언트를 주입해 `messages.create` 를 원하는 응답으로 고정한다.
-- 이렇게 하면 respx 보다 결정적이고 빠르며, API 키 없이 100% 동작한다.
+- **모듈 수준 DI** 를 쓴다: `app.agents.llm.set_client(FakeClient())` 로
+  가짜 클라이언트를 주입해 `chat.completions.create` 를 원하는 응답으로 고정한다.
+- OpenAI SDK 인터페이스(`chat.completions.create`) 를 흉내낸다.
+- API 키 없이 100% 동작한다.
 """
 from __future__ import annotations
 
@@ -23,16 +21,17 @@ from app.agents import llm as llm_module
 _SAMPLES_DIR = Path(__file__).parent / "samples"
 
 
-# ─────────────────────────── 가짜 anthropic 클라이언트 ───────────────────────
-
-
-@dataclass
-class _TextBlock:
-    text: str
+# ─────────────────────────── 가짜 OpenAI 클라이언트 ───────────────────────
 
 
 @dataclass
 class _Usage:
+    """Fake usage 객체.
+
+    Anthropic 스타일 필드명을 사용한다 (테스트 고정값과의 호환).
+    llm._record_usage 가 Anthropic/OpenAI 양쪽 모두를 처리하므로 동작한다.
+    """
+
     cache_read_input_tokens: int = 0
     cache_creation_input_tokens: int = 0
     input_tokens: int = 0
@@ -40,23 +39,36 @@ class _Usage:
 
 
 @dataclass
+class _Message:
+    content: str
+    role: str = "assistant"
+
+
+@dataclass
+class _Choice:
+    message: _Message
+    index: int = 0
+    finish_reason: str = "stop"
+
+
+@dataclass
 class _Response:
-    content: list[_TextBlock]
+    choices: list[_Choice]
     usage: _Usage | None = None
 
 
 @dataclass
-class _Messages:
+class _Completions:
     parent: "FakeAnthropicClient"
 
     async def create(self, **kwargs: Any) -> _Response:
-        # system prompt 를 검사해 어느 Analyzer/게이트 호출인지 식별
-        system = kwargs.get("system") or []
+        # OpenAI 스타일: messages 리스트에서 system 메시지 추출
+        messages = kwargs.get("messages") or []
         system_text = ""
-        if isinstance(system, list) and system:
-            system_text = system[0].get("text", "") if isinstance(system[0], dict) else str(system[0])
-        elif isinstance(system, str):
-            system_text = system
+        for msg in messages:
+            if isinstance(msg, dict) and msg.get("role") == "system":
+                system_text = msg.get("content", "")
+                break
 
         route = _detect_route(system_text)
         self.parent.calls.append({"route": route, "kwargs": kwargs})
@@ -68,18 +80,25 @@ class _Messages:
             if callable(payload):
                 payload = payload(kwargs)
             text = payload if isinstance(payload, str) else json.dumps(payload, ensure_ascii=False)
-            return _Response(content=[_TextBlock(text=text)], usage=usage)
+            return _Response(choices=[_Choice(message=_Message(content=text))], usage=usage)
 
         # fallback: 빈 JSON
-        return _Response(content=[_TextBlock(text="{}")], usage=usage)
+        return _Response(choices=[_Choice(message=_Message(content="{}"))], usage=usage)
+
+
+@dataclass
+class _ChatNamespace:
+    completions: _Completions
 
 
 @dataclass
 class FakeAnthropicClient:
     """
-    anthropic.AsyncAnthropic 의 최소 surface 만 흉내낸다.
+    openai.AsyncOpenAI 의 최소 surface 만 흉내낸다.
     `responses` 에 {'router': dict_or_str, 'analyzer': ..., 'critique': ...} 형태로 응답을 등록한다.
     `usage_per_route` 또는 `default_usage` 로 응답에 토큰/캐시 메트릭을 심을 수 있다.
+
+    클래스 이름은 하위 호환을 위해 FakeAnthropicClient 를 유지한다.
     """
 
     responses: dict[str, Any] = field(default_factory=dict)
@@ -88,7 +107,7 @@ class FakeAnthropicClient:
     default_usage: _Usage | None = None
 
     def __post_init__(self) -> None:
-        self.messages = _Messages(parent=self)
+        self.chat = _ChatNamespace(completions=_Completions(parent=self))
 
 
 def _detect_route(system_text: str) -> str:

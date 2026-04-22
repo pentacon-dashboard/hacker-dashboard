@@ -2,7 +2,7 @@
 
 sprint-02: COPILOT_EMBED_PROVIDER 환경변수로 provider 선택.
   - fake  (기본값): sha256 기반 결정론적 1024차원 L2-정규화 벡터
-  - openai: 미구현 (NotImplementedError)
+  - openai: text-embedding-3-small, dimensions=1024 (native truncation)
   - voyage: 미구현 (NotImplementedError)
 
 fake_embed 계약 (contract.md 고정):
@@ -45,10 +45,22 @@ def fake_embed(text: str) -> list[float]:
 
 
 def _embed_openai(text: str) -> list[float]:
-    raise NotImplementedError(
-        "openai embedding provider는 sprint-03 이후 구현 예정. "
-        "COPILOT_EMBED_PROVIDER=fake 사용."
+    """OpenAI text-embedding-3-small, dimensions=1024 (native truncation).
+
+    sync OpenAI 클라이언트를 사용한다 (임베딩은 단순 단건 호출이므로 충분).
+    OPENAI_API_KEY 환경변수 또는 settings.openai_api_key 로 인증.
+    """
+    from openai import OpenAI
+
+    from app.core.config import settings
+
+    client = OpenAI(api_key=settings.openai_api_key)
+    resp = client.embeddings.create(
+        model="text-embedding-3-small",
+        input=text,
+        dimensions=1024,
     )
+    return resp.data[0].embedding  # list[float], len==1024
 
 
 def _embed_voyage(text: str) -> list[float]:

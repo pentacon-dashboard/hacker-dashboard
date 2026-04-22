@@ -280,31 +280,39 @@ def _create_tables_sqlite(conn: Any) -> None:
     metadata.create_all(conn)
 
 
-# ──────────────── 공통 가짜 Anthropic 클라이언트 (LLM 없는 환경용) ─────────────────
+# ──────────────── 공통 가짜 OpenAI 클라이언트 (LLM 없는 환경용) ─────────────────
 
 
 @dataclass
-class _TextBlock:
-    text: str
+class _FakeMessage:
+    content: str
+    role: str = "assistant"
+
+
+@dataclass
+class _FakeChoice:
+    message: _FakeMessage
+    index: int = 0
+    finish_reason: str = "stop"
 
 
 @dataclass
 class _FakeResponse:
-    content: list[_TextBlock]
+    choices: list[_FakeChoice]
 
 
 @dataclass
-class _FakeMessages:
-    parent: "FakeAnthropicClient"
+class _FakeCompletions:
+    parent: "FakeOpenAIClient"
 
     async def create(self, **kwargs: Any) -> _FakeResponse:
-        system = kwargs.get("system") or []
+        # OpenAI 스타일: messages 리스트에서 system 메시지 추출
+        messages = kwargs.get("messages") or []
         system_text = ""
-        if isinstance(system, list) and system:
-            block = system[0]
-            system_text = block.get("text", "") if isinstance(block, dict) else str(block)
-        elif isinstance(system, str):
-            system_text = system
+        for msg in messages:
+            if isinstance(msg, dict) and msg.get("role") == "system":
+                system_text = msg.get("content", "")
+                break
 
         route = _detect_route(system_text)
         self.parent.calls.append({"route": route, "kwargs": kwargs})
@@ -314,20 +322,29 @@ class _FakeMessages:
             payload = payload(kwargs)
         if payload is not None:
             text = payload if isinstance(payload, str) else json.dumps(payload, ensure_ascii=False)
-            return _FakeResponse(content=[_TextBlock(text=text)])
+            return _FakeResponse(choices=[_FakeChoice(message=_FakeMessage(content=text))])
         # 기본 fallback: 빈 JSON 객체
-        return _FakeResponse(content=[_TextBlock(text="{}")])
+        return _FakeResponse(choices=[_FakeChoice(message=_FakeMessage(content="{}"))])
 
 
 @dataclass
-class FakeAnthropicClient:
-    """anthropic.AsyncAnthropic 의 최소 surface 를 흉내낸다."""
+class _FakeChatNamespace:
+    completions: _FakeCompletions
+
+
+@dataclass
+class FakeOpenAIClient:
+    """openai.AsyncOpenAI 의 최소 surface 를 흉내낸다."""
 
     responses: dict[str, Any] = field(default_factory=dict)
     calls: list[dict[str, Any]] = field(default_factory=list)
 
     def __post_init__(self) -> None:
-        self.messages = _FakeMessages(parent=self)
+        self.chat = _FakeChatNamespace(completions=_FakeCompletions(parent=self))
+
+
+# 하위 호환 alias (기존 코드에서 FakeAnthropicClient 를 import 하는 경우)
+FakeAnthropicClient = FakeOpenAIClient
 
 
 def _detect_route(system_text: str) -> str:

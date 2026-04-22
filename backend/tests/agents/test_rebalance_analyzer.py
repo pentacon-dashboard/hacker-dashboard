@@ -29,22 +29,30 @@ from app.schemas.rebalance import (
 )
 
 
-# ───────────────────────────── Fake anthropic client ─────────────────────────────
+# ───────────────────────────── Fake OpenAI client ─────────────────────────────
 
 
 @dataclass
-class _TextBlock:
-    text: str
+class _FakeMessage:
+    content: str
+    role: str = "assistant"
+
+
+@dataclass
+class _FakeChoice:
+    message: _FakeMessage
+    index: int = 0
+    finish_reason: str = "stop"
 
 
 @dataclass
 class _Response:
-    content: list[_TextBlock]
+    choices: list[_FakeChoice]
     usage: Any = None
 
 
 @dataclass
-class _Messages:
+class _Completions:
     parent: "FakeClient"
 
     async def create(self, **kwargs: Any) -> _Response:
@@ -56,7 +64,12 @@ class _Messages:
             text = payload
         else:
             text = json.dumps(payload, ensure_ascii=False)
-        return _Response(content=[_TextBlock(text=text)])
+        return _Response(choices=[_FakeChoice(message=_FakeMessage(content=text))])
+
+
+@dataclass
+class _ChatNamespace:
+    completions: _Completions
 
 
 @dataclass
@@ -65,7 +78,7 @@ class FakeClient:
     calls: list[dict[str, Any]] = field(default_factory=list)
 
     def __post_init__(self) -> None:
-        self.messages = _Messages(parent=self)
+        self.chat = _ChatNamespace(completions=_Completions(parent=self))
 
 
 @pytest.fixture
@@ -320,9 +333,9 @@ async def test_llm_unavailable() -> None:
     # 안전하게 settings 를 패치.
     from app.core import config as config_module
 
-    original_key = config_module.settings.anthropic_api_key
+    original_key = config_module.settings.openai_api_key
     try:
-        config_module.settings.anthropic_api_key = "test-key"
+        config_module.settings.openai_api_key = ""
         analyzer = RebalanceAnalyzer()
         actions = [_make_action()]
         analysis, gates = await analyzer.analyze(
@@ -336,7 +349,7 @@ async def test_llm_unavailable() -> None:
         assert gates["schema_gate"].startswith("fail")
         assert "llm_unavailable" in gates["schema_gate"]
     finally:
-        config_module.settings.anthropic_api_key = original_key
+        config_module.settings.openai_api_key = original_key
 
 
 # ───────────────────────────── 9. Payload construction ─────────────────────────
@@ -361,8 +374,11 @@ async def test_payload_includes_all_required_fields(fake_llm: FakeClient) -> Non
         constraints=_constraints(),
     )
     assert len(fake_llm.calls) == 1
-    user_content = fake_llm.calls[0]["messages"][0]["content"]
-    payload = json.loads(user_content)
+    # OpenAI 스타일: messages[0]=system, messages[1]=user
+    user_msg = next(
+        m for m in fake_llm.calls[0]["messages"] if m.get("role") == "user"
+    )
+    payload = json.loads(user_msg["content"])
     assert "actions" in payload and len(payload["actions"]) == 1
     assert "drift" in payload
     assert "current_allocation" in payload

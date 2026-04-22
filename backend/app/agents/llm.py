@@ -1,37 +1,39 @@
 """
-Anthropic client 래퍼.
+OpenAI client 래퍼.
 
-- system prompt 를 cache_control ephemeral 블록으로 감싸 프롬프트 캐시 활용
-- 모델 선택(기본 sonnet, 고난도 opus)을 한 곳에 집중
+- 모델 선택(기본 gpt-4o-mini, 고난도 gpt-4o)을 한 곳에 집중
 - 테스트에서 `set_client` 로 주입 가능 (DI 패턴)
 - 직전 호출의 usage/cache 메트릭을 `_last_cache_metrics` 에 보관 → API meta 로 전파
+- OpenAI 는 자동 프롬프트 캐싱(cached_tokens)을 지원하므로 별도 cache_control 불필요
 
-실제 anthropic 호출은 `anthropic.AsyncAnthropic` 를 쓴다. respx 가 httpx 레벨에서
-mock 하므로, 테스트에서 별도 stub 주입 없이도 응답 고정이 가능하다. 다만 API 키가
-없을 때를 대비해 `get_client` 는 lazy 초기화 + 실패 시 명시적 에러를 낸다.
+실제 OpenAI 호출은 `openai.AsyncOpenAI` 를 쓴다. 테스트에서는 `set_client` 로
+FakeClient 를 주입해 LLM 없이 동작한다.
 """
 from __future__ import annotations
 
 import json
-import re
 from pathlib import Path
 from typing import Any
 
-from anthropic import AsyncAnthropic
+from openai import AsyncOpenAI
 
 from app.core.config import settings
 
-# 모델 고정값 (rules/backend.md 기준)
-MODEL_SONNET = "claude-sonnet-4-6"
-MODEL_OPUS = "claude-opus-4-7"
+# 모델 고정값
+MODEL_DEFAULT = "gpt-4o-mini"
+MODEL_HIGH = "gpt-4o"
 
-# 입력 행수가 이 값을 넘으면 복잡 입력으로 판단해 Opus 로 승급
+# deprecated aliases — 기존 import 경로 호환 유지
+MODEL_SONNET = MODEL_DEFAULT
+MODEL_OPUS = MODEL_HIGH
+
+# 입력 행수가 이 값을 넘으면 복잡 입력으로 판단해 고난도 모델로 승급
 COMPLEX_ROW_THRESHOLD = 300
 
 _PROMPT_DIR = Path(__file__).parent / "prompts"
 
 # DI 훅 — 테스트에서 대체 가능
-_client_override: AsyncAnthropic | None = None
+_client_override: AsyncOpenAI | None = None
 
 # 직전 LLM 호출의 사용량/캐시 메트릭. /analyze 응답 meta.cache 로 노출된다.
 # 한 요청 안에서 여러 번 호출되면 누적되므로, API 레이어는 호출 직전 `reset_cache_metrics`
@@ -50,57 +52,17 @@ def load_prompt(name: str) -> str:
     return path.read_text(encoding="utf-8")
 
 
-def set_client(client: AsyncAnthropic | None) -> None:
+def set_client(client: AsyncOpenAI | None) -> None:
     """테스트/의존성 주입용. None 을 넘기면 기본 클라이언트로 리셋."""
     global _client_override
     _client_override = client
 
 
-def get_client() -> AsyncAnthropic:
-    """기본 AsyncAnthropic 싱글턴. API 키 미설정 시에도 객체는 생성된다 (httpx 레벨 mock 호환)."""
+def get_client() -> AsyncOpenAI:
+    """기본 AsyncOpenAI 싱글턴. API 키 미설정 시에도 객체는 생성된다 (DI mock 호환)."""
     if _client_override is not None:
         return _client_override
-    return AsyncAnthropic(api_key=settings.anthropic_api_key)
-
-
-# 프롬프트를 (정적·캐시대상) / (동적·캐시제외) 두 블록으로 나누기 위한 구분자.
-# 프롬프트 파일 어딘가에 `<!-- DYNAMIC -->` 마커가 있으면 그 이후는 cache_control 을
-# 적용하지 않는 별도 블록으로 분리한다. Anthropic 은 순차적 블록 prefix 가 일치하면
-# 캐시 히트를 인정하므로, 자주 바뀌는 지침을 뒤로 몰면 캐시 히트율이 오른다.
-_DYNAMIC_MARKER = "<!-- DYNAMIC -->"
-
-
-def _with_cache_control(system_text: str) -> list[dict[str, Any]]:
-    """
-    system 프롬프트를 cache_control 블록으로 래핑.
-
-    `<!-- DYNAMIC -->` 마커가 있으면:
-      block[0] = 정적 파트 (cache_control: ephemeral)    ← 장기 캐시 대상
-      block[1] = 동적 파트 (cache_control 없음)          ← 매번 변경 가능
-    마커가 없으면 전체를 단일 cached 블록으로 래핑 (기존 동작).
-    """
-    if _DYNAMIC_MARKER in system_text:
-        static_part, dynamic_part = system_text.split(_DYNAMIC_MARKER, 1)
-        static_part = static_part.rstrip()
-        dynamic_part = dynamic_part.lstrip()
-        blocks: list[dict[str, Any]] = [
-            {
-                "type": "text",
-                "text": static_part,
-                "cache_control": {"type": "ephemeral"},
-            }
-        ]
-        if dynamic_part:
-            blocks.append({"type": "text", "text": dynamic_part})
-        return blocks
-
-    return [
-        {
-            "type": "text",
-            "text": system_text,
-            "cache_control": {"type": "ephemeral"},
-        }
-    ]
+    return AsyncOpenAI(api_key=settings.openai_api_key)
 
 
 class LLMUnavailableError(RuntimeError):
@@ -108,8 +70,8 @@ class LLMUnavailableError(RuntimeError):
 
 
 def _is_api_key_configured() -> bool:
-    key = settings.anthropic_api_key
-    return bool(key) and key not in {"", "your-key-here", "test-key", "sk-ant-xxx"}
+    key = settings.openai_api_key
+    return bool(key) and key not in {"", "your-key-here", "test-key", "sk-xxx"}
 
 
 def reset_cache_metrics() -> None:
@@ -124,24 +86,49 @@ def get_cache_metrics() -> dict[str, int]:
 
 
 def select_model(row_count: int) -> str:
-    """행 수가 임계치를 넘으면 opus, 아니면 sonnet."""
-    return MODEL_OPUS if row_count > COMPLEX_ROW_THRESHOLD else MODEL_SONNET
+    """행 수가 임계치를 넘으면 고난도 모델, 아니면 기본 모델."""
+    return MODEL_HIGH if row_count > COMPLEX_ROW_THRESHOLD else MODEL_DEFAULT
 
 
 def _record_usage(resp: Any) -> None:
-    """anthropic 응답의 usage 블록에서 토큰·캐시 메트릭을 누적한다."""
+    """응답의 usage 블록에서 토큰·캐시 메트릭을 누적한다.
+
+    OpenAI 스타일(prompt_tokens, completion_tokens, prompt_tokens_details.cached_tokens)과
+    Anthropic 스타일(input_tokens, output_tokens, cache_read_input_tokens …) 모두 처리한다.
+    테스트용 fake 클라이언트가 Anthropic 스타일 필드를 사용하는 경우에도 올바르게 누적된다.
+    """
     usage = getattr(resp, "usage", None)
     if usage is None:
         return
-    for key in (
-        "cache_read_input_tokens",
-        "cache_creation_input_tokens",
-        "input_tokens",
-        "output_tokens",
-    ):
-        value = _usage_get(usage, key)
-        if value is not None:
-            _last_cache_metrics[key] += int(value)
+
+    # ── Anthropic 스타일 직접 매핑 (테스트 fake 클라이언트 우선) ────────────────
+    cache_read = _usage_get(usage, "cache_read_input_tokens")
+    if cache_read is not None:
+        _last_cache_metrics["cache_read_input_tokens"] += cache_read
+        cache_creation = _usage_get(usage, "cache_creation_input_tokens") or 0
+        _last_cache_metrics["cache_creation_input_tokens"] += cache_creation
+        _last_cache_metrics["input_tokens"] += _usage_get(usage, "input_tokens") or 0
+        _last_cache_metrics["output_tokens"] += _usage_get(usage, "output_tokens") or 0
+        return
+
+    # ── OpenAI 스타일 ────────────────────────────────────────────────────────────
+    # prompt_tokens, completion_tokens, prompt_tokens_details.cached_tokens
+    prompt_tokens = _usage_get(usage, "prompt_tokens") or 0
+    completion_tokens = _usage_get(usage, "completion_tokens") or 0
+
+    # cached_tokens 는 prompt_tokens_details 하위에 있다
+    cached_tokens = 0
+    details = getattr(usage, "prompt_tokens_details", None)
+    if details is not None:
+        cached_tokens = _usage_get(details, "cached_tokens") or 0
+    elif isinstance(usage, dict):
+        details_dict = usage.get("prompt_tokens_details") or {}
+        cached_tokens = int(details_dict.get("cached_tokens", 0))
+
+    _last_cache_metrics["input_tokens"] += prompt_tokens
+    _last_cache_metrics["output_tokens"] += completion_tokens
+    # OpenAI 자동 캐싱: cached 토큰은 cache_read_input_tokens 에 매핑
+    _last_cache_metrics["cache_read_input_tokens"] += cached_tokens
 
 
 def _usage_get(usage: Any, key: str) -> int | None:
@@ -162,9 +149,10 @@ async def call_llm(
     *,
     system_prompt_name: str,
     user_content: str,
-    model: str = MODEL_SONNET,
+    model: str = MODEL_DEFAULT,
     max_tokens: int = 8192,
     temperature: float = 0.2,
+    expect_json: bool = False,
 ) -> str:
     """
     LLM 1회 호출. system 프롬프트는 prompts/<name>.md 에서 로드.
@@ -175,37 +163,38 @@ async def call_llm(
     """
     if _client_override is None and not _is_api_key_configured():
         raise LLMUnavailableError(
-            "anthropic API key not configured and no test client injected"
+            "openai API key not configured and no test client injected"
         )
 
     client = get_client()
     system_text = load_prompt(system_prompt_name)
 
-    resp = await client.messages.create(
+    response_format: dict[str, str] | None = (
+        {"type": "json_object"} if expect_json else None
+    )
+
+    resp = await client.chat.completions.create(
         model=model,
-        max_tokens=max_tokens,
+        messages=[
+            {"role": "system", "content": system_text},
+            {"role": "user", "content": user_content},
+        ],
+        response_format=response_format,  # type: ignore[arg-type]
         temperature=temperature,
-        system=_with_cache_control(system_text),
-        messages=[{"role": "user", "content": user_content}],
+        max_tokens=max_tokens,
     )
 
     # usage 가 있으면 기록 (fake client 에서도 usage 를 심어 테스트 가능)
     _record_usage(resp)
 
-    # anthropic 응답: content 는 list[ContentBlock]. 텍스트 블록만 join.
-    parts: list[str] = []
-    for block in resp.content:
-        text = getattr(block, "text", None)
-        if text:
-            parts.append(text)
-    return "".join(parts).strip()
+    return resp.choices[0].message.content or ""
 
 
 def extract_json(text: str) -> dict[str, Any]:
     """
     LLM 응답에서 첫 JSON 객체를 추출한다.
     - 코드펜스(```json ... ```) 제거
-    - 중괄호 블록을 정규식으로 느슨하게 잡는다 (Claude 가 가끔 설명을 덧붙임)
+    - 중괄호 블록을 정규식으로 느슨하게 잡는다 (LLM 이 가끔 설명을 덧붙임)
     실패 시 ValueError 를 올린다 → schema gate 가 잡아서 1회 재시도.
     """
     cleaned = text.strip()

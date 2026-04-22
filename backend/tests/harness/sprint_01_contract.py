@@ -66,7 +66,7 @@ async def _fake_call_llm(
     *,
     system_prompt_name: str,
     user_content: str,
-    model: str = "claude-sonnet-4-6",
+    model: str = "gpt-4o-mini",
     max_tokens: int = 8192,
     temperature: float = 0.2,
 ) -> str:
@@ -87,7 +87,7 @@ async def _fake_call_llm_unused_steps(
     *,
     system_prompt_name: str,
     user_content: str,
-    model: str = "claude-sonnet-4-6",
+    model: str = "gpt-4o-mini",
     max_tokens: int = 8192,
     temperature: float = 0.2,
 ) -> str:
