@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import json
 import os
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 from app.services.news.chunking import split_text
@@ -67,7 +67,7 @@ async def ingest_document(doc: dict[str, Any]) -> dict[str, Any]:
     """
     source_url: str = doc["source_url"]
     title: str = doc.get("title", "")
-    published_at: str = doc.get("published_at", datetime.now(timezone.utc).isoformat())
+    published_at: str = doc.get("published_at", datetime.now(UTC).isoformat())
     text: str = doc.get("text", "")
 
     if _is_stub_mode():
@@ -137,8 +137,7 @@ async def _ingest_db(
     text: str,
 ) -> dict[str, Any]:
     """SQLAlchemy 비동기 세션으로 pgvector DB에 적재 (멱등)."""
-    from sqlalchemy import select, text as sa_text
-    from sqlalchemy.ext.asyncio import AsyncSession
+    from sqlalchemy import select
 
     from app.db.models import Document, DocumentChunk
     from app.db.session import AsyncSessionLocal

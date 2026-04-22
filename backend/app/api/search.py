@@ -6,8 +6,6 @@ sprint-02:
 """
 from __future__ import annotations
 
-import os
-
 from fastapi import APIRouter, HTTPException, Query, status
 
 from app.schemas.news import Citation, IngestRequest, IngestResponse

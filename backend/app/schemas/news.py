@@ -4,10 +4,7 @@ sprint-02: Citation, NewsSearchRequest, IngestRequest 정의.
 """
 from __future__ import annotations
 
-from datetime import datetime
-from typing import Any
-
-from pydantic import BaseModel, Field, HttpUrl
+from pydantic import BaseModel, Field
 
 
 class Citation(BaseModel):

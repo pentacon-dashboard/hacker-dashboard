@@ -4,17 +4,20 @@ from __future__ import annotations
 from datetime import date, datetime
 from decimal import Decimal
 
-from sqlalchemy import Date, DateTime, ForeignKey, Integer, Numeric, String, Text, UniqueConstraint, func
+from pgvector.sqlalchemy import Vector
+from sqlalchemy import (
+    Date,
+    DateTime,
+    ForeignKey,
+    Integer,
+    Numeric,
+    String,
+    Text,
+    UniqueConstraint,
+    func,
+)
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
-
-try:
-    from pgvector.sqlalchemy import Vector  # type: ignore[import-untyped]
-
-    _VECTOR_AVAILABLE = True
-except ImportError:  # pragma: no cover — pgvector not installed in this env
-    Vector = None  # type: ignore[assignment,misc]
-    _VECTOR_AVAILABLE = False
 
 
 class Base(DeclarativeBase):
@@ -30,7 +33,7 @@ class User(Base):
         DateTime(timezone=True), server_default=func.now()
     )
 
-    watchlist: Mapped[list["WatchlistItem"]] = relationship(back_populates="user")
+    watchlist: Mapped[list[WatchlistItem]] = relationship(back_populates="user")
 
 
 class WatchlistItem(Base):
@@ -112,7 +115,7 @@ class Document(Base):
         DateTime(timezone=True), server_default=func.now()
     )
 
-    chunks: Mapped[list["DocumentChunk"]] = relationship(
+    chunks: Mapped[list[DocumentChunk]] = relationship(
         "DocumentChunk", back_populates="document", cascade="all, delete-orphan"
     )
 
@@ -128,11 +131,13 @@ class DocumentChunk(Base):
     )
     chunk_index: Mapped[int] = mapped_column(Integer, nullable=False)
     text: Mapped[str] = mapped_column(Text, nullable=False)
-    # pgvector VECTOR(1024) — SQLite 환경에서는 JSON Text 로 폴백
+    # pgvector VECTOR(1024)
     embedding: Mapped[str | None] = mapped_column(
-        Vector(1024) if _VECTOR_AVAILABLE else Text,  # type: ignore[arg-type]
+        Vector(1024),
         nullable=True,
     )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )
+
+    document: Mapped[Document] = relationship("Document", back_populates="chunks")
