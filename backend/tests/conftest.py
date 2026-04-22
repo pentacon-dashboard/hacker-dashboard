@@ -55,8 +55,12 @@ def fake_orchestrator_llm(monkeypatch: pytest.MonkeyPatch) -> _FakeOrchestratorL
     ) -> str:
         lower = user_content.lower()
 
-        # role_tag 판별
-        if any(m in lower for m in ("plan_id", "session_id")) and "steps" in lower:
+        # role_tag 판별 — system_prompt_name 우선 (content 기반 판별보다 정확)
+        if "copilot_planner" in system_prompt_name:
+            role_tag = "planner"
+        elif "critique" in system_prompt_name:
+            role_tag = "critique"
+        elif any(m in lower for m in ("plan_id", "session_id")) and "steps" in lower:
             role_tag = "planner"
         elif any(m in lower for m in ("critique", "verdict", "final")):
             role_tag = "critique"

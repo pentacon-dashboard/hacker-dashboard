@@ -10,6 +10,7 @@ import datetime
 import json
 import os
 import uuid
+from typing import Any
 
 from app.schemas.copilot import SessionTurn
 
@@ -22,10 +23,10 @@ class PostgresSessionStore:
     """
 
     def __init__(self) -> None:
-        self._pool: object | None = None
+        self._pool: Any | None = None
         self._dsn: str = os.environ.get("COPILOT_SESSION_STORE_URL", "")
 
-    async def _get_pool(self) -> object:
+    async def _get_pool(self) -> Any:
         """연결 풀 지연 초기화 — asyncpg 사용."""
         if self._pool is not None:
             return self._pool
@@ -35,11 +36,11 @@ class PostgresSessionStore:
                 "Postgres 세션 저장소를 사용하려면 환경변수를 설정하세요."
             )
         try:
-            import asyncpg  # type: ignore[import]
+            import asyncpg  # noqa: PLC0415
             self._pool = await asyncpg.create_pool(self._dsn)
         except ImportError as exc:
             raise RuntimeError("asyncpg 가 설치되어 있지 않습니다.") from exc
-        return self._pool  # type: ignore[return-value]
+        return self._pool
 
     def _max_turns(self) -> int:
         return int(os.environ.get("COPILOT_SESSION_MAX_TURNS", "50"))
@@ -59,8 +60,7 @@ class PostgresSessionStore:
             if ttl_days > 0:
                 ttl_check = f"AND s.updated_at > NOW() - INTERVAL '{ttl_days} days'"
 
-            import asyncpg  # type: ignore[import]
-            async with pool.acquire() as conn:  # type: ignore[union-attr]
+            async with pool.acquire() as conn:
                 rows = await conn.fetch(
                     f"""
                     SELECT t.id, t.query, t.plan_id, t.final_card, t.citations,
@@ -93,7 +93,7 @@ class PostgresSessionStore:
         try:
             pool = await self._get_pool()
             now = datetime.datetime.now(datetime.UTC)
-            async with pool.acquire() as conn:  # type: ignore[union-attr]
+            async with pool.acquire() as conn:
                 # 세션 upsert
                 await conn.execute(
                     """
@@ -149,7 +149,7 @@ class PostgresSessionStore:
         """세션과 모든 턴을 삭제한다."""
         try:
             pool = await self._get_pool()
-            async with pool.acquire() as conn:  # type: ignore[union-attr]
+            async with pool.acquire() as conn:
                 await conn.execute(
                     "DELETE FROM copilot_turns WHERE session_id = $1", session_id
                 )
@@ -165,7 +165,7 @@ class PostgresSessionStore:
         try:
             pool = await self._get_pool()
             now = datetime.datetime.now(datetime.UTC)
-            async with pool.acquire() as conn:  # type: ignore[union-attr]
+            async with pool.acquire() as conn:
                 await conn.execute(
                     "INSERT INTO copilot_sessions (id, created_at, updated_at) VALUES ($1, $2, $2)",
                     session_id, now,

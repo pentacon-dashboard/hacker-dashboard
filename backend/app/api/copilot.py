@@ -193,18 +193,18 @@ async def get_session(session_id: str) -> SessionResponse:
 
     # 존재 여부 확인 (InMemorySessionStore: exists() 사용, 그 외: get_turns 결과로 판단)
     if hasattr(store, "exists"):
-        if not store.exists(session_id):  # type: ignore[union-attr]
+        if not store.exists(session_id):
             raise HTTPException(status_code=404, detail=f"session {session_id!r} not found or expired")
-        turns = await store.get_turns(session_id, limit=50)  # type: ignore[union-attr]
+        turns = await store.get_turns(session_id, limit=50)
     else:
-        turns = await store.get_turns(session_id, limit=50)  # type: ignore[union-attr]
+        turns = await store.get_turns(session_id, limit=50)
         if not turns:
             raise HTTPException(status_code=404, detail=f"session {session_id!r} not found or expired")
 
     active_ctx = await build_active_context(
         session_id=session_id,
         user_query="",
-        store=store,  # type: ignore[arg-type]
+        store=store,
     )
 
     return SessionResponse(
@@ -226,4 +226,4 @@ async def get_session(session_id: str) -> SessionResponse:
 async def delete_session(session_id: str) -> None:
     """DELETE /copilot/session/{session_id} — 세션 삭제."""
     store = get_session_store()
-    await store.clear(session_id)  # type: ignore[union-attr]
+    await store.clear(session_id)

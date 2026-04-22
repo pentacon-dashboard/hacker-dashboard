@@ -4,7 +4,6 @@
 """
 from __future__ import annotations
 
-import uuid
 from typing import Protocol, runtime_checkable
 
 from app.schemas.copilot import SessionTurn

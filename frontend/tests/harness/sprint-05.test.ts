@@ -30,8 +30,8 @@ describe("sprint-05 acceptance — 세션 턴 히스토리 렌더", () => {
       }),
     );
     const items = screen.getAllByRole("listitem");
-    expect(items[0].textContent).toContain("공시 요약");
-    expect(items[1].textContent).toContain("AAPL 분석");
+    expect(items[0]!.textContent).toContain("공시 요약");
+    expect(items[1]!.textContent).toContain("AAPL 분석");
   });
 });
 

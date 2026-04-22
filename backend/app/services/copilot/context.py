@@ -12,7 +12,6 @@ build_active_context(): 이전 세션 턴을 읽어 Planner 에게 전달할 Act
 from __future__ import annotations
 
 import html
-import re
 
 from app.schemas.copilot import ActiveContext, PriorTurn, SessionTurn
 from app.services.session.protocol import SessionStoreProtocol

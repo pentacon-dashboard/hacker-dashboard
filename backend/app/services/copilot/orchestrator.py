@@ -412,7 +412,7 @@ async def stream_copilot_query(
     active_context: ActiveContext = await build_active_context(
         session_id=session_id,  # 신규 세션이면 None 전달
         user_query=query,
-        store=store,  # type: ignore[arg-type]
+        store=store,
     )
     context_str = format_context_for_planner(active_context)
 
@@ -503,7 +503,7 @@ async def stream_copilot_query(
     )
 
     try:
-        await store.append_turn(resolved_session_id, new_turn)  # type: ignore[arg-type]
+        await store.append_turn(resolved_session_id, new_turn)
     except Exception:  # noqa: BLE001
         pass  # 저장 실패는 스트림에 영향 없이 무시
 
