@@ -333,6 +333,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/search/news": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * 뉴스/공시 RAG 검색
+         * @description 자연어 질의 + 심볼 + 기간으로 pgvector 인덱스에서 top-k 청크를 검색해 Citation 배열로 반환한다. stub 모드에서는 결정론적으로 동작한다.
+         */
+        get: operations["get_search_news_search_news_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/search/news/ingest": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * 뉴스/공시 문서 적재 (internal/admin)
+         * @description URL 또는 텍스트를 pgvector에 적재한다. stub 모드에서는 in-memory 저장소에 적재한다. 동일 source_url 은 멱등 처리 (중복 청크 미생성).
+         */
+        post: operations["post_news_ingest_search_news_ingest_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/copilot/plan": {
         parameters: {
             query?: never;
@@ -357,6 +397,49 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /**
+         * Citation
+         * @description RAG 검색 결과의 단일 인용 항목.
+         */
+        Citation: {
+            /** @description Document 테이블 PK */
+            doc_id: number;
+            /** @description DocumentChunk 테이블 PK */
+            chunk_id: number;
+            /** @description 원문 URL */
+            source_url: string;
+            /** @description 문서 제목 */
+            title: string;
+            /** @description 발행일 ISO-8601 */
+            published_at?: string | null;
+            /** @description 관련 청크 텍스트 발췌 */
+            excerpt: string;
+            /** @description L2 거리 기반 유사도 점수 (낮을수록 가까움) */
+            score: number;
+        };
+        /**
+         * IngestRequest
+         * @description POST /search/news/ingest 요청 본문.
+         */
+        IngestRequest: {
+            /** @description 원문 URL */
+            source_url: string;
+            /** @default  */
+            title: string;
+            /** @description 발행일 ISO-8601 */
+            published_at?: string | null;
+            /** @description 전문 텍스트 (512자 이상 권장) */
+            text: string;
+        };
+        /**
+         * IngestResponse
+         * @description POST /search/news/ingest 응답.
+         */
+        IngestResponse: {
+            document_id: number;
+            chunk_count: number;
+            is_new: boolean;
+        };
         /**
          * AnalyzeContext
          * @description 선택적 부가 컨텍스트. 현재는 OHLC 프리패치 결과만.
@@ -1576,6 +1659,79 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["RebalanceResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_search_news_search_news_get: {
+        parameters: {
+            query: {
+                /** @description 자연어 검색 질의 */
+                query: string;
+                /** @description 쉼표 구분 티커 (AAPL,TSLA 등) */
+                symbols?: string | null;
+                /** @description 시작일 YYYY-MM-DD */
+                start_date?: string | null;
+                /** @description 종료일 YYYY-MM-DD */
+                end_date?: string | null;
+                /** @description 반환 최대 청크 수 */
+                k?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Citation"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    post_news_ingest_search_news_ingest_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["IngestRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IngestResponse"];
                 };
             };
             /** @description Validation Error */

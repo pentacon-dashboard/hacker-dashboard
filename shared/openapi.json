@@ -756,6 +756,165 @@
         }
       }
     },
+    "/search/news": {
+      "get": {
+        "tags": [
+          "search"
+        ],
+        "summary": "뉴스/공시 RAG 검색",
+        "description": "자연어 질의 + 심볼 + 기간으로 pgvector 인덱스에서 top-k 청크를 검색해 Citation 배열로 반환한다. stub 모드에서는 결정론적으로 동작한다.",
+        "operationId": "get_search_news_search_news_get",
+        "parameters": [
+          {
+            "name": "query",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "자연어 검색 질의",
+              "title": "Query"
+            },
+            "description": "자연어 검색 질의"
+          },
+          {
+            "name": "symbols",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "쉼표 구분 티커 (AAPL,TSLA 등)",
+              "title": "Symbols"
+            },
+            "description": "쉼표 구분 티커 (AAPL,TSLA 등)"
+          },
+          {
+            "name": "start_date",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "시작일 YYYY-MM-DD",
+              "title": "Start Date"
+            },
+            "description": "시작일 YYYY-MM-DD"
+          },
+          {
+            "name": "end_date",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "종료일 YYYY-MM-DD",
+              "title": "End Date"
+            },
+            "description": "종료일 YYYY-MM-DD"
+          },
+          {
+            "name": "k",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 50,
+              "minimum": 1,
+              "description": "반환 최대 청크 수",
+              "default": 5,
+              "title": "K"
+            },
+            "description": "반환 최대 청크 수"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Citation"
+                  },
+                  "title": "Response Get Search News Search News Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/search/news/ingest": {
+      "post": {
+        "tags": [
+          "search"
+        ],
+        "summary": "뉴스/공시 문서 적재 (internal/admin)",
+        "description": "URL 또는 텍스트를 pgvector에 적재한다. stub 모드에서는 in-memory 저장소에 적재한다. 동일 source_url 은 멱등 처리 (중복 청크 미생성).",
+        "operationId": "post_news_ingest_search_news_ingest_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/IngestRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IngestResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/copilot/plan": {
       "post": {
         "tags": [
@@ -801,6 +960,126 @@
   },
   "components": {
     "schemas": {
+      "Citation": {
+        "properties": {
+          "doc_id": {
+            "type": "integer",
+            "title": "Doc Id",
+            "description": "Document 테이블 PK"
+          },
+          "chunk_id": {
+            "type": "integer",
+            "title": "Chunk Id",
+            "description": "DocumentChunk 테이블 PK"
+          },
+          "source_url": {
+            "type": "string",
+            "title": "Source Url",
+            "description": "원문 URL"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title",
+            "description": "문서 제목"
+          },
+          "published_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Published At",
+            "description": "발행일 ISO-8601"
+          },
+          "excerpt": {
+            "type": "string",
+            "title": "Excerpt",
+            "description": "관련 청크 텍스트 발췌"
+          },
+          "score": {
+            "type": "number",
+            "title": "Score",
+            "description": "L2 거리 기반 유사도 점수 (낮을수록 가까움)"
+          }
+        },
+        "type": "object",
+        "required": [
+          "doc_id",
+          "chunk_id",
+          "source_url",
+          "title",
+          "excerpt",
+          "score"
+        ],
+        "title": "Citation",
+        "description": "RAG 검색 결과의 단일 인용 항목."
+      },
+      "IngestRequest": {
+        "properties": {
+          "source_url": {
+            "type": "string",
+            "title": "Source Url",
+            "description": "원문 URL"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title",
+            "description": "문서 제목",
+            "default": ""
+          },
+          "published_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Published At",
+            "description": "발행일 ISO-8601"
+          },
+          "text": {
+            "type": "string",
+            "title": "Text",
+            "description": "전문 텍스트 (512자 이상 권장)"
+          }
+        },
+        "type": "object",
+        "required": [
+          "source_url",
+          "text"
+        ],
+        "title": "IngestRequest",
+        "description": "POST /search/news/ingest 요청 본문."
+      },
+      "IngestResponse": {
+        "properties": {
+          "document_id": {
+            "type": "integer",
+            "title": "Document Id"
+          },
+          "chunk_count": {
+            "type": "integer",
+            "title": "Chunk Count"
+          },
+          "is_new": {
+            "type": "boolean",
+            "title": "Is New"
+          }
+        },
+        "type": "object",
+        "required": [
+          "document_id",
+          "chunk_count",
+          "is_new"
+        ],
+        "title": "IngestResponse",
+        "description": "POST /search/news/ingest 응답."
+      },
       "AnalyzeContext": {
         "properties": {
           "ohlc": {

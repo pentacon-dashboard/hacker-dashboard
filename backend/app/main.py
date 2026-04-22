@@ -8,7 +8,7 @@ from typing import AsyncGenerator
 from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api import analyze, copilot, health, market, portfolio, ws
+from app.api import analyze, copilot, health, market, portfolio, search, ws
 from app.core.config import settings
 from app.core.errors import AppError, app_error_handler
 from app.core.logging import configure_logging, logger, set_request_id
@@ -19,6 +19,16 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     configure_logging(settings.debug)
     app.state.started_at = time.time()
     logger.info("Starting Hacker Dashboard API", extra={"version": settings.app_version})
+
+    # sprint-02: stub 모드에서 fixture corpus 사전 로드
+    import os
+
+    if os.environ.get("COPILOT_NEWS_MODE", "stub").lower() == "stub":
+        from app.services.news.ingest import load_fixture_corpus
+
+        load_fixture_corpus()
+        logger.info("stub 모드: news fixture corpus 로드 완료")
+
     # DB/Redis 연결 실패해도 앱은 뜬다 (/health 가 degraded 로 응답)
     yield
     logger.info("Shutting down Hacker Dashboard API")
@@ -58,3 +68,4 @@ app.include_router(analyze.router)
 app.include_router(portfolio.router)
 app.include_router(ws.router)
 app.include_router(copilot.router)
+app.include_router(search.router)
