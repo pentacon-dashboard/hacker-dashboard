@@ -755,6 +755,48 @@
           }
         }
       }
+    },
+    "/copilot/plan": {
+      "post": {
+        "tags": [
+          "copilot"
+        ],
+        "summary": "NL Query → CopilotPlan",
+        "description": "자연어 질의를 받아 멀티-스텝 에이전트 실행 계획(CopilotPlan)을 반환한다. LLM(copilot_planner_system)이 plan을 생성하고 3단 게이트(schema/domain/critique)를 통과한 결과만 반환. SSE 스트리밍 없이 단일 JSON 응답 (디버그/테스트용).",
+        "operationId": "create_copilot_plan_copilot_plan_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CopilotPlanRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CopilotPlan"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -1014,6 +1056,141 @@
         },
         "type": "object",
         "title": "CacheMetrics"
+      },
+      "CopilotPlan": {
+        "properties": {
+          "plan_id": {
+            "type": "string",
+            "title": "Plan Id"
+          },
+          "session_id": {
+            "type": "string",
+            "title": "Session Id"
+          },
+          "steps": {
+            "items": {
+              "$ref": "#/components/schemas/CopilotStep"
+            },
+            "type": "array",
+            "title": "Steps"
+          },
+          "created_at": {
+            "type": "string",
+            "title": "Created At"
+          },
+          "gate_results": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object",
+            "title": "Gate Results",
+            "description": "schema/domain/critique gate 통과 여부"
+          }
+        },
+        "type": "object",
+        "required": [
+          "plan_id",
+          "session_id",
+          "steps",
+          "created_at"
+        ],
+        "title": "CopilotPlan",
+        "description": "자연어 질의로부터 생성된 멀티-스텝 에이전트 실행 계획.\n\nPOST /copilot/plan 응답 스키마로도 사용됨.\ngate_results 는 3단 게이트 통과 여부 (옵션 필드)."
+      },
+      "CopilotPlanRequest": {
+        "properties": {
+          "query": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Query",
+            "description": "자연어 질의"
+          },
+          "session_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Session Id",
+            "description": "기존 세션 ID (옵션)"
+          }
+        },
+        "type": "object",
+        "required": [
+          "query"
+        ],
+        "title": "CopilotPlanRequest",
+        "description": "POST /copilot/plan 요청 본문."
+      },
+      "CopilotStep": {
+        "properties": {
+          "step_id": {
+            "type": "string",
+            "title": "Step Id"
+          },
+          "agent": {
+            "type": "string",
+            "enum": [
+              "stock",
+              "crypto",
+              "fx",
+              "macro",
+              "portfolio",
+              "rebalance",
+              "comparison",
+              "simulator",
+              "news-rag"
+            ],
+            "title": "Agent"
+          },
+          "inputs": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Inputs"
+          },
+          "depends_on": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Depends On"
+          },
+          "gate_policy": {
+            "$ref": "#/components/schemas/GatePolicy"
+          }
+        },
+        "type": "object",
+        "required": [
+          "step_id",
+          "agent"
+        ],
+        "title": "CopilotStep",
+        "description": "플랜의 단일 실행 단계."
+      },
+      "GatePolicy": {
+        "properties": {
+          "schema": {
+            "type": "boolean",
+            "title": "Schema",
+            "default": true
+          },
+          "domain": {
+            "type": "boolean",
+            "title": "Domain",
+            "default": true
+          },
+          "critique": {
+            "type": "boolean",
+            "title": "Critique",
+            "default": true
+          }
+        },
+        "type": "object",
+        "title": "GatePolicy",
+        "description": "각 step 에 적용할 3단 게이트 정책."
       },
       "HTTPValidationError": {
         "properties": {
