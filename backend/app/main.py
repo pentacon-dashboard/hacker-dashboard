@@ -8,7 +8,7 @@ from typing import AsyncGenerator
 from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api import analyze, health, market, portfolio, ws
+from app.api import analyze, copilot, health, market, portfolio, ws
 from app.core.config import settings
 from app.core.errors import AppError, app_error_handler
 from app.core.logging import configure_logging, logger, set_request_id
@@ -57,3 +57,4 @@ app.include_router(market.router)
 app.include_router(analyze.router)
 app.include_router(portfolio.router)
 app.include_router(ws.router)
+app.include_router(copilot.router)
