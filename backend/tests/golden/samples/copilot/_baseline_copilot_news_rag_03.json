@@ -1,0 +1,24 @@
+{
+  "id": "copilot_news_rag_03",
+  "agent": "news-rag",
+  "description": "NVDA 블랙웰 출시 뉴스 — schema gate pass with citations",
+  "step": {
+    "step_id": "rag-03",
+    "agent": "news-rag",
+    "inputs": {
+      "query": "nvidia blackwell GPU launch AI",
+      "symbols": ["NVDA"],
+      "k": 3
+    },
+    "depends_on": [],
+    "gate_policy": {"schema": true, "domain": true, "critique": true}
+  },
+  "expected_gate_results": {
+    "schema": "pass",
+    "domain": "pass",
+    "critique": "pass"
+  },
+  "expected_card_type": "text",
+  "expected_min_citations": 1,
+  "expected_degraded": false
+}

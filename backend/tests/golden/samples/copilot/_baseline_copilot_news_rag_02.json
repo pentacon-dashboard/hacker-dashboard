@@ -1,0 +1,24 @@
+{
+  "id": "copilot_news_rag_02",
+  "agent": "news-rag",
+  "description": "BTC 반감기 뉴스 검색 — 심볼 필터",
+  "step": {
+    "step_id": "rag-02",
+    "agent": "news-rag",
+    "inputs": {
+      "query": "bitcoin halving crypto market",
+      "symbols": ["BTC"],
+      "k": 3
+    },
+    "depends_on": [],
+    "gate_policy": {"schema": true, "domain": true, "critique": true}
+  },
+  "expected_gate_results": {
+    "schema": "pass",
+    "domain": "pass",
+    "critique": "pass"
+  },
+  "expected_card_type": "text",
+  "expected_min_citations": 1,
+  "expected_degraded": false
+}

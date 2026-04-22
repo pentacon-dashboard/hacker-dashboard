@@ -373,10 +373,73 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/copilot/plan": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * NL Query → CopilotPlan
+         * @description 자연어 질의를 받아 멀티-스텝 에이전트 실행 계획(CopilotPlan)을 반환한다. LLM(copilot_planner_system)이 plan을 생성하고 3단 게이트(schema/domain/critique)를 통과한 결과만 반환. SSE 스트리밍 없이 단일 JSON 응답 (디버그/테스트용).
+         */
+        post: operations["create_copilot_plan_copilot_plan_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /**
+         * Citation
+         * @description RAG 검색 결과의 단일 인용 항목.
+         */
+        Citation: {
+            /** @description Document 테이블 PK */
+            doc_id: number;
+            /** @description DocumentChunk 테이블 PK */
+            chunk_id: number;
+            /** @description 원문 URL */
+            source_url: string;
+            /** @description 문서 제목 */
+            title: string;
+            /** @description 발행일 ISO-8601 */
+            published_at?: string | null;
+            /** @description 관련 청크 텍스트 발췌 */
+            excerpt: string;
+            /** @description L2 거리 기반 유사도 점수 (낮을수록 가까움) */
+            score: number;
+        };
+        /**
+         * IngestRequest
+         * @description POST /search/news/ingest 요청 본문.
+         */
+        IngestRequest: {
+            /** @description 원문 URL */
+            source_url: string;
+            /** @default  */
+            title: string;
+            /** @description 발행일 ISO-8601 */
+            published_at?: string | null;
+            /** @description 전문 텍스트 (512자 이상 권장) */
+            text: string;
+        };
+        /**
+         * IngestResponse
+         * @description POST /search/news/ingest 응답.
+         */
+        IngestResponse: {
+            document_id: number;
+            chunk_count: number;
+            is_new: boolean;
+        };
         /**
          * AnalyzeContext
          * @description 선택적 부가 컨텍스트. 현재는 OHLC 프리패치 결과만.
@@ -525,48 +588,99 @@ export interface components {
             output_tokens: number;
         };
         /**
-         * Citation
-         * @description RAG 검색 결과의 단일 인용 항목.
+         * CopilotPlan
+         * @description 자연어 질의로부터 생성된 멀티-스텝 에이전트 실행 계획.
          *
-         *     plan.md 기준:
-         *       doc_id, chunk_id, source_url, title, published_at, excerpt, score
+         *     POST /copilot/plan 응답 스키마로도 사용됨.
+         *     gate_results 는 3단 게이트 통과 여부 (옵션 필드).
          */
-        Citation: {
+        /**
+         * CopilotCard
+         * @description Copilot 서브-에이전트 출력 카드 discriminated union (6종 variant).
+         */
+        CopilotCard:
+            | { type: "text"; content: string; citations?: Record<string, unknown>[]; degraded?: boolean }
+            | { type: "chart"; title: string; series: Record<string, unknown>[]; annotations?: Record<string, unknown>[]; degraded?: boolean }
+            | { type: "scorecard"; title: string; rows: Record<string, unknown>[]; degraded?: boolean }
+            | { type: "citation"; doc_id: number; chunk_id: number; source_url: string; title: string; published_at?: string | null; excerpt: string; score: number; degraded?: boolean }
+            | { type: "comparison_table"; symbols: string[]; metrics: string[]; rows: Record<string, unknown>[]; summary?: string; degraded?: boolean }
+            | { type: "simulator_result"; base_value: number; shocked_value: number; twr_change_pct: number; scenarios: Record<string, unknown>[]; sensitivity?: Record<string, number>; degraded?: boolean };
+        CopilotPlan: {
+            /** Plan Id */
+            plan_id: string;
+            /** Session Id */
+            session_id: string;
+            /** Steps */
+            steps: components["schemas"]["CopilotStep"][];
+            /** Created At */
+            created_at: string;
             /**
-             * Doc Id
-             * @description Document 테이블 PK
+             * Gate Results
+             * @description schema/domain/critique gate 통과 여부
              */
-            doc_id: number;
+            gate_results?: {
+                [key: string]: string;
+            };
+        };
+        /**
+         * CopilotPlanRequest
+         * @description POST /copilot/plan 요청 본문.
+         */
+        CopilotPlanRequest: {
             /**
-             * Chunk Id
-             * @description DocumentChunk 테이블 PK
+             * Query
+             * @description 자연어 질의
              */
-            chunk_id: number;
+            query: string;
             /**
-             * Source Url
-             * @description 원문 URL
+             * Session Id
+             * @description 기존 세션 ID (옵션)
              */
-            source_url: string;
+            session_id?: string | null;
+        };
+        /**
+         * CopilotStep
+         * @description 플랜의 단일 실행 단계.
+         */
+        CopilotStep: {
+            /** Step Id */
+            step_id: string;
             /**
-             * Title
-             * @description 문서 제목
+             * Agent
+             * @enum {string}
              */
-            title: string;
+            agent: "stock" | "crypto" | "fx" | "macro" | "portfolio" | "rebalance" | "comparison" | "simulator" | "news-rag";
+            /** Inputs */
+            inputs?: {
+                [key: string]: unknown;
+            };
+            /** Depends On */
+            depends_on?: string[];
+            gate_policy?: components["schemas"]["GatePolicy"];
+        };
+        /**
+         * GatePolicy
+         * @description 각 step 에 적용할 3단 게이트 정책.
+         *
+         *     `schema` 는 Pydantic BaseModel 의 클래스메서드명과 충돌하므로
+         *     내부 필드명은 `schema_check` 를 사용하고 JSON alias 를 "schema" 로 유지한다.
+         */
+        GatePolicy: {
             /**
-             * Published At
-             * @description 발행일 ISO-8601
+             * Schema
+             * @default true
              */
-            published_at?: string | null;
+            schema: boolean;
             /**
-             * Excerpt
-             * @description 관련 청크 텍스트 발췌
+             * Domain
+             * @default true
              */
-            excerpt: string;
+            domain: boolean;
             /**
-             * Score
-             * @description L2 거리 기반 유사도 점수 (낮을수록 가까움)
+             * Critique
+             * @default true
              */
-            score: number;
+            critique: boolean;
         };
         /** HTTPValidationError */
         HTTPValidationError: {
@@ -668,45 +782,6 @@ export interface components {
             quantity?: number | string | null;
             /** Avg Cost */
             avg_cost?: number | string | null;
-        };
-        /**
-         * IngestRequest
-         * @description POST /search/news/ingest 요청 본문.
-         */
-        IngestRequest: {
-            /**
-             * Source Url
-             * @description 원문 URL
-             */
-            source_url: string;
-            /**
-             * Title
-             * @description 문서 제목
-             * @default
-             */
-            title: string;
-            /**
-             * Published At
-             * @description 발행일 ISO-8601
-             */
-            published_at?: string | null;
-            /**
-             * Text
-             * @description 전문 텍스트 (512자 이상 권장)
-             */
-            text: string;
-        };
-        /**
-         * IngestResponse
-         * @description POST /search/news/ingest 응답.
-         */
-        IngestResponse: {
-            /** Document Id */
-            document_id: number;
-            /** Chunk Count */
-            chunk_count: number;
-            /** Is New */
-            is_new: boolean;
         };
         /** LLMAnalysis */
         LLMAnalysis: {
@@ -1668,6 +1743,39 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["IngestResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_copilot_plan_copilot_plan_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CopilotPlanRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CopilotPlan"];
                 };
             };
             /** @description Validation Error */

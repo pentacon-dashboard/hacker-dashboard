@@ -1,0 +1,28 @@
+{
+  "id": "copilot_simulator_01",
+  "agent": "simulator",
+  "description": "AAPL +50% 시나리오 — 정상 범위 multiplier",
+  "step": {
+    "step_id": "sim-01",
+    "agent": "simulator",
+    "inputs": {
+      "holdings": [
+        {"symbol": "AAPL", "quantity": 10, "avg_price": 180.0}
+      ],
+      "shocks": {"AAPL": 1.5},
+      "base_prices": {"AAPL": 200.0}
+    },
+    "depends_on": [],
+    "gate_policy": {"schema": true, "domain": true, "critique": true}
+  },
+  "expected_gate_results": {
+    "schema": "pass",
+    "domain": "pass",
+    "critique": "pass"
+  },
+  "expected_card_type": "simulator_result",
+  "expected_base_value": 2000.0,
+  "expected_shocked_value": 3000.0,
+  "expected_twr_change_pct": 50.0,
+  "expected_degraded": false
+}
