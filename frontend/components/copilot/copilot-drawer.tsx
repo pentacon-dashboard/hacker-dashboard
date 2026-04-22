@@ -48,6 +48,7 @@ export function CopilotDrawer({ open, onClose, state }: CopilotDrawerProps) {
         role="dialog"
         aria-label="Copilot"
         aria-modal="true"
+        data-testid="copilot-drawer"
         className="fixed right-0 top-0 z-50 flex h-full w-full max-w-md flex-col overflow-hidden border-l bg-background shadow-xl"
       >
         {/* 헤더 */}
@@ -92,7 +93,7 @@ export function CopilotDrawer({ open, onClose, state }: CopilotDrawerProps) {
                 <span className="font-mono">{stepId}</span>
                 {stepState.degraded && (
                   <span className="rounded bg-destructive/10 px-1 text-destructive text-[10px]">
-                    degraded
+                    품질저하
                   </span>
                 )}
               </div>
@@ -122,9 +123,10 @@ export function CopilotDrawer({ open, onClose, state }: CopilotDrawerProps) {
 
           {/* Final 카드 */}
           {state.finalCard && (
-            <div className="space-y-1">
+            <div className="space-y-1" data-testid="copilot-card-final">
               <div className="text-xs font-semibold text-muted-foreground">통합 응답</div>
-              <CardRenderer card={state.finalCard} />
+              {/* Final card 는 step 카드에서 이미 degraded 배너를 표시했으므로 중복 방지 */}
+              <CardRenderer card={state.finalCard} suppressDegradedBanner />
             </div>
           )}
 

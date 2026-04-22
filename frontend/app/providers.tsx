@@ -4,6 +4,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useState } from "react";
 import { ThemeProvider } from "@/components/common/theme-provider";
 import { ToastProvider } from "@/components/common/toast-provider";
+import { MswProvider } from "@/components/providers/msw-provider";
 
 interface ProvidersProps {
   children: React.ReactNode;
@@ -24,11 +25,13 @@ export function Providers({ children }: ProvidersProps) {
   );
 
   return (
-    <ThemeProvider>
-      <QueryClientProvider client={queryClient}>
-        {children}
-        <ToastProvider />
-      </QueryClientProvider>
-    </ThemeProvider>
+    <MswProvider>
+      <ThemeProvider>
+        <QueryClientProvider client={queryClient}>
+          {children}
+          <ToastProvider />
+        </QueryClientProvider>
+      </ThemeProvider>
+    </MswProvider>
   );
 }

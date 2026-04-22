@@ -20,7 +20,7 @@ export interface CopilotPlanStep {
 }
 
 export interface CopilotCard {
-  type: "text" | "chart" | "scorecard" | "citation" | "comparison_table" | "simulator_result";
+  type: "text" | "chart" | "scorecard" | "citation" | "comparison_table" | "simulator_result" | "news_rag_list";
   degraded?: boolean;
   body?: string;
   content?: string;
@@ -239,7 +239,16 @@ export function useCopilotStream(options?: UseCopilotStreamOptions) {
       abortRef.current = controller;
 
       try {
-        const res = await fetch("/api/copilot/query", {
+        // mock_scenario 파라미터가 URL에 있으면 그대로 전달 (MSW degraded 시나리오용)
+        const mockScenario =
+          typeof window !== "undefined"
+            ? new URLSearchParams(window.location.search).get("mock_scenario")
+            : null;
+        const fetchUrl = mockScenario
+          ? `/api/copilot/query?mock_scenario=${encodeURIComponent(mockScenario)}`
+          : "/api/copilot/query";
+
+        const res = await fetch(fetchUrl, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ query: queryText, session_id: sessionId }),

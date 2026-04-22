@@ -11,12 +11,26 @@ import { CopilotDrawer } from "@/components/copilot/copilot-drawer";
  * - Enter 로 질의 제출 → CopilotDrawer 열림
  * - Esc 로 drawer 닫기 (drawer 내부 & 전역 핸들러)
  * - aria-live="polite" 로 스트리밍 토큰 접근성 지원
+ * - ?copilot=1 URL 파라미터 시 자동 포커스
  */
 export function CommandBar() {
   const inputRef = useRef<HTMLInputElement>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [inputValue, setInputValue] = useState("");
   const { state, query, reset } = useCopilotStream();
+
+  // ?copilot=1 쿼리파람 감지 → 자동 포커스 (마운트 직후 1회)
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("copilot") === "1") {
+      // requestAnimationFrame 으로 레이아웃 완료 후 포커스
+      const raf = requestAnimationFrame(() => {
+        inputRef.current?.focus();
+      });
+      return () => cancelAnimationFrame(raf);
+    }
+  }, []);
 
   // ⌘K / Ctrl+K 단축키 → 입력창 포커스
   useEffect(() => {
@@ -89,7 +103,7 @@ export function CommandBar() {
             ref={inputRef}
             type="text"
             role="textbox"
-            aria-label="Copilot 질의 입력"
+            aria-label="copilot-input"
             placeholder="Copilot에게 질의... (⌘K)"
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}

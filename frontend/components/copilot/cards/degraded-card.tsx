@@ -15,7 +15,7 @@ interface DegradedCardProps {
  */
 export function DegradedCard({ reason, stepId }: DegradedCardProps) {
   return (
-    <div aria-live="polite">
+    <div aria-live="polite" data-testid="copilot-degraded-card">
       <Alert variant="destructive" className="border-2">
         <svg
           xmlns="http://www.w3.org/2000/svg"
