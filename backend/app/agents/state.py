@@ -44,3 +44,8 @@ class AgentState(TypedDict, total=False):
     copilot_session_id: str | None
     copilot_citations: list[dict[str, Any]]    # Citation list
     copilot_turn_id: str | None
+
+    # ── sprint-05: follow-up 라우팅용 세션 컨텍스트 (WARN-1 해소) ─────────────
+    # ActiveContext.model_dump() dict 로 저장 (순환 import 방지).
+    # 최초 턴에는 None, follow-up 턴에는 ActiveContext dict.
+    active_context: dict[str, Any] | None

@@ -11,6 +11,151 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_asyn
 from app.main import app
 
 
+# ──────────────── fake_orchestrator_llm — sprint-04/05 공통 fixture ──────────────
+
+
+@dataclass
+class _FakeOrchestratorLLM:
+    """planner + sub-agent + critique LLM 호출을 결정론적 fake 로 대체하는 스파이.
+
+    captured_prompts: list[dict] — 매 LLM 호출마다 아래 형태로 append.
+      { "role_tag": "planner"|"critique"|"unknown", "system": str, "user": str }
+
+    sprint-05 에서 role_tag="planner" 호출 캡처 + prompt injection 검증에 사용.
+    """
+
+    captured_prompts: list[dict[str, Any]] = field(default_factory=list)
+
+
+@pytest.fixture(autouse=False, scope="function")
+def fake_orchestrator_llm(monkeypatch: pytest.MonkeyPatch) -> _FakeOrchestratorLLM:
+    """planner + sub-agent + 최종 통합 LLM 호출을 결정론적 fake 로 대체.
+
+    대체 대상: app.agents.llm.call_llm (planner/critique/final 공용 진입).
+    반환값은 테스트 호출 경로를 구분해 고정 plan/card 를 돌려준다.
+
+    sprint-05 추가:
+    - captured_prompts: list[dict] 에 매 호출 (role_tag, system, user) 기록
+    - role_tag="planner": plan JSON 을 반환하는 경로
+    - role_tag="critique": pass verdict 반환
+    """
+    spy = _FakeOrchestratorLLM()
+
+    # planner system prompt 텍스트 (role_tag 감지용)
+    _PLANNER_MARKERS = {"plan_id", "session_id", "steps", "agent", "gate_policy"}
+    _CRITIQUE_MARKERS = {"critique", "verdict", "final"}
+
+    async def _fake(
+        *,
+        system_prompt_name: str,
+        user_content: str,
+        model: str | None = None,
+        max_tokens: int = 4096,
+        **_: Any,
+    ) -> str:
+        lower = user_content.lower()
+
+        # role_tag 판별
+        if any(m in lower for m in ("plan_id", "session_id")) and "steps" in lower:
+            role_tag = "planner"
+        elif any(m in lower for m in ("critique", "verdict", "final")):
+            role_tag = "critique"
+        else:
+            role_tag = "unknown"
+
+        # system prompt 텍스트 로드 (실제 파일)
+        try:
+            from app.agents.llm import load_prompt
+            system_text = load_prompt(system_prompt_name)
+        except Exception:  # noqa: BLE001
+            system_text = system_prompt_name
+
+        spy.captured_prompts.append({
+            "role_tag": role_tag,
+            "system": system_text,
+            "user": user_content,
+            "system_prompt_name": system_prompt_name,
+        })
+
+        # 반환값
+        if role_tag == "planner":
+            # follow-up 질의에서 prior_turns 에 AAPL 이 있으면 steps 에 AAPL 주입
+            symbol = "AAPL"
+            if "aapl" in lower or "AAPL" in user_content:
+                symbol = "AAPL"
+            elif "msft" in lower:
+                symbol = "MSFT"
+
+            # <prior_turns> 에서 symbol 추출 시도
+            import re as _re
+            prior_match = _re.search(
+                r"<prior_turns>.*?query:.*?([A-Z]{2,5}).*?</prior_turns>",
+                user_content,
+                _re.DOTALL,
+            )
+            if prior_match:
+                symbol = prior_match.group(1)
+
+            # follow-up 단축 조건: prior_turns 있고 "계속"/"조금" 등 단축 키워드이면 1개 step
+            is_followup_short = (
+                "<prior_turns>" in user_content and
+                any(kw in user_content for kw in ("계속", "조금", "더", "만"))
+            )
+            if is_followup_short:
+                steps = [
+                    {
+                        "step_id": "a",
+                        "agent": "news-rag",
+                        "inputs": {"symbol": symbol},
+                        "depends_on": [],
+                        "gate_policy": {"schema": True, "domain": True, "critique": True},
+                    }
+                ]
+            else:
+                steps = [
+                    {
+                        "step_id": "a",
+                        "agent": "portfolio",
+                        "inputs": {"symbol": symbol},
+                        "depends_on": [],
+                        "gate_policy": {"schema": True, "domain": True, "critique": True},
+                    },
+                    {
+                        "step_id": "b",
+                        "agent": "comparison",
+                        "inputs": {"symbol": symbol},
+                        "depends_on": [],
+                        "gate_policy": {"schema": True, "domain": True, "critique": True},
+                    },
+                ]
+
+            return json.dumps({
+                "plan_id": "p-fake",
+                "session_id": "s-fake",
+                "steps": steps,
+                "created_at": "2026-04-22T00:00:00Z",
+            })
+
+        if role_tag == "critique":
+            return json.dumps({"verdict": "pass", "ok": True, "text": "fake critique pass"})
+
+        # step token/result 경로
+        return json.dumps({"type": "text", "body": "fake card"})
+
+    monkeypatch.setattr("app.agents.llm.call_llm", _fake, raising=False)
+
+    # 세션 저장소 초기화 (테스트 격리)
+    try:
+        from app.services.session import get_session_store
+        store = get_session_store()
+        if hasattr(store, "reset_all"):
+            store.reset_all()
+    except Exception:  # noqa: BLE001
+        pass
+
+    return spy
+
+
 @pytest.fixture
 async def client() -> AsyncClient:
     """FastAPI AsyncClient fixture — 실제 DB/Redis 없이 동작한다."""
