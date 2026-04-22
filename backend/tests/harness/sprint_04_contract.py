@@ -4,8 +4,7 @@ from __future__ import annotations
 import json
 import time
 from pathlib import Path
-from typing import Any, Callable
-from unittest.mock import MagicMock
+from typing import Any
 
 import pytest
 from fastapi.testclient import TestClient
@@ -207,3 +206,21 @@ def test_direct_import_no_self_http(fake_orchestrator_llm: None) -> None:
     assert not any("/copilot/plan" in c for c in calls), (
         f"orchestrator self-called /copilot/plan via HTTP: {calls}"
     )
+
+
+def test_planner_cannot_generate_step_id_final() -> None:
+    """AC-04 BLOCKING-4 회귀 방지: planner 가 step_id='final' 을 생성하면 스키마 게이트가 reject.
+
+    CopilotStep.step_id 필드 validator 가 'final' 을 거부하는지 검증.
+    orchestrator 는 model_construct 를 통해 validator 우회 후 예약어를 사용한다.
+    """
+    from app.schemas.copilot import CopilotStep
+
+    with pytest.raises(ValueError, match="reserved"):
+        CopilotStep(
+            step_id="final",
+            agent="portfolio",
+            inputs={},
+            depends_on=[],
+            gate_policy={"schema": True, "domain": True, "critique": True},
+        )

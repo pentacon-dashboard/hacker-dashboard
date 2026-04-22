@@ -7,7 +7,7 @@ from __future__ import annotations
 
 from typing import Annotated, Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field, RootModel
+from pydantic import BaseModel, ConfigDict, Field, RootModel, field_validator
 
 # 9개 허용 에이전트 리터럴 (plan.md / contract.md 기준)
 CopilotStepAgent = Literal[
@@ -169,11 +169,22 @@ class GatePolicy(BaseModel):
 class CopilotStep(BaseModel):
     """플랜의 단일 실행 단계."""
 
-    step_id: str
+    step_id: str  # reserved id "final" — 최종 통합 게이트 전용, planner 생성 금지
     agent: CopilotStepAgent
     inputs: dict[str, Any] = Field(default_factory=dict)
     depends_on: list[str] = Field(default_factory=list)
     gate_policy: GatePolicy = Field(default_factory=lambda: GatePolicy.model_validate({"schema": True}))
+
+    @field_validator("step_id")
+    @classmethod
+    def reject_final(cls, v: str) -> str:
+        """'final' 은 오케스트레이터 최종 통합 게이트 전용 예약어 — planner 생성 금지."""
+        if v == "final":
+            raise ValueError(
+                "'final' is reserved as the orchestrator's final-gate step_id — "
+                "planners must not generate this id"
+            )
+        return v
 
 
 class CopilotPlan(BaseModel):

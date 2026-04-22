@@ -18,7 +18,7 @@ describe("sprint-04 acceptance — copilot stream reducer", () => {
     } as CopilotEvent);
     s = copilotStreamReducer(s, { type: "step.token", step_id: "a", text: "Hel" } as CopilotEvent);
     s = copilotStreamReducer(s, { type: "step.token", step_id: "a", text: "lo" } as CopilotEvent);
-    expect(s.steps["a"].buffer).toBe("Hello");
+    expect(s.steps["a"]!.buffer).toBe("Hello");
   });
 
   it("step.result swaps buffer with card", () => {
@@ -29,7 +29,7 @@ describe("sprint-04 acceptance — copilot stream reducer", () => {
       type: "step.result", step_id: "a",
       card: { type: "text", body: "done" },
     } as CopilotEvent);
-    expect(s.steps["a"].card?.type).toBe("text");
+    expect(s.steps["a"]!.card?.type).toBe("text");
   });
 
   it("step.gate fail marks step degraded and exposes reducer-level degraded state", () => {
@@ -45,7 +45,7 @@ describe("sprint-04 acceptance — copilot stream reducer", () => {
       type: "step.result", step_id: "a",
       card: { type: "text", body: "partial", degraded: true },
     } as CopilotEvent);
-    expect(s.steps["a"].degraded).toBe(true);
+    expect(s.steps["a"]!.degraded).toBe(true);
     expect(s.degraded?.step_id).toBe("a");
     expect(s.degraded?.reason).toMatch(/price out of range/);
   });

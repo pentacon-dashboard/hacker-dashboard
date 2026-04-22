@@ -18,10 +18,23 @@ import json
 import os
 import uuid
 from collections import defaultdict
-from typing import Any, AsyncGenerator
+from collections.abc import AsyncGenerator
+from typing import Any
 
+import app.agents.llm as _llm_module
+from app.agents.llm import extract_json
 from app.agents.planner import build_copilot_plan
-from app.schemas.copilot import CopilotPlan, CopilotStep
+from app.schemas.copilot import (
+    ChartCard,
+    CitationCard,
+    ComparisonTableCard,
+    CopilotPlan,
+    CopilotStep,
+    GatePolicy,
+    ScorecardCard,
+    SimulatorResultCard,
+    TextCard,
+)
 from app.services.session.memory_store import SessionTurn, get_session_store, make_turn_id
 
 # ── SSE 헬퍼 ──────────────────────────────────────────────────────────────────
@@ -37,17 +50,10 @@ def _sse(payload: dict[str, Any]) -> bytes:
 
 def _schema_gate(card: dict[str, Any], step: CopilotStep) -> tuple[str, str]:
     """Schema gate: CopilotCard 계열 Pydantic 검증."""
-    from app.schemas.copilot import (
-        ChartCard,
-        CitationCard,
-        ComparisonTableCard,
-        SimulatorResultCard,
-        ScorecardCard,
-        TextCard,
-    )
+    import pydantic
 
     card_type = card.get("type", "")
-    model_map = {
+    model_map: dict[str, type[pydantic.BaseModel]] = {
         "text": TextCard,
         "chart": ChartCard,
         "scorecard": ScorecardCard,
@@ -82,9 +88,6 @@ def _domain_gate(card: dict[str, Any], step: CopilotStep) -> tuple[str, str]:
 
 async def _critique_gate(card: dict[str, Any], step: CopilotStep, *, is_final: bool = False) -> tuple[str, str]:
     """Critique gate: LLM self-critique (unavailable 시 pass)."""
-    import app.agents.llm as _llm_module
-    from app.agents.llm import LLMUnavailableError
-
     instruction = (
         "위 copilot card 가 사용자 질의에 적합하고 사실에 기반한 내용인지 평가하라. "
     )
@@ -105,7 +108,6 @@ async def _critique_gate(card: dict[str, Any], step: CopilotStep, *, is_final: b
             user_content=prompt,
             max_tokens=300,
         )
-        from app.agents.llm import extract_json
         parsed = extract_json(raw)
         verdict = parsed.get("verdict", "pass")
         reason = parsed.get("reason", "")
@@ -327,12 +329,13 @@ async def _run_final_gate(
         "degraded": False,
     }
 
-    # step_id="final" 가상 step 생성
-    from app.schemas.copilot import GatePolicy
-    final_step = CopilotStep(
+    # step_id="final" 가상 step 생성 — model_construct 로 step_id 예약어 validator 우회
+    final_step = CopilotStep.model_construct(
         step_id="final",
         agent="portfolio",  # 더미 값 (최종 게이트에서만 사용)
-        gate_policy=GatePolicy.model_validate({"schema": True, "domain": True, "critique": True}),
+        gate_policy=GatePolicy(schema_check=True, domain=True, critique=True),  # type: ignore[call-arg]
+        inputs={},
+        depends_on=[],
     )
 
     # schema gate

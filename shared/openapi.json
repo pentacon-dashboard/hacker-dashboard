@@ -810,7 +810,43 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/QueryRequest"
+                "$ref": "#/components/schemas/_InternalQueryRequest",
+                "properties": {
+                  "query": {
+                    "type": "string",
+                    "minLength": 1,
+                    "description": "자연어 질의"
+                  },
+                  "session_id": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "기존 세션 ID (옵션)"
+                  },
+                  "context": {
+                    "anyOf": [
+                      {
+                        "additionalProperties": true,
+                        "type": "object"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "추가 컨텍스트 (옵션)"
+                  }
+                },
+                "type": "object",
+                "required": [
+                  "query"
+                ],
+                "title": "QueryRequest",
+                "description": "POST /copilot/query 요청 본문."
               }
             }
           },
@@ -1914,53 +1950,6 @@
         "title": "PortfolioSummary",
         "description": "GET /portfolio/summary 응답."
       },
-      "QueryRequest": {
-        "properties": {
-          "query": {
-            "type": "string",
-            "minLength": 1,
-            "title": "Query",
-            "description": "자연어 질의"
-          },
-          "session_id": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Session Id",
-            "description": "기존 세션 ID (옵션)"
-          },
-          "context": {
-            "anyOf": [
-              {
-                "additionalProperties": true,
-                "type": "object"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Context",
-            "description": "추가 컨텍스트 (옵션)"
-          },
-          "_harness_step_delay_ms": {
-            "type": "integer",
-            "title": "Harness Step Delay Ms",
-            "description": "[harness-only] 각 step 실행 전 지연 ms. 병렬 결정론적 테스트용.",
-            "default": 0
-          }
-        },
-        "type": "object",
-        "required": [
-          "query"
-        ],
-        "title": "QueryRequest",
-        "description": "POST /copilot/query 요청 본문.\n\n`harness_step_delay_ms` (JSON 키: `_harness_step_delay_ms`):\n숨김 파라미터. OpenAPI 스키마 제외. 오케스트레이터가 각 step 진입 시\n`asyncio.sleep(delay_ms / 1000)` 으로 변환. 결정론적 병렬 테스트용."
-      },
       "Quote": {
         "properties": {
           "symbol": {
@@ -2614,6 +2603,53 @@
           "created_at"
         ],
         "title": "WatchlistItemResponse"
+      },
+      "_InternalQueryRequest": {
+        "properties": {
+          "query": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Query",
+            "description": "자연어 질의"
+          },
+          "session_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Session Id",
+            "description": "기존 세션 ID (옵션)"
+          },
+          "context": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Context",
+            "description": "추가 컨텍스트 (옵션)"
+          },
+          "_harness_step_delay_ms": {
+            "type": "integer",
+            "title": "Harness Step Delay Ms",
+            "description": "[harness-only] 각 step 실행 전 지연 ms. 병렬 결정론적 테스트용.",
+            "default": 0
+          }
+        },
+        "type": "object",
+        "required": [
+          "query"
+        ],
+        "title": "_InternalQueryRequest",
+        "description": "내부 전용 확장 — OpenAPI 미노출.\n\n`_harness_step_delay_ms` : 오케스트레이터가 각 step 진입 시\n`asyncio.sleep(delay_ms / 1000)` 으로 변환. 결정론적 병렬 테스트용.\n\nFastAPI 라우트 파라미터에 이 클래스를 사용하면 `_InternalQueryRequest` 가\nOpenAPI components/schemas 에 등록된다. openapi_extra 의 requestBody override 로\n외부에는 `QueryRequest` 스키마만 노출한다."
       }
     }
   }
