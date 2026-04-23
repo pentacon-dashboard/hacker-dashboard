@@ -4,8 +4,11 @@ import { useEffect, useState } from "react";
 import { useTheme } from "@/hooks/use-theme";
 import { Button } from "@/components/ui/button";
 import { getHealth } from "@/lib/api/health";
-import { CommandBar } from "@/components/layout/command-bar";
 import { useUiStore } from "@/stores/ui";
+import { DateRangePicker } from "@/components/layout/date-range-picker";
+import { NotificationBell } from "@/components/layout/notification-bell";
+import { CsvUploadButton } from "@/components/layout/csv-upload-button";
+import { Suspense } from "react";
 
 type HealthStatus = "ok" | "error" | "pending";
 
@@ -47,12 +50,12 @@ export function Header() {
   }
 
   return (
-    <header className="flex h-14 items-center justify-between border-b bg-background px-4">
+    <header className="flex h-14 shrink-0 items-center justify-between border-b border-border/50 bg-background px-4">
+      {/* 좌측: 모바일 햄버거 버튼만 (페이지 제목 제거 — 목업은 본문 H1) */}
       <div className="flex items-center gap-2">
-        {/* 모바일 햄버거 버튼 (<md) */}
         <button
           onClick={toggleMobileMenu}
-          className="flex h-8 w-8 items-center justify-center rounded hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring md:hidden"
+          className="flex h-8 w-8 items-center justify-center rounded-lg hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring md:hidden"
           aria-label="메뉴 열기"
           type="button"
         >
@@ -73,17 +76,18 @@ export function Header() {
             <line x1="4" x2="20" y1="18" y2="18" />
           </svg>
         </button>
-        <span className="hidden text-sm font-semibold text-muted-foreground md:inline">
-          금융 대시보드
-        </span>
       </div>
 
-      {/* Copilot 커맨드 바 */}
-      <div className="flex-1 flex justify-center px-4 max-w-lg">
-        <CommandBar />
-      </div>
+      {/* 우측: DateRangePicker → NotificationBell → health dot → ENV 배지 → theme toggle → CsvUploadButton */}
+      <div className="ml-auto flex items-center gap-2">
+        {/* DateRangePicker — useSearchParams() 사용하므로 Suspense 경계 필요 */}
+        <Suspense fallback={<div className="h-8 w-32 animate-pulse rounded-lg bg-muted" />}>
+          <DateRangePicker />
+        </Suspense>
 
-      <div className="flex items-center gap-3">
+        {/* 알림 벨 */}
+        <NotificationBell />
+
         {/* API Health dot */}
         <div
           className="flex items-center gap-1.5"
@@ -107,7 +111,7 @@ export function Header() {
 
         {/* 환경 배지 */}
         <span
-          className={`rounded px-1.5 py-0.5 text-xs font-semibold ${
+          className={`rounded-lg px-1.5 py-0.5 text-xs font-semibold ${
             ENV === "prod"
               ? "bg-primary text-primary-foreground"
               : "bg-muted text-muted-foreground"
@@ -125,6 +129,7 @@ export function Header() {
           aria-label={isDark ? "라이트 모드로 전환" : "다크 모드로 전환"}
           data-testid="theme-toggle"
           suppressHydrationWarning
+          className="h-8 w-8"
         >
           {mounted && isDark ? (
             <svg
@@ -170,6 +175,9 @@ export function Header() {
         <span className="sr-only" suppressHydrationWarning>
           {mounted ? `현재 테마: ${theme}` : "현재 테마"}
         </span>
+
+        {/* CSV 업로드 버튼 */}
+        <CsvUploadButton />
       </div>
     </header>
   );

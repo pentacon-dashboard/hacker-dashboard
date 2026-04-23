@@ -4,6 +4,8 @@ import "./globals.css";
 import { Providers } from "./providers";
 import { Sidebar } from "@/components/layout/sidebar";
 import { Header } from "@/components/layout/header";
+import { AppFooter } from "@/components/layout/footer";
+import { CommandBarTrigger } from "@/components/layout/command-bar-trigger";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -26,6 +28,9 @@ export default function RootLayout({
       </head>
       <body className={inter.className}>
         <Providers>
+          {/* ⌘K 핫키 Copilot 트리거 — headless, portal mount */}
+          <CommandBarTrigger />
+
           <div className="flex h-screen overflow-hidden">
             <Sidebar />
             <div className="flex flex-1 flex-col overflow-hidden">
@@ -33,6 +38,7 @@ export default function RootLayout({
               <main className="flex-1 overflow-x-hidden overflow-y-auto p-4 pl-4 pt-4 md:p-6">
                 {children}
               </main>
+              <AppFooter />
             </div>
           </div>
         </Providers>
