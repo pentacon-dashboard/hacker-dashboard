@@ -19,6 +19,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.schemas.portfolio import DimensionItem, HoldingDetail, PortfolioSummary
 from app.services.fx import get_rate
 from app.services.market import get_adapter
+from app.services.portfolio_service import build_market_leaders, calc_win_rate
 
 logger = logging.getLogger(__name__)
 
@@ -206,6 +207,10 @@ async def compute_summary(
             )
         )
 
+    # sprint-08 B-1: win_rate_pct + market_leaders
+    win_rate_pct = calc_win_rate(holding_details)
+    market_leaders = build_market_leaders(holding_details)
+
     return PortfolioSummary(
         user_id="demo",
         total_value_krw=_fmt(total_value, 2),
@@ -222,6 +227,8 @@ async def compute_summary(
         period_change_pct=_fmt(period_change_pct, 2),
         period_days=period_days,
         dimension_breakdown=dimension_breakdown,
+        win_rate_pct=win_rate_pct,
+        market_leaders=market_leaders,
     )
 
 

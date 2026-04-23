@@ -1,11 +1,45 @@
-"""포트폴리오 관련 Pydantic 스키마 — week-3."""
+"""포트폴리오 관련 Pydantic 스키마 — week-3 + sprint-08."""
 from __future__ import annotations
 
-from datetime import date, datetime
 from decimal import Decimal
 from typing import Any
 
 from pydantic import BaseModel, Field, field_serializer
+
+
+class MarketLeader(BaseModel):
+    """대시보드·포트폴리오 상단 시장 리더 종목."""
+    rank: int
+    name: str
+    ticker: str
+    logo_url: str | None = None
+    price_display: str
+    change_pct: str
+    change_krw: str | None = None
+
+
+class SectorHeatmapTile(BaseModel):
+    """섹터 히트맵 단일 타일."""
+    sector: str
+    weight_pct: str
+    pnl_pct: str
+    intensity: str          # "-1.0" ~ "+1.0"
+
+
+class MonthlyReturnCell(BaseModel):
+    """월간(일간) 수익률 캘린더 셀."""
+    date: str               # "YYYY-MM-DD"
+    return_pct: str
+    cell_level: int         # 0~4
+
+
+class AiInsightResponse(BaseModel):
+    """AI 인사이트 stub 응답 (ADR-0012 stub 모드)."""
+    summary: str
+    bullets: list[str]
+    generated_at: str
+    stub_mode: bool
+    gates: dict[str, str]   # {schema:"pass", domain:"pass", critique:"pass"}
 
 
 class HoldingCreate(BaseModel):
@@ -96,6 +130,15 @@ class PortfolioSummary(BaseModel):
     dimension_breakdown: list[DimensionItem] = Field(
         default_factory=list,
         description="자산군 차원 비중 + 수익률 (바차트용)",
+    )
+    # ── sprint-08 Phase B-1 확장 ──────────────────────────────
+    win_rate_pct: str = Field(
+        "0.00",
+        description="보유 종목 중 pnl_pct > 0 비율 × 100 (문자열, 소수점 2자리)",
+    )
+    market_leaders: list[MarketLeader] = Field(
+        default_factory=list,
+        description="value_krw 상위 3개 종목 (보유 없으면 S&P top3 fallback)",
     )
 
 
