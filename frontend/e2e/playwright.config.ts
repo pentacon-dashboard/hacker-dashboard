@@ -35,7 +35,11 @@ export default defineConfig({
   projects: [
     {
       name: "chromium",
-      use: { ...devices["Desktop Chrome"] },
+      use: {
+        ...devices["Desktop Chrome"],
+        // 데스크탑 기본 뷰포트를 16:9 (1920×1080) 으로 고정 — 목업 레퍼런스와 일치
+        viewport: { width: 1920, height: 1080 },
+      },
     },
   ],
 

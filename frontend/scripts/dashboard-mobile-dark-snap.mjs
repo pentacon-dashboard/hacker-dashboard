@@ -5,7 +5,7 @@
  *
  * 캡처 대상 3장:
  *   - dashboard-mobile-375.png  : viewport 375x812 (iPhone SE)
- *   - dashboard-dark.png        : 1440x900, dark 클래스 주입
+ *   - dashboard-dark.png        : 1920x1080 (16:9), dark 클래스 주입
  *   - dashboard-dark-mobile.png : 375x812 + dark 클래스 주입
  *
  * 실행:
@@ -44,9 +44,9 @@ async function main() {
     await ctx.close();
   }
 
-  // ── 2. 데스크탑 1440x900, 다크 모드 ─────────────────────────────────────
+  // ── 2. 데스크탑 1920x1080 (16:9), 다크 모드 ─────────────────────────────
   {
-    const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+    const ctx = await browser.newContext({ viewport: { width: 1920, height: 1080 } });
     const page = await ctx.newPage();
     await waitForDashboard(page);
     // dark 클래스 강제 주입 (next-themes 가 localStorage 기반이므로 직접 DOM 조작)
