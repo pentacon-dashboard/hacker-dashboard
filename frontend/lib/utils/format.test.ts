@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import {
   formatKRW,
+  formatKRWCompact,
   formatUSD,
   formatPct,
   formatSignedNumber,
@@ -22,6 +23,36 @@ describe("formatKRW", () => {
 
   it("음수도 처리한다", () => {
     expect(formatKRW(-500)).toBe("-₩500");
+  });
+});
+
+describe("formatKRWCompact", () => {
+  it("1,000원 미만은 formatKRW로 폴백", () => {
+    expect(formatKRWCompact(850)).toBe("₩850");
+  });
+
+  it("1K대는 ₩X.XK", () => {
+    expect(formatKRWCompact(12345)).toBe("₩12.3K");
+  });
+
+  it("1M대는 ₩X.XXM (목업 기준)", () => {
+    expect(formatKRWCompact(18_760_000)).toBe("₩18.76M");
+  });
+
+  it("1B대는 ₩X.XXB", () => {
+    expect(formatKRWCompact(2_500_000_000)).toBe("₩2.50B");
+  });
+
+  it("1T대는 ₩X.XXT", () => {
+    expect(formatKRWCompact(3_200_000_000_000)).toBe("₩3.20T");
+  });
+
+  it("음수 부호 유지", () => {
+    expect(formatKRWCompact(-18_760_000)).toBe("-₩18.76M");
+  });
+
+  it("string 입력 처리", () => {
+    expect(formatKRWCompact("18760000")).toBe("₩18.76M");
   });
 });
 

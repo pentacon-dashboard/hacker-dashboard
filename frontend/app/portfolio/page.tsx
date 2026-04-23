@@ -78,7 +78,7 @@ function TableSkeleton() {
 export default function PortfolioPage() {
   const summaryQuery = useQuery({
     queryKey: ["portfolio", "summary"],
-    queryFn: getPortfolioSummary,
+    queryFn: () => getPortfolioSummary(),
     staleTime: 30_000,
   });
 

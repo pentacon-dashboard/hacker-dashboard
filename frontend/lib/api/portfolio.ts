@@ -55,8 +55,11 @@ export async function deleteHolding(id: number): Promise<void> {
   });
 }
 
-export async function getPortfolioSummary(): Promise<GetSummaryResponse> {
-  return apiFetch<GetSummaryResponse>("/portfolio/summary");
+export async function getPortfolioSummary(
+  periodDays?: number,
+): Promise<GetSummaryResponse> {
+  const qs = periodDays != null ? `?period_days=${periodDays}` : "";
+  return apiFetch<GetSummaryResponse>(`/portfolio/summary${qs}`);
 }
 
 export async function getSnapshots(
