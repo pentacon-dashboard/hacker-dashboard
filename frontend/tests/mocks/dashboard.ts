@@ -121,11 +121,27 @@ const SUMMARY = {
   ],
 };
 
-function buildSnapshots(): unknown[] {
-  const days = 30;
-  const start = 18_000_000;
+// period_days → (누적 수익률 %, 시작 평가액)
+// 심사 시연 시 기간 탭 전환이 "살아 있음"을 보여주기 위해 구간별 다른 수치 반환.
+const PERIOD_PROFILE: Record<number, { changePct: string; startKrw: number }> = {
+  7: { changePct: "0.41", startKrw: 18_680_000 },
+  30: { changePct: "1.23", startKrw: 18_530_000 },
+  90: { changePct: "3.82", startKrw: 18_070_000 },
+  365: { changePct: "12.70", startKrw: 16_645_000 },
+};
+
+function profileFor(periodDays: number): { changePct: string; startKrw: number } {
+  return (
+    PERIOD_PROFILE[periodDays] ?? {
+      changePct: "1.23",
+      startKrw: 18_530_000,
+    }
+  );
+}
+
+function buildSnapshots(days: number, startKrw: number): unknown[] {
   const end = 18_760_000;
-  const step = (end - start) / days;
+  const step = (end - startKrw) / days;
   const now = new Date();
   const out: unknown[] = [];
   for (let i = 0; i <= days; i++) {
@@ -134,13 +150,13 @@ function buildSnapshots(): unknown[] {
     const iso = d.toISOString().slice(0, 10);
     // 약간의 요철을 주어 실제 시계열처럼 보이게
     const jitter = Math.sin(i / 3) * 120_000;
-    const total = Math.round(start + step * i + jitter);
+    const total = Math.round(startKrw + step * i + jitter);
     out.push({
       id: i + 1,
       user_id: "demo",
       snapshot_date: iso,
       total_value_krw: String(total),
-      total_pnl_krw: String(total - start),
+      total_pnl_krw: String(total - startKrw),
       asset_class_breakdown: SUMMARY.asset_class_breakdown,
       holdings_detail: [],
       created_at: d.toISOString(),
@@ -207,13 +223,34 @@ export const portfolioSummaryHandler = http.get(
   ({ request }) => {
     const url = new URL(request.url);
     const periodDays = Number(url.searchParams.get("period_days") ?? 30);
-    return HttpResponse.json({ ...SUMMARY, period_days: periodDays });
+    const { changePct } = profileFor(periodDays);
+    return HttpResponse.json({
+      ...SUMMARY,
+      period_days: periodDays,
+      period_change_pct: changePct,
+    });
   },
 );
 
 export const portfolioSnapshotsHandler = http.get(
   /\/portfolio\/snapshots/,
-  () => HttpResponse.json(buildSnapshots()),
+  ({ request }) => {
+    const url = new URL(request.url);
+    const from = url.searchParams.get("from");
+    const to = url.searchParams.get("to");
+    // from/to 가 주어지면 일수로 환산 (대시보드 페이지가 period_days 만큼 전 날짜를 보냄).
+    // 그 외엔 기본 30일.
+    let days = 30;
+    if (from && to) {
+      const diff = Math.round(
+        (new Date(to).getTime() - new Date(from).getTime()) /
+          (1000 * 60 * 60 * 24),
+      );
+      if (diff > 0) days = diff;
+    }
+    const { startKrw } = profileFor(days);
+    return HttpResponse.json(buildSnapshots(days, startKrw));
+  },
 );
 
 export const searchNewsHandler = http.get(/\/search\/news/, ({ request }) => {
