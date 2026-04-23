@@ -1,0 +1,92 @@
+"use client";
+
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { cn } from "@/lib/utils";
+import { Globe } from "lucide-react";
+
+interface RegionData {
+  region: string;
+  countries: string[];
+  avg_change_pct: number;
+}
+
+interface WorldHeatmapProps {
+  data: RegionData[];
+  loading?: boolean;
+}
+
+function getHeatColor(pct: number): string {
+  if (pct >= 2) return "bg-green-600/80 text-white dark:bg-green-600/70";
+  if (pct >= 0.5) return "bg-green-500/50 text-green-900 dark:text-green-100";
+  if (pct >= 0) return "bg-green-400/30 text-green-800 dark:text-green-200";
+  if (pct >= -0.5) return "bg-red-400/30 text-red-800 dark:text-red-200";
+  if (pct >= -2) return "bg-red-500/50 text-red-900 dark:text-red-100";
+  return "bg-red-600/80 text-white dark:bg-red-600/70";
+}
+
+export function WorldHeatmap({ data, loading }: WorldHeatmapProps) {
+  return (
+    <Card data-testid="world-heatmap">
+      <CardHeader className="pb-3">
+        <CardTitle className="flex items-center gap-2 text-sm font-semibold">
+          <Globe className="h-4 w-4 text-primary" aria-hidden="true" />
+          글로벌 시장 동향
+          <span className="ml-auto text-xs font-normal text-muted-foreground">지역별 등락률</span>
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        {loading && (
+          <div className="grid grid-cols-4 gap-2">
+            {[...Array(8)].map((_, i) => (
+              <div key={i} className="h-16 animate-pulse rounded-lg bg-muted/30" />
+            ))}
+          </div>
+        )}
+
+        {!loading && (
+          <>
+            {/* 지역별 히트맵 그리드 — 옵션 F-1 */}
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+              {data.map((region) => {
+                const positive = region.avg_change_pct >= 0;
+                return (
+                  <div
+                    key={region.region}
+                    className={cn(
+                      "rounded-lg px-3 py-2.5 transition-opacity hover:opacity-90",
+                      getHeatColor(region.avg_change_pct),
+                    )}
+                    aria-label={`${region.region} ${region.avg_change_pct > 0 ? "+" : ""}${region.avg_change_pct.toFixed(2)}%`}
+                  >
+                    <p className="text-xs font-bold">{region.region}</p>
+                    <p className="mt-0.5 text-lg font-bold tabular-nums">
+                      {positive ? "+" : ""}
+                      {region.avg_change_pct.toFixed(2)}%
+                    </p>
+                    <p className="mt-0.5 truncate text-[10px] opacity-80">
+                      {region.countries.slice(0, 3).join(" · ")}
+                      {region.countries.length > 3 ? " ..." : ""}
+                    </p>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* 범례 */}
+            <div className="mt-3 flex items-center justify-end gap-1">
+              <span className="text-[10px] text-muted-foreground">하락</span>
+              {["bg-red-600/70", "bg-red-500/50", "bg-red-400/30", "bg-green-400/30", "bg-green-500/50", "bg-green-600/70"].map(
+                (cls, i) => (
+                  <div key={i} className={cn("h-2.5 w-4 rounded-sm", cls)} aria-hidden="true" />
+                ),
+              )}
+              <span className="text-[10px] text-muted-foreground">상승</span>
+            </div>
+
+            {/* TODO: 옵션 F-2 — react-simple-maps 세계지도 구현 예정 */}
+          </>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
