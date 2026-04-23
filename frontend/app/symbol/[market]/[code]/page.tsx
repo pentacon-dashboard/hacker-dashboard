@@ -50,6 +50,28 @@ const TIMEFRAME_TO_INTERVAL: Record<Timeframe, string> = {
   month: "1mo",
 };
 
+// BE /market/symbol/{market}/{code}/indicators 실제 응답 스키마
+interface BeIndicatorsRaw {
+  interval: string;
+  period: number;
+  rsi_14: Array<{ t: string; v: number }>;
+  macd: Array<{ t: string; macd: number; signal: number; histogram: number }>;
+  bollinger: {
+    upper: Array<{ t: string; v: number }>;
+    mid: Array<{ t: string; v: number }>;
+    lower: Array<{ t: string; v: number }>;
+  };
+  stochastic: Array<{ t: string; k: number; d: number }>;
+  metrics: {
+    rsi_latest: number | null;
+    macd_latest: number | null;
+    macd_signal: number | null;
+    bollinger_position: number | null;
+  };
+  signal: "buy" | "hold" | "sell";
+}
+
+// FE 내부 정규화 타입
 interface IndicatorsResponse {
   metrics: IndicatorMetrics;
   rsi_14: number | null;
@@ -59,6 +81,33 @@ interface IndicatorsResponse {
   bollinger_lower: number | null;
   stochastic: number | null;
   signal: "buy" | "hold" | "sell";
+}
+
+function normalizeIndicators(raw: BeIndicatorsRaw, changePct: string, volume: string): IndicatorsResponse {
+  const lastRsi = raw.metrics.rsi_latest ?? (raw.rsi_14.at(-1)?.v ?? null);
+  const lastMacd = raw.metrics.macd_latest ?? (raw.macd.at(-1)?.macd ?? null);
+  const lastMacdSig = raw.metrics.macd_signal ?? (raw.macd.at(-1)?.signal ?? null);
+  const lastBolUpper = raw.bollinger.upper.at(-1)?.v ?? null;
+  const lastBolLower = raw.bollinger.lower.at(-1)?.v ?? null;
+  const lastSto = raw.stochastic.at(-1)?.k ?? null;
+
+  return {
+    metrics: {
+      change_pct: changePct,
+      avg_cost: null,
+      ma20: null,
+      ma60: null,
+      volume,
+      signal: raw.signal,
+    },
+    rsi_14: lastRsi,
+    macd: lastMacd,
+    macd_signal: lastMacdSig,
+    bollinger_upper: lastBolUpper,
+    bollinger_lower: lastBolLower,
+    stochastic: lastSto,
+    signal: raw.signal,
+  };
 }
 
 // 목업 stub 이슈
@@ -122,27 +171,30 @@ export default function SymbolDetailPage() {
   const indicatorsQuery = useQuery<IndicatorsResponse | null>({
     queryKey: ["symbol", "indicators", decodedMarket, decodedCode, timeframe],
     queryFn: async () => {
+      const changePct = quoteQuery.data?.change_pct != null ? String(quoteQuery.data.change_pct) : "0";
+      const volume = quoteQuery.data?.volume != null ? String(quoteQuery.data.volume) : "-";
       try {
-        return await apiFetch<IndicatorsResponse>(
+        const raw = await apiFetch<BeIndicatorsRaw>(
           `/market/symbol/${encodeURIComponent(decodedMarket)}/${encodeURIComponent(decodedCode)}/indicators?interval=${timeframe}&period=60`,
         );
+        return normalizeIndicators(raw, changePct, volume);
       } catch {
-        // BE 미구현 시 stub fallback
+        // BE 오류 시 stub fallback — 페이지 crash 방지
         return {
           metrics: {
-            change_pct: quoteQuery.data?.change_pct != null ? String(quoteQuery.data.change_pct) : "0",
+            change_pct: changePct,
             avg_cost: null,
             ma20: null,
             ma60: null,
-            volume: quoteQuery.data?.volume != null ? String(quoteQuery.data.volume) : "-",
+            volume,
             signal: "hold" as const,
           },
-          rsi_14: 52.3,
-          macd: 1.24,
-          macd_signal: 0.98,
+          rsi_14: null,
+          macd: null,
+          macd_signal: null,
           bollinger_upper: null,
           bollinger_lower: null,
-          stochastic: 48.5,
+          stochastic: null,
           signal: "hold" as const,
         };
       }

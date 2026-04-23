@@ -14,8 +14,9 @@ interface SymbolNewsPanelProps {
 }
 
 async function fetchNews(symbol?: string, limit = 5): Promise<Citation[]> {
-  const params = new URLSearchParams({ k: String(limit) });
-  if (symbol) params.set("symbols", symbol);
+  // BE /search/news 는 ?query= 파라미터 필수, ?limit= 선택
+  const query = symbol ?? "market";
+  const params = new URLSearchParams({ query, limit: String(limit) });
   return apiFetch<Citation[]>(`/search/news?${params.toString()}`);
 }
 
