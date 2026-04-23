@@ -139,6 +139,5 @@ export function useRealtimeTicker(symbols: SymbolSpec[]) {
       }
     };
     // symbols 배열이 변경될 때마다 재연결
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [connect]);
 }
