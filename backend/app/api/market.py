@@ -203,7 +203,12 @@ async def list_watchlist() -> list[WatchlistItemResponse]:
     ]
 
 
-@router.post("/watchlist/items", response_model=WatchlistItemResponse, status_code=201)
+@router.post(
+    "/watchlist/items",
+    response_model=WatchlistItemResponse,
+    status_code=201,
+    responses={400: {"description": "JSON 파싱 실패"}},
+)
 async def add_watchlist(body: WatchlistItemCreate) -> WatchlistItemResponse:
     """워치리스트에 심볼 추가."""
     global _next_id

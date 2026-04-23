@@ -336,6 +336,9 @@
               }
             }
           },
+          "400": {
+            "description": "JSON 파싱 실패"
+          },
           "422": {
             "description": "Validation Error",
             "content": {
@@ -534,6 +537,9 @@
               }
             }
           },
+          "400": {
+            "description": "JSON 파싱 실패"
+          },
           "422": {
             "description": "Validation Error",
             "content": {
@@ -590,6 +596,9 @@
                 }
               }
             }
+          },
+          "400": {
+            "description": "JSON 파싱 실패"
           },
           "404": {
             "description": "Holding not found"
@@ -814,6 +823,9 @@
                 }
               }
             }
+          },
+          "400": {
+            "description": "JSON 파싱 실패"
           },
           "422": {
             "description": "Validation Error",

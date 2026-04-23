@@ -65,7 +65,12 @@ def _holding_to_response(h: Holding) -> HoldingResponse:
 # ────────────────────── Holdings CRUD ──────────────────────
 
 
-@router.post("/holdings", response_model=HoldingResponse, status_code=201)
+@router.post(
+    "/holdings",
+    response_model=HoldingResponse,
+    status_code=201,
+    responses={400: {"description": "JSON 파싱 실패"}},
+)
 async def create_holding(
     body: HoldingCreate,
     db: AsyncSession = Depends(get_db),
@@ -113,7 +118,10 @@ async def list_holdings(
 @router.patch(
     "/holdings/{holding_id}",
     response_model=HoldingResponse,
-    responses={404: {"description": "Holding not found"}},
+    responses={
+        400: {"description": "JSON 파싱 실패"},
+        404: {"description": "Holding not found"},
+    },
 )
 async def update_holding(
     body: HoldingUpdate,
@@ -218,8 +226,20 @@ async def list_snapshots(
     db: AsyncSession = Depends(get_db),
 ) -> list[SnapshotResponse]:
     """포트폴리오 스냅샷 조회 (날짜 범위 필터). pattern 불일치 시 422 자동 반환."""
-    from_date: date | None = date.fromisoformat(from_str) if from_str else None
-    to_date: date | None = date.fromisoformat(to_str) if to_str else None
+    try:
+        from_date: date | None = date.fromisoformat(from_str) if from_str else None
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=422,
+            detail=[{"msg": f"from 날짜 형식 오류: {exc}", "type": "value_error", "loc": ["query", "from"]}],
+        ) from exc
+    try:
+        to_date: date | None = date.fromisoformat(to_str) if to_str else None
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=422,
+            detail=[{"msg": f"to 날짜 형식 오류: {exc}", "type": "value_error", "loc": ["query", "to"]}],
+        ) from exc
     stmt = select(PortfolioSnapshot).where(PortfolioSnapshot.user_id == _DEMO_USER)
     if from_date:
         stmt = stmt.where(PortfolioSnapshot.snapshot_date >= from_date)
@@ -251,6 +271,7 @@ async def list_snapshots(
 @router.post(
     "/rebalance",
     response_model=RebalanceResponse,
+    responses={400: {"description": "JSON 파싱 실패"}},
     openapi_extra={
         "requestBody": {
             "required": True,
