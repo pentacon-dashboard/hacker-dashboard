@@ -6,6 +6,7 @@ Week-2: 시장 데이터 어댑터 + 심볼 검색 + Watchlist CRUD 연동.
 from __future__ import annotations
 
 import asyncio
+from datetime import UTC
 
 from fastapi import APIRouter, HTTPException, Query
 
@@ -115,7 +116,7 @@ async def search_symbols(
 @router.get("/quotes/{symbol}", response_model=Quote)
 async def get_quote(symbol: str) -> Quote:
     """단일 심볼 시세 조회 (stub — legacy 호환)"""
-    from datetime import datetime, timezone
+    from datetime import datetime
     return Quote(
         symbol=symbol,
         market="unknown",
@@ -124,11 +125,15 @@ async def get_quote(symbol: str) -> Quote:
         change_pct=0.0,
         volume=None,
         currency="USD",
-        timestamp=datetime.now(timezone.utc).isoformat(),
+        timestamp=datetime.now(UTC).isoformat(),
     )
 
 
-@router.get("/quotes/{market}/{code}", response_model=Quote)
+@router.get(
+    "/quotes/{market}/{code}",
+    response_model=Quote,
+    responses={404: {"description": "market 또는 code 를 찾을 수 없음"}},
+)
 async def get_market_quote(market: str, code: str) -> Quote:
     """market별 단일 심볼 현재가 조회. Redis 캐시(TTL 5s) 적용."""
     cache_k = quote_key(market, code)
@@ -153,7 +158,11 @@ async def get_market_quote(market: str, code: str) -> Quote:
     return quote
 
 
-@router.get("/ohlc/{market}/{code}", response_model=list[OhlcBar])
+@router.get(
+    "/ohlc/{market}/{code}",
+    response_model=list[OhlcBar],
+    responses={404: {"description": "market 또는 code 를 찾을 수 없음"}},
+)
 async def get_ohlc(
     market: str,
     code: str,
@@ -198,17 +207,20 @@ async def list_watchlist() -> list[WatchlistItemResponse]:
 async def add_watchlist(body: WatchlistItemCreate) -> WatchlistItemResponse:
     """워치리스트에 심볼 추가."""
     global _next_id
-    from datetime import datetime, timezone
+    from datetime import datetime
 
     # market 유효성 확인
     try:
         get_adapter(body.market)
     except ValueError as exc:
-        raise HTTPException(status_code=422, detail=str(exc)) from exc
+        raise HTTPException(
+            status_code=422,
+            detail=[{"msg": str(exc), "type": "value_error", "loc": ["body", "market"]}],
+        ) from exc
 
     item_id = _next_id
     _next_id += 1
-    ts = datetime.now(timezone.utc).isoformat()
+    ts = datetime.now(UTC).isoformat()
     record = {
         "id": item_id,
         "market": body.market,
@@ -220,7 +232,11 @@ async def add_watchlist(body: WatchlistItemCreate) -> WatchlistItemResponse:
     return WatchlistItemResponse(**record)
 
 
-@router.delete("/watchlist/items/{item_id}", status_code=204)
+@router.delete(
+    "/watchlist/items/{item_id}",
+    status_code=204,
+    responses={404: {"description": "워치리스트 항목을 찾을 수 없음"}},
+)
 async def delete_watchlist(item_id: int) -> None:
     """워치리스트 항목 삭제."""
     if item_id not in _watchlist:

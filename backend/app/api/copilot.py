@@ -186,6 +186,7 @@ async def query_copilot(body: _InternalQueryRequest) -> StreamingResponse:
         "세션 메모리를 조회한다. 세션이 없거나 TTL 만료 시 404 를 반환한다. "
         "응답에 최근 50턴 이하의 SessionTurn 목록과 ActiveContext 가 포함된다."
     ),
+    responses={404: {"description": "세션을 찾을 수 없거나 TTL 만료"}},
 )
 async def get_session(session_id: str) -> SessionResponse:
     """GET /copilot/session/{session_id} — 세션 메모리 조회."""
