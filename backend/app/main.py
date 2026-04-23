@@ -9,7 +9,7 @@ from typing import Any
 from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api import analyze, copilot, health, market, portfolio, search, upload, watchlist, ws
+from app.api import analyze, copilot, health, market, portfolio, search, upload, user, watchlist, ws
 from app.core.config import settings
 from app.core.errors import AppError, app_error_handler
 from app.core.logging import configure_logging, logger, set_request_id
@@ -72,3 +72,4 @@ app.include_router(copilot.router)
 app.include_router(search.router)
 app.include_router(upload.router)  # sprint-08 B-5: CSV 업로드 파이프라인
 app.include_router(watchlist.router)  # sprint-08 B-2: watchlist
+app.include_router(user.router)  # sprint-08 B-6: users settings
