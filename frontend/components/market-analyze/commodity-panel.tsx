@@ -4,48 +4,20 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { TrendingUp, TrendingDown, Layers } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-interface CommodityData {
-  code: string;
+// BE /market/commodities 실제 스키마
+export interface CommodityItem {
+  symbol: string;
   name: string;
-  value: number;
+  price: string;
+  change_pct: string;
   unit: string;
-  change_pct: number;
-  sparkline: number[];
 }
 
 interface CommodityPanelProps {
-  commodities: CommodityData[];
+  commodities: CommodityItem[];
   loading?: boolean;
 }
 
-function MiniSparkline({ data, positive }: { data: number[]; positive: boolean }) {
-  if (!data || data.length < 2) return null;
-  const min = Math.min(...data);
-  const max = Math.max(...data);
-  const range = max - min || 1;
-  const w = 48;
-  const h = 20;
-  const pts = data
-    .map((v, i) => {
-      const x = (i / (data.length - 1)) * w;
-      const y = h - ((v - min) / range) * h;
-      return `${x},${y}`;
-    })
-    .join(" ");
-
-  return (
-    <svg width={w} height={h} viewBox={`0 0 ${w} ${h}`} aria-hidden="true">
-      <polyline
-        points={pts}
-        fill="none"
-        stroke={positive ? "rgb(34 197 94)" : "rgb(239 68 68)"}
-        strokeWidth="1.5"
-        strokeLinejoin="round"
-        strokeLinecap="round"
-      />
-    </svg>
-  );
-}
 
 export function CommodityPanel({ commodities, loading }: CommodityPanelProps) {
   return (
@@ -67,12 +39,12 @@ export function CommodityPanel({ commodities, loading }: CommodityPanelProps) {
 
         {!loading &&
           commodities.map((c) => {
-            const positive = c.change_pct >= 0;
+            const positive = !c.change_pct.startsWith("-");
             return (
               <div
-                key={c.code}
+                key={c.symbol}
                 className="flex items-center gap-3 rounded-lg border border-border bg-card/50 px-3 py-2"
-                data-testid={`commodity-${c.code}`}
+                data-testid={`commodity-${c.symbol}`}
               >
                 {/* 이름 */}
                 <div className="min-w-0 flex-1">
@@ -80,12 +52,9 @@ export function CommodityPanel({ commodities, loading }: CommodityPanelProps) {
                   <p className="text-[10px] text-muted-foreground">{c.unit}</p>
                 </div>
 
-                {/* 스파크라인 */}
-                <MiniSparkline data={c.sparkline} positive={positive} />
-
                 {/* 가격 + 변동 */}
                 <div className="text-right">
-                  <p className="text-sm font-bold tabular-nums">{c.value.toFixed(2)}</p>
+                  <p className="text-sm font-bold tabular-nums">{c.price}</p>
                   <p
                     className={cn(
                       "flex items-center justify-end gap-0.5 text-xs font-semibold",
@@ -97,8 +66,8 @@ export function CommodityPanel({ commodities, loading }: CommodityPanelProps) {
                     ) : (
                       <TrendingDown className="h-3 w-3" aria-hidden="true" />
                     )}
-                    {positive ? "+" : ""}
-                    {c.change_pct.toFixed(2)}%
+                    {positive && !c.change_pct.startsWith("+") ? "+" : ""}
+                    {c.change_pct}%
                   </p>
                 </div>
               </div>

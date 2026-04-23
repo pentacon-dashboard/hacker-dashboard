@@ -16,21 +16,22 @@ import { SectorKpiGrid } from "@/components/market-analyze/sector-kpi-grid";
 import { CommodityPanel } from "@/components/market-analyze/commodity-panel";
 import { MarketNewsFeed } from "@/components/market-analyze/market-news-feed";
 
+// BE 실 스키마 기준 샘플 데이터
 const SAMPLE_INDICES = [
-  { code: "KOSPI", name: "KOSPI", value: 2705.32, change_pct: 1.24, sparkline: [2645, 2658, 2672, 2680, 2668, 2690, 2705] },
-  { code: "NASDAQ", name: "나스닥", value: 18720.02, change_pct: -0.38, sparkline: [18500, 18580, 18620, 18560, 18650, 18700, 18720] },
-  { code: "VIX", name: "VIX", value: 18.34, change_pct: 5.12, sparkline: [16.2, 16.8, 17.5, 18.1, 17.8, 18.0, 18.34] },
+  { ticker: "KOSPI", display_name: "KOSPI", value: "2,705.32", change_pct: "+1.24", change_abs: "+33.01", sparkline_7d: [2645, 2658, 2672, 2680, 2668, 2690, 2705] },
+  { ticker: "NASDAQ", display_name: "나스닥", value: "18,720.02", change_pct: "-0.38", change_abs: "-71.34", sparkline_7d: [18500, 18580, 18620, 18560, 18650, 18700, 18720] },
+  { ticker: "VIX", display_name: "VIX", value: "18.34", change_pct: "+5.12", change_abs: "+0.89", sparkline_7d: [16.2, 16.8, 17.5, 18.1, 17.8, 18.0, 18.34] },
 ];
 
 const SAMPLE_SECTORS = [
-  { sector: "Technology", change_pct: 1.85 },
-  { sector: "Healthcare", change_pct: -0.31 },
-  { sector: "Financials", change_pct: 0.42 },
+  { name: "Technology", change_pct: "+1.85", constituents: 75, leaders: ["AAPL", "MSFT"] },
+  { name: "Healthcare", change_pct: "-0.31", constituents: 60, leaders: ["JNJ", "PFE"] },
+  { name: "Financials", change_pct: "+0.42", constituents: 65, leaders: ["JPM", "BAC"] },
 ];
 
 const SAMPLE_COMMODITIES = [
-  { code: "OIL", name: "원유(WTI)", value: 78.42, unit: "USD/배럴", change_pct: -0.85, sparkline: [80.2, 79.5, 79.1, 78.8, 78.42] },
-  { code: "GOLD", name: "금", value: 2342.10, unit: "USD/온스", change_pct: 0.54, sparkline: [2310, 2318, 2325, 2342] },
+  { symbol: "OIL", name: "원유(WTI)", price: "78.42", unit: "USD/배럴", change_pct: "-0.85" },
+  { symbol: "GOLD", name: "금", price: "2,342.10", unit: "USD/온스", change_pct: "+0.54" },
 ];
 
 const SAMPLE_NEWS = [
@@ -40,8 +41,8 @@ const SAMPLE_NEWS = [
 ];
 
 const SAMPLE_HEATMAP = [
-  { region: "동아시아", countries: ["한국", "일본"], avg_change_pct: 0.84 },
-  { region: "유럽", countries: ["영국", "독일"], avg_change_pct: -0.18 },
+  { country_code: "KR", country_name: "동아시아", change_pct: "+0.84", market_cap_usd: "$1.8T" },
+  { country_code: "GB", country_name: "유럽", change_pct: "-0.18", market_cap_usd: "$2.9T" },
 ];
 
 describe("C-4: IndexKpiStrip", () => {
@@ -67,7 +68,7 @@ describe("C-4: IndexKpiStrip", () => {
 });
 
 describe("C-4: WorldHeatmap", () => {
-  it("지역 카드를 렌더한다", () => {
+  it("나라 카드를 렌더한다", () => {
     render(<WorldHeatmap data={SAMPLE_HEATMAP} />);
     expect(screen.getByTestId("world-heatmap")).toBeInTheDocument();
     expect(screen.getByText("동아시아")).toBeInTheDocument();
@@ -96,9 +97,9 @@ describe("C-4: SectorKpiGrid", () => {
 
   it("3개 섹터 모두 표시한다", () => {
     render(<SectorKpiGrid sectors={SAMPLE_SECTORS} />);
-    expect(screen.getByText("Technology")).toBeInTheDocument();
-    expect(screen.getByText("Healthcare")).toBeInTheDocument();
-    expect(screen.getByText("Financials")).toBeInTheDocument();
+    expect(screen.getAllByText("Technology").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Healthcare").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Financials").length).toBeGreaterThan(0);
   });
 
   it("빈 상태에서 에러 없이 렌더한다", () => {

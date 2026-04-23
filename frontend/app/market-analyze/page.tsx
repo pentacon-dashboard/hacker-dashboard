@@ -1,45 +1,26 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { IndexKpiStrip } from "@/components/market-analyze/index-kpi-strip";
-import { WorldHeatmap } from "@/components/market-analyze/world-heatmap";
-import { SectorKpiGrid } from "@/components/market-analyze/sector-kpi-grid";
-import { CommodityPanel } from "@/components/market-analyze/commodity-panel";
+import { IndexKpiStrip, type IndexSnapshot } from "@/components/market-analyze/index-kpi-strip";
+import { WorldHeatmap, type CountryHeatmapItem } from "@/components/market-analyze/world-heatmap";
+import { SectorKpiGrid, type SectorItem } from "@/components/market-analyze/sector-kpi-grid";
+import { CommodityPanel, type CommodityItem } from "@/components/market-analyze/commodity-panel";
 import { MarketNewsFeed } from "@/components/market-analyze/market-news-feed";
 import { API_BASE } from "@/lib/api/client";
 
-// TODO: BE β-sprint 완료 후 실 엔드포인트 연결 (현재 MSW stub 사용)
-
-interface IndexKpi {
-  code: string;
-  name: string;
-  value: number;
-  change_pct: number;
-  sparkline: number[];
-}
-
-interface SectorData {
-  sector: string;
-  change_pct: number;
-  market_cap_b?: number;
-}
-
-interface CommodityData {
-  code: string;
-  name: string;
-  value: number;
-  unit: string;
-  change_pct: number;
-  sparkline: number[];
-}
-
-interface RegionData {
-  region: string;
-  countries: string[];
-  avg_change_pct: number;
-}
-
+// BE 실 스키마 기반 NewsItem (search/news 응답 구조)
 interface NewsItem {
+  doc_id: number;
+  chunk_id: number;
+  source_url: string;
+  title: string;
+  published_at: string;
+  excerpt: string;
+  score?: number;
+}
+
+// MarketNewsFeed 내부 interface 와 매핑
+interface MappedNewsItem {
   id: string;
   title: string;
   source: string;
@@ -48,9 +29,19 @@ interface NewsItem {
   sentiment?: "positive" | "negative" | "neutral";
 }
 
+function mapNewsItem(item: NewsItem): MappedNewsItem {
+  return {
+    id: String(item.chunk_id),
+    title: item.title,
+    source: new URL(item.source_url).hostname.replace("www.", ""),
+    published_at: item.published_at,
+    url: item.source_url,
+  };
+}
+
 async function safeFetch<T>(url: string, fallback: T): Promise<T> {
   try {
-    const res = await fetch(url, { next: { revalidate: 60 } });
+    const res = await fetch(url);
     if (!res.ok) return fallback;
     return res.json() as Promise<T>;
   } catch {
@@ -59,26 +50,27 @@ async function safeFetch<T>(url: string, fallback: T): Promise<T> {
 }
 
 export default function MarketAnalyzePage() {
-  const [indices, setIndices] = useState<IndexKpi[]>([]);
-  const [sectors, setSectors] = useState<SectorData[]>([]);
-  const [commodities, setCommodities] = useState<CommodityData[]>([]);
-  const [heatmap, setHeatmap] = useState<RegionData[]>([]);
-  const [news, setNews] = useState<NewsItem[]>([]);
+  const [indices, setIndices] = useState<IndexSnapshot[]>([]);
+  const [sectors, setSectors] = useState<SectorItem[]>([]);
+  const [commodities, setCommodities] = useState<CommodityItem[]>([]);
+  const [heatmap, setHeatmap] = useState<CountryHeatmapItem[]>([]);
+  const [news, setNews] = useState<MappedNewsItem[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     Promise.all([
-      safeFetch<IndexKpi[]>(`${API_BASE}/market/indices`, []),
-      safeFetch<SectorData[]>(`${API_BASE}/market/sectors`, []),
-      safeFetch<CommodityData[]>(`${API_BASE}/market/commodities`, []),
-      safeFetch<RegionData[]>(`${API_BASE}/market/world-heatmap`, []),
-      safeFetch<NewsItem[]>(`${API_BASE}/market/news`, []),
+      safeFetch<IndexSnapshot[]>(`${API_BASE}/market/indices`, []),
+      safeFetch<SectorItem[]>(`${API_BASE}/market/sectors`, []),
+      safeFetch<CommodityItem[]>(`${API_BASE}/market/commodities`, []),
+      safeFetch<CountryHeatmapItem[]>(`${API_BASE}/market/world-heatmap`, []),
+      // /market/news 없음 → /search/news?query=market 사용
+      safeFetch<NewsItem[]>(`${API_BASE}/search/news?query=market&limit=6`, []),
     ]).then(([idx, sec, com, hm, n]) => {
-      setIndices(idx);
-      setSectors(sec);
-      setCommodities(com);
-      setHeatmap(hm);
-      setNews(n);
+      setIndices(Array.isArray(idx) ? idx : []);
+      setSectors(Array.isArray(sec) ? sec : []);
+      setCommodities(Array.isArray(com) ? com : []);
+      setHeatmap(Array.isArray(hm) ? hm : []);
+      setNews(Array.isArray(n) ? n.map(mapNewsItem) : []);
       setLoading(false);
     });
   }, []);

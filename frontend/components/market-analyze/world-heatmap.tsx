@@ -4,18 +4,22 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { Globe } from "lucide-react";
 
-interface RegionData {
-  region: string;
-  countries: string[];
-  avg_change_pct: number;
+// BE /market/world-heatmap 실제 스키마 (나라별)
+export interface CountryHeatmapItem {
+  country_code: string;
+  country_name: string;
+  change_pct: string;
+  market_cap_usd: string;
 }
 
 interface WorldHeatmapProps {
-  data: RegionData[];
+  data: CountryHeatmapItem[];
   loading?: boolean;
 }
 
-function getHeatColor(pct: number): string {
+function getHeatColor(pctStr: string): string {
+  const pct = parseFloat(pctStr);
+  if (isNaN(pct)) return "bg-muted text-muted-foreground";
   if (pct >= 2) return "bg-green-600/80 text-white dark:bg-green-600/70";
   if (pct >= 0.5) return "bg-green-500/50 text-green-900 dark:text-green-100";
   if (pct >= 0) return "bg-green-400/30 text-green-800 dark:text-green-200";
@@ -47,25 +51,24 @@ export function WorldHeatmap({ data, loading }: WorldHeatmapProps) {
           <>
             {/* 지역별 히트맵 그리드 — 옵션 F-1 */}
             <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-              {data.map((region) => {
-                const positive = region.avg_change_pct >= 0;
+              {data.map((country) => {
+                const positive = !country.change_pct.startsWith("-");
                 return (
                   <div
-                    key={region.region}
+                    key={country.country_code}
                     className={cn(
                       "rounded-lg px-3 py-2.5 transition-opacity hover:opacity-90",
-                      getHeatColor(region.avg_change_pct),
+                      getHeatColor(country.change_pct),
                     )}
-                    aria-label={`${region.region} ${region.avg_change_pct > 0 ? "+" : ""}${region.avg_change_pct.toFixed(2)}%`}
+                    aria-label={`${country.country_name} ${country.change_pct}%`}
                   >
-                    <p className="text-xs font-bold">{region.region}</p>
+                    <p className="text-xs font-bold">{country.country_name}</p>
                     <p className="mt-0.5 text-lg font-bold tabular-nums">
-                      {positive ? "+" : ""}
-                      {region.avg_change_pct.toFixed(2)}%
+                      {positive && !country.change_pct.startsWith("+") ? "+" : ""}
+                      {country.change_pct}%
                     </p>
                     <p className="mt-0.5 truncate text-[10px] opacity-80">
-                      {region.countries.slice(0, 3).join(" · ")}
-                      {region.countries.length > 3 ? " ..." : ""}
+                      {country.market_cap_usd}
                     </p>
                   </div>
                 );

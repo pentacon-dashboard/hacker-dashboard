@@ -3,16 +3,18 @@
 import { TrendingUp, TrendingDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-interface IndexKpi {
-  code: string;
-  name: string;
-  value: number;
-  change_pct: number;
-  sparkline: number[];
+// BE /market/indices 실제 스키마
+export interface IndexSnapshot {
+  ticker: string;
+  display_name: string;
+  value: string;
+  change_pct: string;
+  change_abs: string;
+  sparkline_7d: number[];
 }
 
 interface IndexKpiStripProps {
-  indices: IndexKpi[];
+  indices: IndexSnapshot[];
   loading?: boolean;
 }
 
@@ -51,14 +53,13 @@ function Sparkline({ data, positive }: { data: number[]; positive: boolean }) {
   );
 }
 
-function formatValue(code: string, value: number): string {
-  if (code === "USDKRW") {
-    return value.toLocaleString("ko-KR", { maximumFractionDigits: 2 });
+function formatValue(ticker: string, value: string): string {
+  const num = parseFloat(value.replace(/,/g, ""));
+  if (isNaN(num)) return value;
+  if (ticker === "USDKRW" || num >= 1000) {
+    return num.toLocaleString("ko-KR", { maximumFractionDigits: 2 });
   }
-  if (value >= 1000) {
-    return value.toLocaleString("ko-KR", { maximumFractionDigits: 2 });
-  }
-  return value.toFixed(2);
+  return num.toFixed(2);
 }
 
 export function IndexKpiStrip({ indices, loading }: IndexKpiStripProps) {
@@ -83,18 +84,18 @@ export function IndexKpiStrip({ indices, loading }: IndexKpiStripProps) {
       data-testid="index-kpi-strip"
     >
       {indices.map((idx) => {
-        const positive = idx.change_pct >= 0;
+        const positive = !idx.change_pct.startsWith("-");
         return (
           <div
-            key={idx.code}
+            key={idx.ticker}
             role="listitem"
             className="flex min-w-[140px] shrink-0 items-center justify-between gap-2 rounded-lg border border-border bg-card px-3 py-2"
-            data-testid={`kpi-${idx.code}`}
+            data-testid={`kpi-${idx.ticker}`}
           >
             <div className="min-w-0 flex-1">
-              <p className="text-xs font-semibold text-muted-foreground">{idx.name}</p>
+              <p className="text-xs font-semibold text-muted-foreground">{idx.display_name}</p>
               <p className="mt-0.5 text-sm font-bold tabular-nums">
-                {formatValue(idx.code, idx.value)}
+                {formatValue(idx.ticker, idx.value)}
               </p>
               <div className={cn("flex items-center gap-0.5 text-xs font-semibold", positive ? "text-green-500" : "text-destructive")}>
                 {positive ? (
@@ -102,11 +103,10 @@ export function IndexKpiStrip({ indices, loading }: IndexKpiStripProps) {
                 ) : (
                   <TrendingDown className="h-3 w-3" aria-hidden="true" />
                 )}
-                {positive ? "+" : ""}
-                {idx.change_pct.toFixed(2)}%
+                {idx.change_pct}%
               </div>
             </div>
-            <Sparkline data={idx.sparkline} positive={positive} />
+            <Sparkline data={idx.sparkline_7d} positive={positive} />
           </div>
         );
       })}

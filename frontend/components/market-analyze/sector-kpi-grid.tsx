@@ -4,14 +4,16 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { TrendingUp, TrendingDown, BarChart3 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-interface SectorData {
-  sector: string;
-  change_pct: number;
-  market_cap_b?: number;
+// BE /market/sectors 실제 스키마
+export interface SectorItem {
+  name: string;
+  change_pct: string;
+  constituents: number;
+  leaders: string[];
 }
 
 interface SectorKpiGridProps {
-  sectors: SectorData[];
+  sectors: SectorItem[];
   loading?: boolean;
 }
 
@@ -35,17 +37,18 @@ export function SectorKpiGrid({ sectors, loading }: SectorKpiGridProps) {
 
         {!loading &&
           sectors.map((sector) => {
-            const positive = sector.change_pct >= 0;
-            const barPct = Math.min(Math.abs(sector.change_pct) * 25, 100);
+            const positive = !sector.change_pct.startsWith("-");
+            const numPct = parseFloat(sector.change_pct);
+            const barPct = Math.min(Math.abs(isNaN(numPct) ? 0 : numPct) * 25, 100);
             return (
               <div
-                key={sector.sector}
+                key={sector.name}
                 className="flex items-center gap-2"
-                data-testid={`sector-${sector.sector}`}
+                data-testid={`sector-${sector.name}`}
               >
                 {/* 섹터명 */}
                 <span className="w-28 shrink-0 truncate text-xs text-muted-foreground">
-                  {sector.sector}
+                  {sector.name}
                 </span>
 
                 {/* 바 */}
@@ -69,8 +72,8 @@ export function SectorKpiGrid({ sectors, loading }: SectorKpiGridProps) {
                     positive ? "text-green-500" : "text-destructive",
                   )}
                 >
-                  {positive ? "+" : ""}
-                  {sector.change_pct.toFixed(2)}%
+                  {positive && !sector.change_pct.startsWith("+") ? "+" : ""}
+                  {sector.change_pct}%
                 </span>
 
                 {positive ? (
