@@ -22,6 +22,7 @@ from app.schemas.portfolio import (
     HoldingCreate,
     HoldingResponse,
     HoldingUpdate,
+    MarketLeader,
     MonthlyReturnCell,
     PortfolioSummary,
     SectorHeatmapTile,
@@ -35,6 +36,7 @@ from app.schemas.rebalance import (
     RebalanceSummary,
 )
 from app.services.market import get_adapter
+from app.services.market_leaders import get_market_leaders
 from app.services.portfolio import compute_summary, get_period_snapshot, get_prev_snapshot
 from app.services.portfolio_service import ai_insight_stub, monthly_returns, sector_heatmap
 from app.services.rebalance import (
@@ -275,7 +277,10 @@ async def list_snapshots(
 @router.post(
     "/rebalance",
     response_model=RebalanceResponse,
-    responses={400: {"description": "JSON 파싱 실패"}},
+    responses={
+        400: {"description": "JSON 파싱 실패"},
+        422: {"description": "target_allocation 합계가 1.0이 아님 (sum > 0 필요)"},
+    },
     openapi_extra={
         "requestBody": {
             "required": True,
@@ -430,7 +435,7 @@ async def rebalance(
 
     return RebalanceResponse(
         request_id=request_id,
-        status=status,  # type: ignore[arg-type]
+        status=status,
         current_allocation=current_alloc,
         target_allocation=target_dict,
         drift=drift,
@@ -541,3 +546,23 @@ async def get_ai_insight(
     )
 
     return ai_insight_stub(summary)
+
+
+# ────────────────────── 시장 주도주 ──────────────────────
+
+
+@router.get(
+    "/market-leaders",
+    response_model=list[MarketLeader],
+    summary="시장 주도주 목록",
+    description=(
+        "글로벌 시장 주도 종목을 최대 20개까지 반환한다. "
+        "현재 stub 데이터 (NVDA/AAPL/TSLA/삼성전자/BTC) 를 순위순으로 반환. "
+        "실 시장 API 연동은 non-goal."
+    ),
+)
+async def get_market_leaders_endpoint(
+    limit: int = Query(5, ge=1, le=20, description="반환 개수 (1~20)"),
+) -> list[MarketLeader]:
+    """시장 주도주 stub 목록 반환."""
+    return get_market_leaders(limit=limit)

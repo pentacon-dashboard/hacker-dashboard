@@ -64,27 +64,36 @@ _SP500_FALLBACK: list[MarketLeader] = [
         rank=1,
         name="NVIDIA",
         ticker="NVDA",
+        market="yahoo",
+        price="875.40",
+        change_pct="+2.15",
+        currency="USD",
         logo_url=None,
         price_display="$875.40",
-        change_pct="+2.15",
         change_krw="+25,800",
     ),
     MarketLeader(
         rank=2,
         name="Apple",
         ticker="AAPL",
+        market="yahoo",
+        price="189.30",
+        change_pct="+0.82",
+        currency="USD",
         logo_url=None,
         price_display="$189.30",
-        change_pct="+0.82",
         change_krw="+9,850",
     ),
     MarketLeader(
         rank=3,
         name="Microsoft",
         ticker="MSFT",
+        market="yahoo",
+        price="415.20",
+        change_pct="+1.34",
+        currency="USD",
         logo_url=None,
         price_display="$415.20",
-        change_pct="+1.34",
         change_krw="+16,200",
     ),
 ]
@@ -133,14 +142,18 @@ def build_market_leaders(holdings: list[HoldingDetail]) -> list[MarketLeader]:
         else:
             price_display = f"{_fmt(price_val, 2)} {currency}"
 
+        market_id = h.market
         leaders.append(
             MarketLeader(
                 rank=rank,
                 name=_DISPLAY_NAMES.get(h.code, h.code),
                 ticker=h.code,
+                market=market_id,
+                price=str(price_val),
+                change_pct=pnl_str,
+                currency=currency,
                 logo_url=None,
                 price_display=price_display,
-                change_pct=pnl_str,
                 change_krw=krw_display,
             )
         )

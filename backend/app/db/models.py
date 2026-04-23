@@ -6,6 +6,7 @@ from decimal import Decimal
 
 from pgvector.sqlalchemy import Vector
 from sqlalchemy import (
+    Boolean,
     Date,
     DateTime,
     ForeignKey,
@@ -141,3 +142,25 @@ class DocumentChunk(Base):
     )
 
     document: Mapped[Document] = relationship("Document", back_populates="chunks")
+
+
+# ---------------------------------------------------------------------------
+# sprint-08 Phase 2-D: Watchlist Alerts
+# ---------------------------------------------------------------------------
+
+
+class WatchlistAlert(Base):
+    """워치리스트 알림 설정 — 지정 가격 초과/미달 시 알림."""
+
+    __tablename__ = "watchlist_alerts"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[str] = mapped_column(String(50), nullable=False, index=True, default="demo")
+    symbol: Mapped[str] = mapped_column(String(50), nullable=False)    # "NVDA", "KRW-BTC"
+    market: Mapped[str] = mapped_column(String(20), nullable=False)    # "yahoo", "upbit", "naver_kr"
+    direction: Mapped[str] = mapped_column(String(10), nullable=False)  # "above" | "below"
+    threshold: Mapped[Decimal] = mapped_column(Numeric(18, 4), nullable=False)
+    enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )

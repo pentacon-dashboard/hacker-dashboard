@@ -7,10 +7,7 @@ from __future__ import annotations
 
 import math
 
-import pytest
-
-from app.services.indicators import calc_bollinger, calc_macd, calc_rsi, calc_stochastic
-
+from app.services.indicators import calc_bollinger, calc_ma, calc_macd, calc_rsi, calc_stochastic
 
 # ──────────────── 공통 픽스처 ────────────────
 
@@ -110,8 +107,8 @@ class TestCalcBollinger:
         """upper >= mid >= lower 항상 성립."""
         closes = _make_alternating(60)
         upper, mid, lower = calc_bollinger(closes)
-        for u, m, l in zip(upper, mid, lower):
-            assert u >= m >= l, f"밴드 역전: {u} {m} {l}"
+        for u, m, lo in zip(upper, mid, lower):
+            assert u >= m >= lo, f"밴드 역전: {u} {m} {lo}"
 
     def test_mid_is_rolling_mean(self) -> None:
         """mid 는 20일 이동평균이어야 함."""
@@ -152,7 +149,7 @@ class TestCalcStochastic:
         highs, lows, closes = self._make_hls(80)
         k, d = calc_stochastic(highs, lows, closes)
         assert all(0 <= v <= 100 for v in k), f"K 범위 벗어남: {[v for v in k if not (0 <= v <= 100)]}"
-        assert all(0 <= v <= 100 for v in d), f"D 범위 벗어남"
+        assert all(0 <= v <= 100 for v in d), "D 범위 벗어남"
 
     def test_constant_price_returns_50(self) -> None:
         """가격이 변하지 않으면 K=50 (high==low → 강제 50)."""
@@ -169,3 +166,34 @@ class TestCalcStochastic:
         closes = [100.0] * 5
         k, d = calc_stochastic(highs, lows, closes)
         assert k == [] and d == []
+
+
+# ──────────────── MA (이동평균) ────────────────
+
+class TestCalcMa:
+    def test_ma5_length(self) -> None:
+        closes = list(range(1, 21))  # [1, 2, ..., 20]
+        result = calc_ma(closes, period=5)
+        assert len(result) == 16  # 20 - 5 + 1
+
+    def test_ma5_first_value(self) -> None:
+        closes = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0]
+        result = calc_ma(closes, period=5)
+        assert abs(result[0] - 3.0) < 1e-4  # (1+2+3+4+5)/5 = 3.0
+
+    def test_insufficient_returns_empty(self) -> None:
+        closes = [1.0, 2.0, 3.0]
+        result = calc_ma(closes, period=5)
+        assert result == []
+
+    def test_constant_prices(self) -> None:
+        closes = [50.0] * 30
+        result = calc_ma(closes, period=20)
+        assert all(abs(v - 50.0) < 1e-4 for v in result)
+
+    def test_ma20_ma60_lengths(self) -> None:
+        closes = [float(i) for i in range(100)]
+        ma20 = calc_ma(closes, period=20)
+        ma60 = calc_ma(closes, period=60)
+        assert len(ma20) == 81  # 100 - 20 + 1
+        assert len(ma60) == 41  # 100 - 60 + 1

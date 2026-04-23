@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Hacker Dashboard API",
-    "description": "\uc784\uc758 \ud22c\uc790 \ub370\uc774\ud130 \uc2a4\ud0a4\ub9c8\uc5d0\uc11c \uc790\ub3d9 \ubd84\uc11d \ubdf0\ub97c \uc0dd\uc131\ud558\ub294 \uae08\uc735 \ub300\uc2dc\ubcf4\ub4dc API",
+    "description": "임의 투자 데이터 스키마에서 자동 분석 뷰를 생성하는 금융 대시보드 API",
     "version": "0.1.0"
   },
   "paths": {
@@ -33,7 +33,7 @@
           "market"
         ],
         "summary": "List Symbols",
-        "description": "\uc9c0\uc6d0 \uc2ec\ubcfc \ubaa9\ub85d (\ub370\ubaa8 \uace0\uc815 \uc0d8\ud50c)",
+        "description": "지원 심볼 목록 (데모 고정 샘플)",
         "operationId": "list_symbols_market_symbols_get",
         "responses": {
           "200": {
@@ -59,7 +59,7 @@
           "market"
         ],
         "summary": "Search Symbols",
-        "description": "\uc2ec\ubcfc \ud1b5\ud569 \uac80\uc0c9 (upbit + yahoo + naver_kr + alias).\n\n- 4\uac1c \uc18c\uc2a4\ub97c asyncio.gather \ub85c \ubcd1\ub82c \ud638\ucd9c\n- (market, symbol) \uae30\uc900 dedupe, \ub192\uc740 score \uc720\uc9c0\n- score \ub0b4\ub9bc\ucc28\uc21c \uc815\ub82c \ud6c4 \uc0c1\uc704 50\uac1c \ubc18\ud658\n- score \ud544\ub4dc\ub294 \uc751\ub2f5\uc5d0 \ud3ec\ud568\ub418\uc9c0 \uc54a\uc74c (SymbolInfo.score \ub294 exclude=True)",
+        "description": "심볼 통합 검색 (upbit + yahoo + naver_kr + alias).\n\n- 4개 소스를 asyncio.gather 로 병렬 호출\n- (market, symbol) 기준 dedupe, 높은 score 유지\n- score 내림차순 정렬 후 상위 50개 반환\n- score 필드는 응답에 포함되지 않음 (SymbolInfo.score 는 exclude=True)",
         "operationId": "search_symbols_market_symbols_search_get",
         "parameters": [
           {
@@ -69,10 +69,10 @@
             "schema": {
               "type": "string",
               "minLength": 1,
-              "description": "\uac80\uc0c9 \ud0a4\uc6cc\ub4dc",
+              "description": "검색 키워드",
               "title": "Q"
             },
-            "description": "\uac80\uc0c9 \ud0a4\uc6cc\ub4dc"
+            "description": "검색 키워드"
           }
         ],
         "responses": {
@@ -109,7 +109,7 @@
           "market"
         ],
         "summary": "Get Quote",
-        "description": "\ub2e8\uc77c \uc2ec\ubcfc \uc2dc\uc138 \uc870\ud68c (stub -- legacy \ud638\ud658)",
+        "description": "단일 심볼 시세 조회 (stub -- legacy 호환)",
         "operationId": "get_quote_market_quotes__symbol__get",
         "parameters": [
           {
@@ -152,7 +152,7 @@
           "market"
         ],
         "summary": "Get Market Quote",
-        "description": "market\ubcc4 \ub2e8\uc77c \uc2ec\ubcfc \ud604\uc7ac\uac00 \uc870\ud68c. Redis \uce90\uc2dc(TTL 5s) \uc801\uc6a9.",
+        "description": "market별 단일 심볼 현재가 조회. Redis 캐시(TTL 5s) 적용.",
         "operationId": "get_market_quote_market_quotes__market___code__get",
         "parameters": [
           {
@@ -186,7 +186,7 @@
             }
           },
           "404": {
-            "description": "market \ub610\ub294 code \ub97c \ucc3e\uc744 \uc218 \uc5c6\uc74c"
+            "description": "market 또는 code 를 찾을 수 없음"
           },
           "422": {
             "description": "Validation Error",
@@ -207,7 +207,7 @@
           "market"
         ],
         "summary": "Get Ohlc",
-        "description": "OHLC \uce94\ub4e4 \uc870\ud68c. Redis \uce90\uc2dc(TTL 60s) \uc801\uc6a9.",
+        "description": "OHLC 캔들 조회. Redis 캐시(TTL 60s) 적용.",
         "operationId": "get_ohlc_market_ohlc__market___code__get",
         "parameters": [
           {
@@ -268,7 +268,7 @@
             }
           },
           "404": {
-            "description": "market \ub610\ub294 code \ub97c \ucc3e\uc744 \uc218 \uc5c6\uc74c"
+            "description": "market 또는 code 를 찾을 수 없음"
           },
           "422": {
             "description": "Validation Error",
@@ -289,7 +289,7 @@
           "market"
         ],
         "summary": "List Watchlist",
-        "description": "\uc6cc\uce58\ub9ac\uc2a4\ud2b8 \uc870\ud68c (user_id='demo' \uace0\uc815). pnl_7d \uc2a4\ud30c\ud06c\ub77c\uc778 \ud3ec\ud568.",
+        "description": "워치리스트 조회 (user_id='demo' 고정). pnl_7d 스파크라인 포함.",
         "operationId": "list_watchlist_market_watchlist_items_get",
         "responses": {
           "200": {
@@ -313,7 +313,7 @@
           "market"
         ],
         "summary": "Add Watchlist",
-        "description": "\uc6cc\uce58\ub9ac\uc2a4\ud2b8\uc5d0 \uc2ec\ubcfc \ucd94\uac00.",
+        "description": "워치리스트에 심볼 추가.",
         "operationId": "add_watchlist_market_watchlist_items_post",
         "requestBody": {
           "content": {
@@ -337,7 +337,7 @@
             }
           },
           "400": {
-            "description": "JSON \ud30c\uc2f1 \uc2e4\ud328"
+            "description": "JSON 파싱 실패"
           },
           "422": {
             "description": "Validation Error",
@@ -358,7 +358,7 @@
           "market"
         ],
         "summary": "Delete Watchlist",
-        "description": "\uc6cc\uce58\ub9ac\uc2a4\ud2b8 \ud56d\ubaa9 \uc0ad\uc81c.",
+        "description": "워치리스트 항목 삭제.",
         "operationId": "delete_watchlist_market_watchlist_items__item_id__delete",
         "parameters": [
           {
@@ -376,7 +376,7 @@
             "description": "Successful Response"
           },
           "404": {
-            "description": "\uc6cc\uce58\ub9ac\uc2a4\ud2b8 \ud56d\ubaa9\uc744 \ucc3e\uc744 \uc218 \uc5c6\uc74c"
+            "description": "워치리스트 항목을 찾을 수 없음"
           },
           "422": {
             "description": "Validation Error",
@@ -397,7 +397,7 @@
           "market"
         ],
         "summary": "Get Symbol Indicators",
-        "description": "\uc2ec\ubcfc \uae30\uc220 \uc9c0\ud45c (RSI-14, MACD, \ubcfc\ub9b0\uc800, \uc2a4\ud1a0\uce90\uc2a4\ud2f1).\n\n\uc2e4\uc81c OHLC \uc5b4\ub311\ud130 \uc2dc\ub3c4 \ud6c4 \uc2e4\ud328\ud558\uba74 stub \ub370\uc774\ud130\ub85c \ud3f4\ubc31.",
+        "description": "심볼 기술 지표 (RSI-14, MACD, 볼린저, 스토캐스틱).\n\n실제 OHLC 어댑터 시도 후 실패하면 stub 데이터로 폴백.",
         "operationId": "get_symbol_indicators_market_symbol__market___code__indicators_get",
         "parameters": [
           {
@@ -455,7 +455,7 @@
             }
           },
           "400": {
-            "description": "interval \uac12\uc774 \uc720\ud6a8\ud558\uc9c0 \uc54a\uc74c"
+            "description": "interval 값이 유효하지 않음"
           },
           "422": {
             "description": "Validation Error",
@@ -476,7 +476,7 @@
           "market"
         ],
         "summary": "Get Market Indices",
-        "description": "KOSPI/KOSDAQ/S&P/NASDAQ/DOW/VIX/USD-KRW 7\uc885 \uc2a4\ub0c5\uc0f7 (stub).",
+        "description": "KOSPI/KOSDAQ/S&P/NASDAQ/DOW/VIX/USD-KRW 7종 스냅샷 (stub).",
         "operationId": "get_market_indices_market_indices_get",
         "responses": {
           "200": {
@@ -502,7 +502,7 @@
           "market"
         ],
         "summary": "Get Market Sectors",
-        "description": "11 GICS \uc139\ud130 KPI (stub).",
+        "description": "11 GICS 섹터 KPI (stub).",
         "operationId": "get_market_sectors_market_sectors_get",
         "responses": {
           "200": {
@@ -528,7 +528,7 @@
           "market"
         ],
         "summary": "Get Market Commodities",
-        "description": "\uc6d0\uc720/\uae08/\uc740/\uad6c\ub9ac/\ucc9c\uc5f0\uac00\uc2a4 5\uc885 (stub).",
+        "description": "원유/금/은/구리/천연가스 5종 (stub).",
         "operationId": "get_market_commodities_market_commodities_get",
         "responses": {
           "200": {
@@ -554,7 +554,7 @@
           "market"
         ],
         "summary": "Get World Heatmap",
-        "description": "20\uac1c\uad6d \uc138\uacc4 \ud788\ud2b8\ub9f5 (stub).",
+        "description": "20개국 세계 히트맵 (stub).",
         "operationId": "get_world_heatmap_market_world_heatmap_get",
         "responses": {
           "200": {
@@ -580,7 +580,7 @@
           "analyze"
         ],
         "summary": "Analyze",
-        "description": "\uc784\uc758 \ud22c\uc790 \ub370\uc774\ud130\ub97c \ubc1b\uc544 Router \u2192 Analyzer \u2192 3\ub2e8 \uac8c\uc774\ud2b8 \ud30c\uc774\ud504\ub77c\uc778\uc744 \uc2e4\ud589\ud55c\ub2e4.\n\n- `data` \ub9cc \uc8fc\uc5b4\uc9c4 \uacbd\uc6b0: \uadf8\ub300\ub85c \ubd84\uc11d\n- `symbol` \uc774 \uc8fc\uc5b4\uc9c4 \uacbd\uc6b0: market \uc5b4\ub311\ud130\ub85c OHLC \ud504\ub9ac\ud328\uce58 \ud6c4 \uc8fc\uc785\n- `context.ohlc` \uac00 \uc8fc\uc5b4\uc9c4 \uacbd\uc6b0: \uadf8\ub300\ub85c rows \ub85c \ubcc0\ud658\ud574 \uc8fc\uc785\n- `include_portfolio_context=True` \uc778 \uacbd\uc6b0: DB\uc5d0\uc11c holdings\ub97c \uc870\ud68c\ud574 AgentState\uc5d0 \uc8fc\uc785",
+        "description": "임의 투자 데이터를 받아 Router → Analyzer → 3단 게이트 파이프라인을 실행한다.\n\n- `data` 만 주어진 경우: 그대로 분석\n- `symbol` 이 주어진 경우: market 어댑터로 OHLC 프리패치 후 주입\n- `context.ohlc` 가 주어진 경우: 그대로 rows 로 변환해 주입\n- `include_portfolio_context=True` 인 경우: DB에서 holdings를 조회해 AgentState에 주입",
         "operationId": "analyze_analyze_post",
         "requestBody": {
           "content": {
@@ -604,7 +604,7 @@
             }
           },
           "400": {
-            "description": "JSON \ud30c\uc2f1 \uc2e4\ud328"
+            "description": "JSON 파싱 실패"
           },
           "422": {
             "description": "Validation Error",
@@ -625,7 +625,7 @@
           "analyze"
         ],
         "summary": "Analyze Csv",
-        "description": "CSV \ud30c\uc77c \uc5c5\ub85c\ub4dc \u2192 \uc790\ub3d9 \ubd84\uc11d.\n\n- content-type: text/csv \ub610\ub294 application/vnd.ms-excel\n- \ud30c\uc77c \ud06c\uae30: \u2264 10MB (\ucd08\uacfc \uc2dc 413)\n- \uc778\ucf54\ub529: utf-8 / cp949 \uc790\ub3d9 \ud0d0\uc9c0\n- \ud589 \uc218 > 300 \uc774\uba74 \ubaa8\ub378\uc744 opus \ub85c \uc790\ub3d9 \uc2b9\uae09\n- \uacb0\uacfc\ub294 \ud30c\uc77c \ud574\uc2dc + user_note \uae30\ubc18 \uce90\uc2dc \ud0a4\ub85c 5\ubd84 \uce90\uc2f1",
+        "description": "CSV 파일 업로드 → 자동 분석.\n\n- content-type: text/csv 또는 application/vnd.ms-excel\n- 파일 크기: ≤ 10MB (초과 시 413)\n- 인코딩: utf-8 / cp949 자동 탐지\n- 행 수 > 300 이면 모델을 opus 로 자동 승급\n- 결과는 파일 해시 + user_note 기반 캐시 키로 5분 캐싱",
         "operationId": "analyze_csv_analyze_csv_post",
         "requestBody": {
           "content": {
@@ -649,23 +649,16 @@
             }
           },
           "400": {
-            "description": "CSV \ud30c\uc2f1 \uc2e4\ud328 \ub610\ub294 \ube48 \ud30c\uc77c"
+            "description": "CSV 파싱 실패 또는 빈 파일"
           },
           "413": {
-            "description": "\ud30c\uc77c \ud06c\uae30 10MB \ucd08\uacfc"
+            "description": "파일 크기 10MB 초과"
           },
           "415": {
-            "description": "\uc9c0\uc6d0\ud558\uc9c0 \uc54a\ub294 Content-Type"
+            "description": "지원하지 않는 Content-Type"
           },
           "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
+            "description": "요청 파라미터 검증 실패"
           }
         }
       }
@@ -676,7 +669,7 @@
           "portfolio"
         ],
         "summary": "List Holdings",
-        "description": "\ubcf4\uc720 \uc885\ubaa9 \uc804\uccb4 \uc870\ud68c.",
+        "description": "보유 종목 전체 조회.",
         "operationId": "list_holdings_portfolio_holdings_get",
         "responses": {
           "200": {
@@ -700,7 +693,7 @@
           "portfolio"
         ],
         "summary": "Create Holding",
-        "description": "\ubcf4\uc720 \uc885\ubaa9 \ucd94\uac00.",
+        "description": "보유 종목 추가.",
         "operationId": "create_holding_portfolio_holdings_post",
         "requestBody": {
           "content": {
@@ -724,7 +717,7 @@
             }
           },
           "400": {
-            "description": "JSON \ud30c\uc2f1 \uc2e4\ud328"
+            "description": "JSON 파싱 실패"
           },
           "422": {
             "description": "Validation Error",
@@ -745,7 +738,7 @@
           "portfolio"
         ],
         "summary": "Update Holding",
-        "description": "\uc218\ub7c9/\ud3c9\ub2e8\uac00 \uc218\uc815.",
+        "description": "수량/평단가 수정.",
         "operationId": "update_holding_portfolio_holdings__holding_id__patch",
         "parameters": [
           {
@@ -756,10 +749,10 @@
               "type": "integer",
               "maximum": 2147483647,
               "minimum": 1,
-              "description": "\ubcf4\uc720 \uc885\ubaa9 ID",
+              "description": "보유 종목 ID",
               "title": "Holding Id"
             },
-            "description": "\ubcf4\uc720 \uc885\ubaa9 ID"
+            "description": "보유 종목 ID"
           }
         ],
         "requestBody": {
@@ -784,7 +777,7 @@
             }
           },
           "400": {
-            "description": "JSON \ud30c\uc2f1 \uc2e4\ud328"
+            "description": "JSON 파싱 실패"
           },
           "404": {
             "description": "Holding not found"
@@ -806,7 +799,7 @@
           "portfolio"
         ],
         "summary": "Delete Holding",
-        "description": "\ubcf4\uc720 \uc885\ubaa9 \uc0ad\uc81c.",
+        "description": "보유 종목 삭제.",
         "operationId": "delete_holding_portfolio_holdings__holding_id__delete",
         "parameters": [
           {
@@ -817,10 +810,10 @@
               "type": "integer",
               "maximum": 2147483647,
               "minimum": 1,
-              "description": "\ubcf4\uc720 \uc885\ubaa9 ID",
+              "description": "보유 종목 ID",
               "title": "Holding Id"
             },
-            "description": "\ubcf4\uc720 \uc885\ubaa9 ID"
+            "description": "보유 종목 ID"
           }
         ],
         "responses": {
@@ -849,7 +842,7 @@
           "portfolio"
         ],
         "summary": "Get Summary",
-        "description": "\ud3ec\ud2b8\ud3f4\ub9ac\uc624 \uc9d1\uacc4 \uc694\uc57d (\ud604\uc7ac\uac00 \uae30\ubc18 \uc2e4\uc2dc\uac04 \uacc4\uc0b0).\n\n6\uac1c KPI + \uc790\uc0b0\uad70 \ube44\uc911 + \ub514\uba58\uc158 breakdown + TOP \uc885\ubaa9\uc744 \ud55c \ubc88\uc5d0 \ubc18\ud658.",
+        "description": "포트폴리오 집계 요약 (현재가 기반 실시간 계산).\n\n6개 KPI + 자산군 비중 + 디멘션 breakdown + TOP 종목을 한 번에 반환.",
         "operationId": "get_summary_portfolio_summary_get",
         "parameters": [
           {
@@ -860,11 +853,11 @@
               "type": "integer",
               "maximum": 365,
               "minimum": 1,
-              "description": "period_change_pct \uacc4\uc0b0 \uae30\uac04 (\uc77c). \uae30\ubcf8 30\uc77c.",
+              "description": "period_change_pct 계산 기간 (일). 기본 30일.",
               "default": 30,
               "title": "Period Days"
             },
-            "description": "period_change_pct \uacc4\uc0b0 \uae30\uac04 (\uc77c). \uae30\ubcf8 30\uc77c."
+            "description": "period_change_pct 계산 기간 (일). 기본 30일."
           }
         ],
         "responses": {
@@ -897,7 +890,7 @@
           "portfolio"
         ],
         "summary": "List Snapshots",
-        "description": "\ud3ec\ud2b8\ud3f4\ub9ac\uc624 \uc2a4\ub0c5\uc0f7 \uc870\ud68c (\ub0a0\uc9dc \ubc94\uc704 \ud544\ud130). pattern \ubd88\uc77c\uce58 \uc2dc 422 \uc790\ub3d9 \ubc18\ud658.",
+        "description": "포트폴리오 스냅샷 조회 (날짜 범위 필터). pattern 불일치 시 422 자동 반환.",
         "operationId": "list_snapshots_portfolio_snapshots_get",
         "parameters": [
           {
@@ -914,10 +907,10 @@
                   "type": "null"
                 }
               ],
-              "description": "\uc2dc\uc791 \ub0a0\uc9dc (YYYY-MM-DD)",
+              "description": "시작 날짜 (YYYY-MM-DD)",
               "title": "From"
             },
-            "description": "\uc2dc\uc791 \ub0a0\uc9dc (YYYY-MM-DD)"
+            "description": "시작 날짜 (YYYY-MM-DD)"
           },
           {
             "name": "to",
@@ -933,10 +926,10 @@
                   "type": "null"
                 }
               ],
-              "description": "\uc885\ub8cc \ub0a0\uc9dc (YYYY-MM-DD)",
+              "description": "종료 날짜 (YYYY-MM-DD)",
               "title": "To"
             },
-            "description": "\uc885\ub8cc \ub0a0\uc9dc (YYYY-MM-DD)"
+            "description": "종료 날짜 (YYYY-MM-DD)"
           }
         ],
         "responses": {
@@ -973,7 +966,7 @@
           "portfolio"
         ],
         "summary": "Rebalance",
-        "description": "\ub9ac\ubc38\ub7f0\uc2f1 \uc81c\uc548 \uc0dd\uc131.\n\n\uacb0\uc815\uc801 \uacc4\uc0b0(\uc21c\uc218\ud568\uc218)\uc73c\ub85c actions \ubc30\uc5f4\uc744 \uc0dd\uc131\ud558\uace0,\nLLM \ud574\uc11d(RebalanceAnalyzer)\uc744 \uc635\uc158\uc73c\ub85c \ucd94\uac00.\nLLM \uc2e4\ud328 \uc2dc llm_analysis=None, status=\"degraded\" \ub85c graceful degrade.",
+        "description": "리밸런싱 제안 생성.\n\n결정적 계산(순수함수)으로 actions 배열을 생성하고,\nLLM 해석(RebalanceAnalyzer)을 옵션으로 추가.\nLLM 실패 시 llm_analysis=None, status=\"degraded\" 로 graceful degrade.",
         "operationId": "rebalance_portfolio_rebalance_post",
         "requestBody": {
           "content": {
@@ -1011,17 +1004,10 @@
             }
           },
           "400": {
-            "description": "JSON \ud30c\uc2f1 \uc2e4\ud328"
+            "description": "JSON 파싱 실패"
           },
           "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
+            "description": "target_allocation 합계가 1.0이 아님 (sum > 0 필요)"
           }
         }
       }
@@ -1031,8 +1017,8 @@
         "tags": [
           "portfolio"
         ],
-        "summary": "\uc139\ud130 \ud788\ud2b8\ub9f5",
-        "description": "\uc139\ud130\ubcc4 \ube44\uc911 + \uac00\uc911 PnL \ud788\ud2b8\ub9f5 \ub370\uc774\ud130\ub97c \ubc18\ud658\ud55c\ub2e4.\n\n\ubcf4\uc720 \uc885\ubaa9\uc744 \uc139\ud130\ub85c \ubd84\ub958\ud558\uace0 \uac01 \uc139\ud130\uc758 value_krw \ube44\uc911 \ubc0f \uc190\uc775\ub960\uc744 \uc9d1\uacc4\ud55c\ub2e4.\n\ubbf8\ubd84\ub958 \uc885\ubaa9\uc740 '\uae30\ud0c0' \uc139\ud130\ub85c \ud1b5\ud569.",
+        "summary": "섹터 히트맵",
+        "description": "섹터별 비중 + 가중 PnL 히트맵 데이터를 반환한다.\n\n보유 종목을 섹터로 분류하고 각 섹터의 value_krw 비중 및 손익률을 집계한다.\n미분류 종목은 '기타' 섹터로 통합.",
         "operationId": "get_sector_heatmap_portfolio_sectors_heatmap_get",
         "responses": {
           "200": {
@@ -1057,8 +1043,8 @@
         "tags": [
           "portfolio"
         ],
-        "summary": "\uc6d4\uac04(\uc77c\uac04) \uc218\uc775\ub960 \uce98\ub9b0\ub354",
-        "description": "\uc9c0\uc815 \uc5f0\ub3c4\uc758 \uc77c\ubcc4 \uc218\uc775\ub960 \uc140 \ubaa9\ub85d\uc744 \ubc18\ud658\ud55c\ub2e4 (365\uc77c).\n\n\uc2e4\uc81c \uc2a4\ub0c5\uc0f7 \uc11c\ube44\uc2a4 \ubbf8\uad6c\ucd95 \uc2dc \uacb0\uc815\ub860\uc801 sin stub \uac12 \uc81c\uacf5.\nyear \ubbf8\uc9c0\uc815 \uc2dc \ud604\uc7ac \uc5f0\ub3c4 \uc0ac\uc6a9.",
+        "summary": "월간(일간) 수익률 캘린더",
+        "description": "지정 연도의 일별 수익률 셀 목록을 반환한다 (365일).\n\n실제 스냅샷 서비스 미구축 시 결정론적 sin stub 값 제공.\nyear 미지정 시 현재 연도 사용.",
         "operationId": "get_monthly_returns_portfolio_monthly_returns_get",
         "parameters": [
           {
@@ -1076,10 +1062,10 @@
                   "type": "null"
                 }
               ],
-              "description": "\uc870\ud68c \uc5f0\ub3c4 (\uae30\ubcf8: \ud604\uc7ac \uc5f0\ub3c4)",
+              "description": "조회 연도 (기본: 현재 연도)",
               "title": "Year"
             },
-            "description": "\uc870\ud68c \uc5f0\ub3c4 (\uae30\ubcf8: \ud604\uc7ac \uc5f0\ub3c4)"
+            "description": "조회 연도 (기본: 현재 연도)"
           }
         ],
         "responses": {
@@ -1115,8 +1101,8 @@
         "tags": [
           "portfolio"
         ],
-        "summary": "AI \ud3ec\ud2b8\ud3f4\ub9ac\uc624 \uc778\uc0ac\uc774\ud2b8 (stub \ubaa8\ub4dc)",
-        "description": "\ud3ec\ud2b8\ud3f4\ub9ac\uc624 \uc694\uc57d \uae30\ubc18 AI \uc778\uc0ac\uc774\ud2b8\ub97c \ubc18\ud658\ud55c\ub2e4.\n\nADR-0012 stub \ubaa8\ub4dc: LLM \ud638\ucd9c \uc5c6\uc774 \uacb0\uc815\ub860\uc801 \ubb38\ub2e8 \uc0dd\uc131.\ngates \ud544\ub4dc\ub85c 3\ub2e8 \ud488\uc9c8 \uac8c\uc774\ud2b8 \ud1b5\uacfc \uc5ec\ubd80 \ud45c\uc2dc.",
+        "summary": "AI 포트폴리오 인사이트 (stub 모드)",
+        "description": "포트폴리오 요약 기반 AI 인사이트를 반환한다.\n\nADR-0012 stub 모드: LLM 호출 없이 결정론적 문단 생성.\ngates 필드로 3단 품질 게이트 통과 여부 표시.",
         "operationId": "get_ai_insight_portfolio_ai_insight_get",
         "responses": {
           "200": {
@@ -1132,13 +1118,65 @@
         }
       }
     },
+    "/portfolio/market-leaders": {
+      "get": {
+        "tags": [
+          "portfolio"
+        ],
+        "summary": "시장 주도주 목록",
+        "description": "글로벌 시장 주도 종목을 최대 20개까지 반환한다. 현재 stub 데이터 (NVDA/AAPL/TSLA/삼성전자/BTC) 를 순위순으로 반환. 실 시장 API 연동은 non-goal.",
+        "operationId": "get_market_leaders_endpoint_portfolio_market_leaders_get",
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 20,
+              "minimum": 1,
+              "description": "반환 개수 (1~20)",
+              "default": 5,
+              "title": "Limit"
+            },
+            "description": "반환 개수 (1~20)"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/MarketLeader"
+                  },
+                  "title": "Response Get Market Leaders Endpoint Portfolio Market Leaders Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/copilot/plan": {
       "post": {
         "tags": [
           "copilot"
         ],
-        "summary": "NL Query \u2192 CopilotPlan",
-        "description": "\uc790\uc5f0\uc5b4 \uc9c8\uc758\ub97c \ubc1b\uc544 \uba40\ud2f0-\uc2a4\ud15d \uc5d0\uc774\uc804\ud2b8 \uc2e4\ud589 \uacc4\ud68d(CopilotPlan)\uc744 \ubc18\ud658\ud55c\ub2e4. LLM(copilot_planner_system)\uc774 plan\uc744 \uc0dd\uc131\ud558\uace0 3\ub2e8 \uac8c\uc774\ud2b8(schema/domain/critique)\ub97c \ud1b5\uacfc\ud55c \uacb0\uacfc\ub9cc \ubc18\ud658. SSE \uc2a4\ud2b8\ub9ac\ubc0d \uc5c6\uc774 \ub2e8\uc77c JSON \uc751\ub2f5 (\ub514\ubc84\uadf8/\ud14c\uc2a4\ud2b8\uc6a9).",
+        "summary": "NL Query → CopilotPlan",
+        "description": "자연어 질의를 받아 멀티-스텝 에이전트 실행 계획(CopilotPlan)을 반환한다. LLM(copilot_planner_system)이 plan을 생성하고 3단 게이트(schema/domain/critique)를 통과한 결과만 반환. SSE 스트리밍 없이 단일 JSON 응답 (디버그/테스트용).",
         "operationId": "create_copilot_plan_copilot_plan_post",
         "requestBody": {
           "content": {
@@ -1162,7 +1200,7 @@
             }
           },
           "400": {
-            "description": "JSON \ud30c\uc2f1 \uc2e4\ud328"
+            "description": "JSON 파싱 실패"
           },
           "422": {
             "description": "Validation Error",
@@ -1182,8 +1220,8 @@
         "tags": [
           "copilot"
         ],
-        "summary": "\uc790\uc5f0\uc5b4 \uc9c8\uc758 \u2192 SSE \uc2a4\ud2b8\ub9bc",
-        "description": "\uc790\uc5f0\uc5b4 \uc9c8\uc758\ub97c \ubc1b\uc544 \uba40\ud2f0-\uc2a4\ud15d \uc5d0\uc774\uc804\ud2b8 \uc624\ucf00\uc2a4\ud2b8\ub808\uc774\uc158\uc744 \uc2e4\ud589\ud558\uace0 \uacb0\uacfc\ub97c Server-Sent Events \ub85c \uc2a4\ud2b8\ub9ac\ubc0d\ud55c\ub2e4. \uac01 \uc774\ubca4\ud2b8\ub294 `data: <JSON>\\n\\n` \ud3ec\ub9f7 (data-only SSE). JSON \uc740 CopilotEvent discriminated union.",
+        "summary": "자연어 질의 → SSE 스트림",
+        "description": "자연어 질의를 받아 멀티-스텝 에이전트 오케스트레이션을 실행하고 결과를 Server-Sent Events 로 스트리밍한다. 각 이벤트는 `data: <JSON>\\n\\n` 포맷 (data-only SSE). JSON 은 CopilotEvent discriminated union.",
         "operationId": "query_copilot_copilot_query_post",
         "requestBody": {
           "content": {
@@ -1194,7 +1232,7 @@
                   "query": {
                     "type": "string",
                     "minLength": 1,
-                    "description": "\uc790\uc5f0\uc5b4 \uc9c8\uc758"
+                    "description": "자연어 질의"
                   },
                   "session_id": {
                     "anyOf": [
@@ -1205,7 +1243,7 @@
                         "type": "null"
                       }
                     ],
-                    "description": "\uae30\uc874 \uc138\uc158 ID (\uc635\uc158)"
+                    "description": "기존 세션 ID (옵션)"
                   },
                   "context": {
                     "anyOf": [
@@ -1217,7 +1255,7 @@
                         "type": "null"
                       }
                     ],
-                    "description": "\ucd94\uac00 \ucee8\ud14d\uc2a4\ud2b8 (\uc635\uc158)"
+                    "description": "추가 컨텍스트 (옵션)"
                   }
                 },
                 "type": "object",
@@ -1225,7 +1263,7 @@
                   "query"
                 ],
                 "title": "QueryRequest",
-                "description": "POST /copilot/query \uc694\uccad \ubcf8\ubb38."
+                "description": "POST /copilot/query 요청 본문."
               }
             }
           },
@@ -1242,7 +1280,7 @@
                 "schema": {
                   "type": "string"
                 },
-                "description": "Server-Sent Events. \uac01 \uc774\ubca4\ud2b8\ub294 `data: <JSON>\\n\\n` \ud3ec\ub9f7. JSON \uc740 CopilotEvent discriminated union. \uc774\ubca4\ud2b8 \ud0c0\uc785: plan.ready | step.start | step.token | step.gate | step.result | final.card | error | done"
+                "description": "Server-Sent Events. 각 이벤트는 `data: <JSON>\\n\\n` 포맷. JSON 은 CopilotEvent discriminated union. 이벤트 타입: plan.ready | step.start | step.token | step.gate | step.result | final.card | error | done"
               }
             }
           },
@@ -1264,8 +1302,8 @@
         "tags": [
           "copilot"
         ],
-        "summary": "\uc138\uc158 \ud788\uc2a4\ud1a0\ub9ac \ubaa9\ub85d \uc870\ud68c",
-        "description": "\uc800\uc7a5\ub41c \ucf54\ud30c\uc77c\ub7ff \uc138\uc158 \ubaa9\ub85d\uc744 \ucd5c\uadfc\uc21c\uc73c\ub85c \ubc18\ud658\ud55c\ub2e4. limit/offset \uc73c\ub85c \ud398\uc774\uc9c0\ub124\uc774\uc158. TTL \ub9cc\ub8cc \uc138\uc158\uc740 \uc81c\uc678.",
+        "summary": "세션 히스토리 목록 조회",
+        "description": "저장된 코파일럿 세션 목록을 최근순으로 반환한다. limit/offset 으로 페이지네이션. TTL 만료 세션은 제외.",
         "operationId": "list_sessions_copilot_sessions_get",
         "parameters": [
           {
@@ -1322,8 +1360,8 @@
         "tags": [
           "copilot"
         ],
-        "summary": "\uc138\uc158 \uc0c1\uc138 \uc870\ud68c (sessions \uacbd\ub85c)",
-        "description": "GET /copilot/session/{session_id} \uc758 alias. /sessions/ \uacbd\ub85c\ub85c\ub3c4 \ub3d9\uc77c\ud558\uac8c \uc811\uadfc \uac00\ub2a5.",
+        "summary": "세션 상세 조회 (sessions 경로)",
+        "description": "GET /copilot/session/{session_id} 의 alias. /sessions/ 경로로도 동일하게 접근 가능.",
         "operationId": "get_session_alias_copilot_sessions__session_id__get",
         "parameters": [
           {
@@ -1348,7 +1386,7 @@
             }
           },
           "404": {
-            "description": "\uc138\uc158\uc744 \ucc3e\uc744 \uc218 \uc5c6\uac70\ub098 TTL \ub9cc\ub8cc"
+            "description": "세션을 찾을 수 없거나 TTL 만료"
           },
           "422": {
             "description": "Validation Error",
@@ -1368,8 +1406,8 @@
         "tags": [
           "copilot"
         ],
-        "summary": "\uc138\uc158 \uba54\ubaa8\ub9ac \uc870\ud68c",
-        "description": "\uc138\uc158 \uba54\ubaa8\ub9ac\ub97c \uc870\ud68c\ud55c\ub2e4. \uc138\uc158\uc774 \uc5c6\uac70\ub098 TTL \ub9cc\ub8cc \uc2dc 404 \ub97c \ubc18\ud658\ud55c\ub2e4. \uc751\ub2f5\uc5d0 \ucd5c\uadfc 50\ud134 \uc774\ud558\uc758 SessionTurn \ubaa9\ub85d\uacfc ActiveContext \uac00 \ud3ec\ud568\ub41c\ub2e4.",
+        "summary": "세션 메모리 조회",
+        "description": "세션 메모리를 조회한다. 세션이 없거나 TTL 만료 시 404 를 반환한다. 응답에 최근 50턴 이하의 SessionTurn 목록과 ActiveContext 가 포함된다.",
         "operationId": "get_session_copilot_session__session_id__get",
         "parameters": [
           {
@@ -1394,7 +1432,7 @@
             }
           },
           "404": {
-            "description": "\uc138\uc158\uc744 \ucc3e\uc744 \uc218 \uc5c6\uac70\ub098 TTL \ub9cc\ub8cc"
+            "description": "세션을 찾을 수 없거나 TTL 만료"
           },
           "422": {
             "description": "Validation Error",
@@ -1412,8 +1450,8 @@
         "tags": [
           "copilot"
         ],
-        "summary": "\uc138\uc158 \uc0ad\uc81c",
-        "description": "\uc138\uc158\uacfc \ubaa8\ub4e0 \ud134\uc744 \uc0ad\uc81c\ud55c\ub2e4. \uc774\ud6c4 GET \uc740 404 \ub97c \ubc18\ud658\ud55c\ub2e4.",
+        "summary": "세션 삭제",
+        "description": "세션과 모든 턴을 삭제한다. 이후 GET 은 404 를 반환한다.",
         "operationId": "delete_session_copilot_session__session_id__delete",
         "parameters": [
           {
@@ -1448,8 +1486,8 @@
         "tags": [
           "search"
         ],
-        "summary": "\ub274\uc2a4/\uacf5\uc2dc RAG \uac80\uc0c9",
-        "description": "\uc790\uc5f0\uc5b4 \uc9c8\uc758 + \uc2ec\ubcfc + \uae30\uac04\uc73c\ub85c pgvector \uc778\ub371\uc2a4\uc5d0\uc11c top-k \uccad\ud06c\ub97c \uac80\uc0c9\ud574 Citation \ubc30\uc5f4\ub85c \ubc18\ud658\ud55c\ub2e4. stub \ubaa8\ub4dc\uc5d0\uc11c\ub294 \uacb0\uc815\ub860\uc801\uc73c\ub85c \ub3d9\uc791\ud55c\ub2e4.",
+        "summary": "뉴스/공시 RAG 검색",
+        "description": "자연어 질의 + 심볼 + 기간으로 pgvector 인덱스에서 top-k 청크를 검색해 Citation 배열로 반환한다. stub 모드에서는 결정론적으로 동작한다.",
         "operationId": "get_search_news_search_news_get",
         "parameters": [
           {
@@ -1458,10 +1496,10 @@
             "required": true,
             "schema": {
               "type": "string",
-              "description": "\uc790\uc5f0\uc5b4 \uac80\uc0c9 \uc9c8\uc758",
+              "description": "자연어 검색 질의",
               "title": "Query"
             },
-            "description": "\uc790\uc5f0\uc5b4 \uac80\uc0c9 \uc9c8\uc758"
+            "description": "자연어 검색 질의"
           },
           {
             "name": "symbols",
@@ -1476,10 +1514,10 @@
                   "type": "null"
                 }
               ],
-              "description": "\uc27c\ud45c \uad6c\ubd84 \ud2f0\ucee4 (AAPL,TSLA \ub4f1)",
+              "description": "쉼표 구분 티커 (AAPL,TSLA 등)",
               "title": "Symbols"
             },
-            "description": "\uc27c\ud45c \uad6c\ubd84 \ud2f0\ucee4 (AAPL,TSLA \ub4f1)"
+            "description": "쉼표 구분 티커 (AAPL,TSLA 등)"
           },
           {
             "name": "start_date",
@@ -1494,10 +1532,10 @@
                   "type": "null"
                 }
               ],
-              "description": "\uc2dc\uc791\uc77c YYYY-MM-DD",
+              "description": "시작일 YYYY-MM-DD",
               "title": "Start Date"
             },
-            "description": "\uc2dc\uc791\uc77c YYYY-MM-DD"
+            "description": "시작일 YYYY-MM-DD"
           },
           {
             "name": "end_date",
@@ -1512,10 +1550,10 @@
                   "type": "null"
                 }
               ],
-              "description": "\uc885\ub8cc\uc77c YYYY-MM-DD",
+              "description": "종료일 YYYY-MM-DD",
               "title": "End Date"
             },
-            "description": "\uc885\ub8cc\uc77c YYYY-MM-DD"
+            "description": "종료일 YYYY-MM-DD"
           },
           {
             "name": "k",
@@ -1525,11 +1563,11 @@
               "type": "integer",
               "maximum": 50,
               "minimum": 1,
-              "description": "\ubc18\ud658 \ucd5c\ub300 \uccad\ud06c \uc218",
+              "description": "반환 최대 청크 수",
               "default": 5,
               "title": "K"
             },
-            "description": "\ubc18\ud658 \ucd5c\ub300 \uccad\ud06c \uc218"
+            "description": "반환 최대 청크 수"
           }
         ],
         "responses": {
@@ -1565,8 +1603,8 @@
         "tags": [
           "search"
         ],
-        "summary": "\ub274\uc2a4/\uacf5\uc2dc \ubb38\uc11c \uc801\uc7ac (internal/admin)",
-        "description": "URL \ub610\ub294 \ud14d\uc2a4\ud2b8\ub97c pgvector\uc5d0 \uc801\uc7ac\ud55c\ub2e4. stub \ubaa8\ub4dc\uc5d0\uc11c\ub294 in-memory \uc800\uc7a5\uc18c\uc5d0 \uc801\uc7ac\ud55c\ub2e4. \ub3d9\uc77c source_url \uc740 \uba71\ub4f1 \ucc98\ub9ac (\uc911\ubcf5 \uccad\ud06c \ubbf8\uc0dd\uc131).",
+        "summary": "뉴스/공시 문서 적재 (internal/admin)",
+        "description": "URL 또는 텍스트를 pgvector에 적재한다. stub 모드에서는 in-memory 저장소에 적재한다. 동일 source_url 은 멱등 처리 (중복 청크 미생성).",
         "operationId": "post_news_ingest_search_news_ingest_post",
         "requestBody": {
           "content": {
@@ -1610,8 +1648,8 @@
         "tags": [
           "upload"
         ],
-        "summary": "CSV \ud30c\uc77c \uc5c5\ub85c\ub4dc \ubc0f \uac80\uc99d",
-        "description": "multipart/form-data \ub85c CSV \ud30c\uc77c\uc744 \uc5c5\ub85c\ub4dc\ud55c\ub2e4. \ud544\uc218 \uceec\ub7fc (date, market, code, quantity, avg_cost, currency) \uac80\uc99d \ud6c4 UploadValidationResult \ubc18\ud658. upload_id \ub294 30\ubd84\uac04 \uc11c\ubc84 \uba54\ubaa8\ub9ac\uc5d0 \uce90\uc2dc\ub41c\ub2e4.",
+        "summary": "CSV 파일 업로드 및 검증",
+        "description": "multipart/form-data 로 CSV 파일을 업로드한다. 필수 컬럼 (date, market, code, quantity, avg_cost, currency) 검증 후 UploadValidationResult 반환. upload_id 는 30분간 서버 메모리에 캐시된다.",
         "operationId": "upload_csv_upload_csv_post",
         "requestBody": {
           "content": {
@@ -1652,8 +1690,8 @@
         "tags": [
           "upload"
         ],
-        "summary": "\uc5c5\ub85c\ub4dc \ub370\uc774\ud130 \ubd84\uc11d (SSE \uc2a4\ud2b8\ub9bc)",
-        "description": "upload_id \uc640 \ubd84\uc11d \uc124\uc815\uc744 \ubc1b\uc544 3\ub2e8 \uac8c\uc774\ud2b8 \ubd84\uc11d \uc9c4\ud589 \uc774\ubca4\ud2b8\ub97c SSE \ub85c \uc2a4\ud2b8\ub9ac\ubc0d\ud55c\ub2e4. media_type: text/event-stream. \uac01 \uc774\ubca4\ud2b8\ub294 data: {JSON} \ud615\uc2dd.",
+        "summary": "업로드 데이터 분석 (SSE 스트림)",
+        "description": "upload_id 와 분석 설정을 받아 3단 게이트 분석 진행 이벤트를 SSE 로 스트리밍한다. media_type: text/event-stream. 각 이벤트는 data: {JSON} 형식.",
         "operationId": "analyze_upload_upload_analyze_post",
         "requestBody": {
           "content": {
@@ -1676,7 +1714,7 @@
             }
           },
           "404": {
-            "description": "upload_id \ubbf8\uc874\uc7ac \ub610\ub294 \ub9cc\ub8cc"
+            "description": "upload_id 미존재 또는 만료"
           },
           "422": {
             "description": "Validation Error",
@@ -1696,8 +1734,8 @@
         "tags": [
           "upload"
         ],
-        "summary": "\uc0d8\ud50c \ud3ec\ud2b8\ud3f4\ub9ac\uc624 CSV \ub2e4\uc6b4\ub85c\ub4dc",
-        "description": "\uc5c5\ub85c\ub4dc \ud615\uc2dd\uc744 \ud655\uc778\ud560 \uc218 \uc788\ub294 \uc0d8\ud50c CSV \ud30c\uc77c\uc744 \ub2e4\uc6b4\ub85c\ub4dc\ud55c\ub2e4.",
+        "summary": "샘플 포트폴리오 CSV 다운로드",
+        "description": "업로드 형식을 확인할 수 있는 샘플 CSV 파일을 다운로드한다.",
         "operationId": "get_template_upload_template_get",
         "responses": {
           "200": {
@@ -1712,7 +1750,7 @@
           "watchlist"
         ],
         "summary": "Get Watchlist Summary",
-        "description": "\ud604\uc7ac \uc6cc\uce58\ub9ac\uc2a4\ud2b8 \uae30\ubc18 \ud1b5\uacc4 \uc694\uc57d.\n\ndemo user(_watchlist in-memory) \uae30\uc900\uc73c\ub85c \uc9d1\uacc4.\n\uc6cc\uce58\ub9ac\uc2a4\ud2b8\uac00 \ube44\uc5b4 \uc788\uc73c\uba74 \uc804\ubd80 0 \ubc18\ud658.",
+        "description": "현재 워치리스트 기반 통계 요약.\n\ndemo user(_watchlist in-memory) 기준으로 집계.\n워치리스트가 비어 있으면 전부 0 반환.",
         "operationId": "get_watchlist_summary_watchlist_summary_get",
         "responses": {
           "200": {
@@ -1734,7 +1772,7 @@
           "watchlist"
         ],
         "summary": "Get Popular",
-        "description": "\uc804\uc5ed \uc778\uae30 \uc885\ubaa9 Top-5 (stub \ud558\ub4dc\ucf54\ub4dc \u2014 AAPL/NVDA/005930/KRW-BTC/TSLA).",
+        "description": "전역 인기 종목 Top-5 (stub 하드코드 — AAPL/NVDA/005930/KRW-BTC/TSLA).",
         "operationId": "get_popular_watchlist_popular_get",
         "responses": {
           "200": {
@@ -1760,7 +1798,7 @@
           "watchlist"
         ],
         "summary": "Get Gainers Losers",
-        "description": "\uc0c1\uc2b9/\ud558\ub77d Top-5 (stub \ud558\ub4dc\ucf54\ub4dc, deterministic).\n\n\uc751\ub2f5: `{\"gainers\": [...], \"losers\": [...]}`",
+        "description": "상승/하락 Top-5 (stub 하드코드, deterministic).\n\n응답: `{\"gainers\": [...], \"losers\": [...]}`",
         "operationId": "get_gainers_losers_watchlist_gainers_losers_get",
         "responses": {
           "200": {
@@ -1783,13 +1821,181 @@
         }
       }
     },
+    "/watchlist/alerts": {
+      "get": {
+        "tags": [
+          "watchlist"
+        ],
+        "summary": "워치리스트 알림 목록 조회",
+        "description": "demo user 의 워치리스트 알림 전체 조회.",
+        "operationId": "list_watchlist_alerts_watchlist_alerts_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/WatchlistAlertResponse"
+                  },
+                  "type": "array",
+                  "title": "Response List Watchlist Alerts Watchlist Alerts Get"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "watchlist"
+        ],
+        "summary": "워치리스트 알림 추가",
+        "description": "워치리스트 알림 신규 생성.",
+        "operationId": "create_watchlist_alert_watchlist_alerts_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WatchlistAlertCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WatchlistAlertResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "JSON 파싱 실패"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/watchlist/alerts/{alert_id}": {
+      "patch": {
+        "tags": [
+          "watchlist"
+        ],
+        "summary": "워치리스트 알림 수정",
+        "description": "알림 활성화 여부 또는 임계가격 변경.",
+        "operationId": "update_watchlist_alert_watchlist_alerts__alert_id__patch",
+        "parameters": [
+          {
+            "name": "alert_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "알림 ID",
+              "title": "Alert Id"
+            },
+            "description": "알림 ID"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WatchlistAlertUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WatchlistAlertResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "알림을 찾을 수 없음"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "watchlist"
+        ],
+        "summary": "워치리스트 알림 삭제",
+        "description": "워치리스트 알림 삭제.",
+        "operationId": "delete_watchlist_alert_watchlist_alerts__alert_id__delete",
+        "parameters": [
+          {
+            "name": "alert_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "알림 ID",
+              "title": "Alert Id"
+            },
+            "description": "알림 ID"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "404": {
+            "description": "알림을 찾을 수 없음"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/users/me": {
       "get": {
         "tags": [
           "users"
         ],
-        "summary": "\ud604\uc7ac \uc0ac\uc6a9\uc790 \uc815\ubcf4 \uc870\ud68c",
-        "description": "X-User-Id \ud5e4\ub354 \uae30\ubc18 fake auth. \ud5e4\ub354 \uc5c6\uc73c\uba74 user_id='demo-user' \ub85c fallback.",
+        "summary": "현재 사용자 정보 조회",
+        "description": "X-User-Id 헤더 기반 fake auth. 헤더 없으면 user_id='demo-user' 로 fallback.",
         "operationId": "get_me_users_me_get",
         "parameters": [
           {
@@ -1838,8 +2044,8 @@
         "tags": [
           "users"
         ],
-        "summary": "\uc0ac\uc6a9\uc790 \uc124\uc815 \uc870\ud68c",
-        "description": "\ud604\uc7ac \uc0ac\uc6a9\uc790\uc758 \uc124\uc815\uc744 \ubc18\ud658\ud55c\ub2e4. \uc5c6\uc73c\uba74 \uae30\ubcf8\uac12\uc744 \uc0dd\uc131 \ud6c4 \ubc18\ud658.",
+        "summary": "사용자 설정 조회",
+        "description": "현재 사용자의 설정을 반환한다. 없으면 기본값을 생성 후 반환.",
         "operationId": "get_settings_users_me_settings_get",
         "parameters": [
           {
@@ -1886,8 +2092,8 @@
         "tags": [
           "users"
         ],
-        "summary": "\uc0ac\uc6a9\uc790 \uc124\uc815 \ubd80\ubd84 \uc5c5\ub370\uc774\ud2b8",
-        "description": "partial update. \uc804\ub2ec\ub41c \ud544\ub4dc\ub9cc deep-merge \ub85c \ubc18\uc601\ud558\uace0 updated_at \uac31\uc2e0.",
+        "summary": "사용자 설정 부분 업데이트",
+        "description": "partial update. 전달된 필드만 deep-merge 로 반영하고 updated_at 갱신.",
         "operationId": "patch_settings_users_me_settings_patch",
         "parameters": [
           {
@@ -1964,7 +2170,7 @@
           "user_query"
         ],
         "title": "ActiveContext",
-        "description": "Planner \uc5d0\uac8c \uc804\ub2ec\ud560 follow-up \ucee8\ud14d\uc2a4\ud2b8.\n\nplanner \uc624\ucf00\uc2a4\ud2b8\ub808\uc774\ud130\ub294 \uc774 \uac1d\uccb4\ub97c user role \uba54\uc2dc\uc9c0\ub85c \ubcd1\ud569\ud55c\ub2e4 (system \uc624\uc5fc \uae08\uc9c0)."
+        "description": "Planner 에게 전달할 follow-up 컨텍스트.\n\nplanner 오케스트레이터는 이 객체를 user role 메시지로 병합한다 (system 오염 금지)."
       },
       "AiInsightResponse": {
         "properties": {
@@ -2004,7 +2210,7 @@
           "gates"
         ],
         "title": "AiInsightResponse",
-        "description": "AI \uc778\uc0ac\uc774\ud2b8 stub \uc751\ub2f5 (ADR-0012 stub \ubaa8\ub4dc)."
+        "description": "AI 인사이트 stub 응답 (ADR-0012 stub 모드)."
       },
       "AnalyzeContext": {
         "properties": {
@@ -2021,24 +2227,24 @@
               }
             ],
             "title": "Ohlc",
-            "description": "\uc11c\ubc84 \ub610\ub294 \ud074\ub77c\uc774\uc5b8\ud2b8\uac00 \uc81c\uacf5\ud55c OHLC \uc2dc\uacc4\uc5f4"
+            "description": "서버 또는 클라이언트가 제공한 OHLC 시계열"
           }
         },
         "type": "object",
         "title": "AnalyzeContext",
-        "description": "\uc120\ud0dd\uc801 \ubd80\uac00 \ucee8\ud14d\uc2a4\ud2b8. \ud604\uc7ac\ub294 OHLC \ud504\ub9ac\ud328\uce58 \uacb0\uacfc\ub9cc."
+        "description": "선택적 부가 컨텍스트. 현재는 OHLC 프리패치 결과만."
       },
       "AnalyzeMeta": {
         "properties": {
           "asset_class": {
             "type": "string",
             "title": "Asset Class",
-            "description": "Router \uac00 \uacb0\uc815\ud55c \uc790\uc0b0\uad70"
+            "description": "Router 가 결정한 자산군"
           },
           "router_reason": {
             "type": "string",
             "title": "Router Reason",
-            "description": "Router \uac00 \uc120\ud0dd\ud55c \uc774\uc720 (\ud55c \ubb38\uc7a5)"
+            "description": "Router 가 선택한 이유 (한 문장)"
           },
           "gates": {
             "additionalProperties": {
@@ -2046,7 +2252,7 @@
             },
             "type": "object",
             "title": "Gates",
-            "description": "\uac01 \uac8c\uc774\ud2b8\uc758 \ucd5c\uc885 \uc0c1\ud0dc"
+            "description": "각 게이트의 최종 상태"
           },
           "latency_ms": {
             "anyOf": [
@@ -2058,7 +2264,7 @@
               }
             ],
             "title": "Latency Ms",
-            "description": "\uadf8\ub798\ud504 \uc2e4\ud589 \uc18c\uc694 \uc2dc\uac04(ms)"
+            "description": "그래프 실행 소요 시간(ms)"
           },
           "analyzer_name": {
             "anyOf": [
@@ -2070,7 +2276,7 @@
               }
             ],
             "title": "Analyzer Name",
-            "description": "\uc5b4\ub5a4 analyzer \uac00 \uc2e4\ud589\ub418\uc5c8\ub294\uc9c0 (stock | crypto | fx | ...)"
+            "description": "어떤 analyzer 가 실행되었는지 (stock | crypto | fx | ...)"
           },
           "evidence_snippets": {
             "items": {
@@ -2078,7 +2284,7 @@
             },
             "type": "array",
             "title": "Evidence Snippets",
-            "description": "critique \ud1b5\uacfc \ud6c4 \ud655\uc815\ub41c \uadfc\uac70 \uc778\uc6a9 3~5\uac1c"
+            "description": "critique 통과 후 확정된 근거 인용 3~5개"
           },
           "cache": {
             "anyOf": [
@@ -2089,7 +2295,7 @@
                 "type": "null"
               }
             ],
-            "description": "\uc9c1\uc804 \uc694\uccad\uc758 \ud504\ub86c\ud504\ud2b8 \uce90\uc2dc/\ud1a0\ud070 \uc0ac\uc6a9\ub7c9"
+            "description": "직전 요청의 프롬프트 캐시/토큰 사용량"
           }
         },
         "type": "object",
@@ -2109,7 +2315,7 @@
             },
             "type": "array",
             "title": "Data",
-            "description": "\ubd84\uc11d\ud560 \uc6d0\uc2dc \ub370\uc774\ud130 rows. symbol \ub9cc\uc73c\ub85c\ub3c4 \ubd84\uc11d\ud560 \uacbd\uc6b0 \ube48 \ub9ac\uc2a4\ud2b8 \ud5c8\uc6a9."
+            "description": "분석할 원시 데이터 rows. symbol 만으로도 분석할 경우 빈 리스트 허용."
           },
           "query": {
             "anyOf": [
@@ -2121,7 +2327,7 @@
               }
             ],
             "title": "Query",
-            "description": "\uc790\uc5f0\uc5b4 \ubd84\uc11d \uc9c0\uc2dc (\uc120\ud0dd)"
+            "description": "자연어 분석 지시 (선택)"
           },
           "asset_class_hint": {
             "anyOf": [
@@ -2133,7 +2339,7 @@
               }
             ],
             "title": "Asset Class Hint",
-            "description": "Router \ud78c\ud2b8: stock | crypto | fx | macro | auto"
+            "description": "Router 힌트: stock | crypto | fx | macro | auto"
           },
           "symbol": {
             "anyOf": [
@@ -2144,7 +2350,7 @@
                 "type": "null"
               }
             ],
-            "description": "\uc2ec\ubcfc \ubd84\uc11d \uc694\uccad. \uc874\uc7ac \uc2dc \uc11c\ubc84\uac00 market \uc5b4\ub311\ud130\ub85c OHLC \ub97c \ud504\ub9ac\ud328\uce58\ud55c\ub2e4."
+            "description": "심볼 분석 요청. 존재 시 서버가 market 어댑터로 OHLC 를 프리패치한다."
           },
           "context": {
             "anyOf": [
@@ -2155,25 +2361,25 @@
                 "type": "null"
               }
             ],
-            "description": "\ud074\ub77c\uc774\uc5b8\ud2b8\uac00 \uc120\uacc4\uc0b0\ud574 \ub118\uae30\ub294 OHLC \ub4f1 \ubd80\uac00 \ucee8\ud14d\uc2a4\ud2b8"
+            "description": "클라이언트가 선계산해 넘기는 OHLC 등 부가 컨텍스트"
           },
           "include_portfolio_context": {
             "type": "boolean",
             "title": "Include Portfolio Context",
-            "description": "True\uba74 \uc11c\ubc84\uac00 DB\uc5d0\uc11c holdings\ub97c \uc870\ud68c\ud574 AgentState\uc5d0 \uc8fc\uc785. LLM\uc774 \uac1c\uc778\ud654\ub41c \ubd84\uc11d \uc218\ud589.",
+            "description": "True면 서버가 DB에서 holdings를 조회해 AgentState에 주입. LLM이 개인화된 분석 수행.",
             "default": false
           }
         },
         "type": "object",
         "title": "AnalyzeRequest",
-        "description": "\uc784\uc758 \ud22c\uc790 \ub370\uc774\ud130\ub97c \ubc1b\uc544 \uc790\ub3d9 \ubd84\uc11d\uc744 \uc694\uccad\ud55c\ub2e4."
+        "description": "임의 투자 데이터를 받아 자동 분석을 요청한다."
       },
       "AnalyzeResponse": {
         "properties": {
           "request_id": {
             "type": "string",
             "title": "Request Id",
-            "description": "\ucd94\uc801\uc6a9 UUID"
+            "description": "추적용 UUID"
           },
           "status": {
             "type": "string",
@@ -2191,7 +2397,7 @@
               }
             ],
             "title": "Result",
-            "description": "Analyzer \ucd9c\ub825 (\uc790\uc0b0\uad70\ubcc4 \uc0c1\uc774)"
+            "description": "Analyzer 출력 (자산군별 상이)"
           },
           "meta": {
             "$ref": "#/components/schemas/AnalyzeMeta"
@@ -2302,13 +2508,13 @@
           "read_tokens": {
             "type": "integer",
             "title": "Read Tokens",
-            "description": "\ud504\ub86c\ud504\ud2b8 \uce90\uc2dc \ud788\ud2b8 \ud1a0\ud070",
+            "description": "프롬프트 캐시 히트 토큰",
             "default": 0
           },
           "creation_tokens": {
             "type": "integer",
             "title": "Creation Tokens",
-            "description": "\uce90\uc2dc \uc0dd\uc131(\uae30\ub85d) \ud1a0\ud070",
+            "description": "캐시 생성(기록) 토큰",
             "default": 0
           },
           "input_tokens": {
@@ -2330,22 +2536,22 @@
           "doc_id": {
             "type": "integer",
             "title": "Doc Id",
-            "description": "Document \ud14c\uc774\ube14 PK"
+            "description": "Document 테이블 PK"
           },
           "chunk_id": {
             "type": "integer",
             "title": "Chunk Id",
-            "description": "DocumentChunk \ud14c\uc774\ube14 PK"
+            "description": "DocumentChunk 테이블 PK"
           },
           "source_url": {
             "type": "string",
             "title": "Source Url",
-            "description": "\uc6d0\ubb38 URL"
+            "description": "원문 URL"
           },
           "title": {
             "type": "string",
             "title": "Title",
-            "description": "\ubb38\uc11c \uc81c\ubaa9"
+            "description": "문서 제목"
           },
           "published_at": {
             "anyOf": [
@@ -2357,17 +2563,17 @@
               }
             ],
             "title": "Published At",
-            "description": "\ubc1c\ud589\uc77c ISO-8601"
+            "description": "발행일 ISO-8601"
           },
           "excerpt": {
             "type": "string",
             "title": "Excerpt",
-            "description": "\uad00\ub828 \uccad\ud06c \ud14d\uc2a4\ud2b8 \ubc1c\ucdcc"
+            "description": "관련 청크 텍스트 발췌"
           },
           "score": {
             "type": "number",
             "title": "Score",
-            "description": "L2 \uac70\ub9ac \uae30\ubc18 \uc720\uc0ac\ub3c4 \uc810\uc218 (\ub0ae\uc744\uc218\ub85d \uac00\uae4c\uc6c0)"
+            "description": "L2 거리 기반 유사도 점수 (낮을수록 가까움)"
           },
           "thumbnail_url": {
             "anyOf": [
@@ -2379,7 +2585,7 @@
               }
             ],
             "title": "Thumbnail Url",
-            "description": "\ub300\uc2dc\ubcf4\ub4dc \ub274\uc2a4 \ud328\ub110\uc6a9 \uc378\ub124\uc77c \uc774\ubbf8\uc9c0 URL (\uc120\ud0dd). \uc5c6\uc73c\uba74 FE \ucabd\uc5d0\uc11c \uc774\ub2c8\uc15c \ubc15\uc2a4\ub85c \ud3f4\ubc31."
+            "description": "대시보드 뉴스 패널용 썸네일 이미지 URL (선택). 없으면 FE 쪽에서 이니셜 박스로 폴백."
           }
         },
         "type": "object",
@@ -2392,19 +2598,19 @@
           "score"
         ],
         "title": "Citation",
-        "description": "RAG \uac80\uc0c9 \uacb0\uacfc\uc758 \ub2e8\uc77c \uc778\uc6a9 \ud56d\ubaa9.\n\nplan.md \uae30\uc900:\n  doc_id, chunk_id, source_url, title, published_at, excerpt, score\nsprint-07 \ub300\uc2dc\ubcf4\ub4dc \ud655\uc7a5: thumbnail_url (optional)"
+        "description": "RAG 검색 결과의 단일 인용 항목.\n\nplan.md 기준:\n  doc_id, chunk_id, source_url, title, published_at, excerpt, score\nsprint-07 대시보드 확장: thumbnail_url (optional)"
       },
       "CommodityItem": {
         "properties": {
           "symbol": {
             "type": "string",
             "title": "Symbol",
-            "description": "\uc608: GC=F"
+            "description": "예: GC=F"
           },
           "name": {
             "type": "string",
             "title": "Name",
-            "description": "\uc608: \uae08"
+            "description": "예: 금"
           },
           "price": {
             "type": "string",
@@ -2417,7 +2623,7 @@
           "unit": {
             "type": "string",
             "title": "Unit",
-            "description": "\uc608: USD/oz"
+            "description": "예: USD/oz"
           }
         },
         "type": "object",
@@ -2498,7 +2704,7 @@
             },
             "type": "object",
             "title": "Gate Results",
-            "description": "schema/domain/critique gate \ud1b5\uacfc \uc5ec\ubd80"
+            "description": "schema/domain/critique gate 통과 여부"
           }
         },
         "type": "object",
@@ -2509,7 +2715,7 @@
           "created_at"
         ],
         "title": "CopilotPlan",
-        "description": "\uc790\uc5f0\uc5b4 \uc9c8\uc758\ub85c\ubd80\ud130 \uc0dd\uc131\ub41c \uba40\ud2f0-\uc2a4\ud15d \uc5d0\uc774\uc804\ud2b8 \uc2e4\ud589 \uacc4\ud68d.\n\nPOST /copilot/plan \uc751\ub2f5 \uc2a4\ud0a4\ub9c8\ub85c\ub3c4 \uc0ac\uc6a9\ub428.\ngate_results \ub294 3\ub2e8 \uac8c\uc774\ud2b8 \ud1b5\uacfc \uc5ec\ubd80 (\uc635\uc158 \ud544\ub4dc)."
+        "description": "자연어 질의로부터 생성된 멀티-스텝 에이전트 실행 계획.\n\nPOST /copilot/plan 응답 스키마로도 사용됨.\ngate_results 는 3단 게이트 통과 여부 (옵션 필드)."
       },
       "CopilotPlanRequest": {
         "properties": {
@@ -2517,7 +2723,7 @@
             "type": "string",
             "minLength": 1,
             "title": "Query",
-            "description": "\uc790\uc5f0\uc5b4 \uc9c8\uc758"
+            "description": "자연어 질의"
           },
           "session_id": {
             "anyOf": [
@@ -2529,7 +2735,7 @@
               }
             ],
             "title": "Session Id",
-            "description": "\uae30\uc874 \uc138\uc158 ID (\uc635\uc158)"
+            "description": "기존 세션 ID (옵션)"
           }
         },
         "type": "object",
@@ -2537,7 +2743,7 @@
           "query"
         ],
         "title": "CopilotPlanRequest",
-        "description": "POST /copilot/plan \uc694\uccad \ubcf8\ubb38."
+        "description": "POST /copilot/plan 요청 본문."
       },
       "CopilotStep": {
         "properties": {
@@ -2582,7 +2788,7 @@
           "agent"
         ],
         "title": "CopilotStep",
-        "description": "\ud50c\ub79c\uc758 \ub2e8\uc77c \uc2e4\ud589 \ub2e8\uacc4."
+        "description": "플랜의 단일 실행 단계."
       },
       "DataSettings": {
         "properties": {
@@ -2615,17 +2821,17 @@
           "label": {
             "type": "string",
             "title": "Label",
-            "description": "\ud45c\uc2dc \ub77c\ubca8 (\uc608: 'stock_us', 'crypto')"
+            "description": "표시 라벨 (예: 'stock_us', 'crypto')"
           },
           "weight_pct": {
             "type": "string",
             "title": "Weight Pct",
-            "description": "\ube44\uc911 %% (\uc608: '43.20')"
+            "description": "비중 %% (예: '43.20')"
           },
           "pnl_pct": {
             "type": "string",
             "title": "Pnl Pct",
-            "description": "\ud574\ub2f9 \ucc28\uc6d0\uc758 \uac00\uc911 \uc218\uc775\ub960 %% (\uc608: '+3.40')"
+            "description": "해당 차원의 가중 수익률 %% (예: '+3.40')"
           }
         },
         "type": "object",
@@ -2635,7 +2841,7 @@
           "pnl_pct"
         ],
         "title": "DimensionItem",
-        "description": "\ub514\uba58\uc158 \ubd84\uc11d \ubc14 \ucc28\ud2b8\uc758 \ub2e8\uc77c \ud56d\ubaa9 (\uc790\uc0b0\uad70\u00b7\uc139\ud130\u00b7\ud1b5\ud654 \ub4f1 \ucc28\uc6d0\ubcc4 \uc9d1\uacc4)."
+        "description": "디멘션 분석 바 차트의 단일 항목 (자산군·섹터·통화 등 차원별 집계)."
       },
       "GatePolicy": {
         "properties": {
@@ -2657,7 +2863,7 @@
         },
         "type": "object",
         "title": "GatePolicy",
-        "description": "\uac01 step \uc5d0 \uc801\uc6a9\ud560 3\ub2e8 \uac8c\uc774\ud2b8 \uc815\ucc45.\n\n`schema` \ub294 Pydantic BaseModel \uc758 \ud074\ub798\uc2a4\uba54\uc11c\ub4dc\uba85\uacfc \ucda9\ub3cc\ud558\ubbc0\ub85c\n\ub0b4\ubd80 \ud544\ub4dc\uba85\uc740 `schema_check` \ub97c \uc0ac\uc6a9\ud558\uace0 JSON alias \ub97c \"schema\" \ub85c \uc720\uc9c0\ud55c\ub2e4."
+        "description": "각 step 에 적용할 3단 게이트 정책.\n\n`schema` 는 Pydantic BaseModel 의 클래스메서드명과 충돌하므로\n내부 필드명은 `schema_check` 를 사용하고 JSON alias 를 \"schema\" 로 유지한다."
       },
       "HTTPValidationError": {
         "properties": {
@@ -2711,7 +2917,7 @@
             "type": "string",
             "minLength": 1,
             "title": "Code",
-            "description": "\uc2ec\ubcfc/\ucf54\ub4dc (\uc608: KRW-BTC, AAPL)"
+            "description": "심볼/코드 (예: KRW-BTC, AAPL)"
           },
           "quantity": {
             "anyOf": [
@@ -2725,7 +2931,7 @@
               }
             ],
             "title": "Quantity",
-            "description": "\ubcf4\uc720 \uc218\ub7c9"
+            "description": "보유 수량"
           },
           "avg_cost": {
             "anyOf": [
@@ -2739,14 +2945,14 @@
               }
             ],
             "title": "Avg Cost",
-            "description": "\ud3c9\uade0 \ub9e4\uc785 \ub2e8\uac00"
+            "description": "평균 매입 단가"
           },
           "currency": {
             "type": "string",
             "maxLength": 4,
             "minLength": 3,
             "title": "Currency",
-            "description": "\ud1b5\ud654 \ucf54\ub4dc (KRW/USD/USDT/EUR/JPY)"
+            "description": "통화 코드 (KRW/USD/USDT/EUR/JPY)"
           }
         },
         "type": "object",
@@ -2826,7 +3032,7 @@
           "pnl_pct"
         ],
         "title": "HoldingDetail",
-        "description": "\uc9d1\uacc4 \uacb0\uacfc\uc5d0\uc11c \uc885\ubaa9\ubcc4 \uc0c1\uc138."
+        "description": "집계 결과에서 종목별 상세."
       },
       "HoldingResponse": {
         "properties": {
@@ -2924,12 +3130,12 @@
           "ticker": {
             "type": "string",
             "title": "Ticker",
-            "description": "\uc608: ^GSPC"
+            "description": "예: ^GSPC"
           },
           "display_name": {
             "type": "string",
             "title": "Display Name",
-            "description": "\uc608: S&P 500"
+            "description": "예: S&P 500"
           },
           "value": {
             "type": "string",
@@ -2997,6 +3203,22 @@
             "type": "array",
             "title": "Stochastic"
           },
+          "ma20": {
+            "items": {
+              "$ref": "#/components/schemas/IndicatorPoint"
+            },
+            "type": "array",
+            "title": "Ma20",
+            "description": "MA-20 시계열"
+          },
+          "ma60": {
+            "items": {
+              "$ref": "#/components/schemas/IndicatorPoint"
+            },
+            "type": "array",
+            "title": "Ma60",
+            "description": "MA-60 시계열"
+          },
           "metrics": {
             "$ref": "#/components/schemas/IndicatorMetrics"
           },
@@ -3038,6 +3260,30 @@
             "type": "string",
             "title": "Bollinger Position",
             "description": "upper | mid | lower"
+          },
+          "ma20_latest": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ma20 Latest",
+            "description": "MA-20 최신값"
+          },
+          "ma60_latest": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ma60 Latest",
+            "description": "MA-60 최신값"
           }
         },
         "type": "object",
@@ -3073,12 +3319,12 @@
           "source_url": {
             "type": "string",
             "title": "Source Url",
-            "description": "\uc6d0\ubb38 URL"
+            "description": "원문 URL"
           },
           "title": {
             "type": "string",
             "title": "Title",
-            "description": "\ubb38\uc11c \uc81c\ubaa9",
+            "description": "문서 제목",
             "default": ""
           },
           "published_at": {
@@ -3091,12 +3337,12 @@
               }
             ],
             "title": "Published At",
-            "description": "\ubc1c\ud589\uc77c ISO-8601"
+            "description": "발행일 ISO-8601"
           },
           "text": {
             "type": "string",
             "title": "Text",
-            "description": "\uc804\ubb38 \ud14d\uc2a4\ud2b8 (512\uc790 \uc774\uc0c1 \uad8c\uc7a5)"
+            "description": "전문 텍스트 (512자 이상 권장)"
           }
         },
         "type": "object",
@@ -3105,7 +3351,7 @@
           "text"
         ],
         "title": "IngestRequest",
-        "description": "POST /search/news/ingest \uc694\uccad \ubcf8\ubb38."
+        "description": "POST /search/news/ingest 요청 본문."
       },
       "IngestResponse": {
         "properties": {
@@ -3129,7 +3375,7 @@
           "is_new"
         ],
         "title": "IngestResponse",
-        "description": "POST /search/news/ingest \uc751\ub2f5."
+        "description": "POST /search/news/ingest 응답."
       },
       "LLMAnalysis": {
         "properties": {
@@ -3197,13 +3443,29 @@
             "type": "integer",
             "title": "Rank"
           },
+          "ticker": {
+            "type": "string",
+            "title": "Ticker"
+          },
           "name": {
             "type": "string",
             "title": "Name"
           },
-          "ticker": {
+          "market": {
             "type": "string",
-            "title": "Ticker"
+            "title": "Market"
+          },
+          "price": {
+            "type": "string",
+            "title": "Price"
+          },
+          "change_pct": {
+            "type": "string",
+            "title": "Change Pct"
+          },
+          "currency": {
+            "type": "string",
+            "title": "Currency"
           },
           "logo_url": {
             "anyOf": [
@@ -3217,12 +3479,15 @@
             "title": "Logo Url"
           },
           "price_display": {
-            "type": "string",
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Price Display"
-          },
-          "change_pct": {
-            "type": "string",
-            "title": "Change Pct"
           },
           "change_krw": {
             "anyOf": [
@@ -3239,13 +3504,15 @@
         "type": "object",
         "required": [
           "rank",
-          "name",
           "ticker",
-          "price_display",
-          "change_pct"
+          "name",
+          "market",
+          "price",
+          "change_pct",
+          "currency"
         ],
         "title": "MarketLeader",
-        "description": "\ub300\uc2dc\ubcf4\ub4dc\u00b7\ud3ec\ud2b8\ud3f4\ub9ac\uc624 \uc0c1\ub2e8 \uc2dc\uc7a5 \ub9ac\ub354 \uc885\ubaa9."
+        "description": "대시보드·포트폴리오 상단 시장 리더 종목 / GET /portfolio/market-leaders 응답."
       },
       "MonthlyReturnCell": {
         "properties": {
@@ -3269,7 +3536,7 @@
           "cell_level"
         ],
         "title": "MonthlyReturnCell",
-        "description": "\uc6d4\uac04(\uc77c\uac04) \uc218\uc775\ub960 \uce98\ub9b0\ub354 \uc140."
+        "description": "월간(일간) 수익률 캘린더 셀."
       },
       "NotificationSettings": {
         "properties": {
@@ -3341,7 +3608,7 @@
           "close"
         ],
         "title": "OhlcBar",
-        "description": "OHLC \uce94\ub4e4 \ud558\ub098"
+        "description": "OHLC 캔들 하나"
       },
       "PortfolioSummary": {
         "properties": {
@@ -3392,31 +3659,31 @@
           "holdings_count": {
             "type": "integer",
             "title": "Holdings Count",
-            "description": "\ubcf4\uc720 \uc885\ubaa9 \uc218",
+            "description": "보유 종목 수",
             "default": 0
           },
           "worst_asset_pct": {
             "type": "string",
             "title": "Worst Asset Pct",
-            "description": "\ubcf4\uc720 \uc885\ubaa9 \uc911 \ucd5c\uc800 \uc190\uc775\ub960 %% (\uc608: '-3.85')",
+            "description": "보유 종목 중 최저 손익률 %% (예: '-3.85')",
             "default": "0.00"
           },
           "risk_score_pct": {
             "type": "string",
             "title": "Risk Score Pct",
-            "description": "HHI \uae30\ubc18 \uc9d1\uc911\ub3c4 \ub9ac\uc2a4\ud06c \uc810\uc218 %% (0: \uc644\uc804\ubd84\uc0b0 ~ 100: \ub2e8\uc77c\uc790\uc0b0)",
+            "description": "HHI 기반 집중도 리스크 점수 %% (0: 완전분산 ~ 100: 단일자산)",
             "default": "0.00"
           },
           "period_change_pct": {
             "type": "string",
             "title": "Period Change Pct",
-            "description": "period_days \uc804 \uc2a4\ub0c5\uc0f7 \ub300\ube44 \uc218\uc775\ub960 %% (\uae30\ubcf8 30\uc77c)",
+            "description": "period_days 전 스냅샷 대비 수익률 %% (기본 30일)",
             "default": "0.00"
           },
           "period_days": {
             "type": "integer",
             "title": "Period Days",
-            "description": "period_change_pct \uacc4\uc0b0\uc5d0 \uc4f0\uc778 \uae30\uac04(\uc77c)",
+            "description": "period_change_pct 계산에 쓰인 기간(일)",
             "default": 30
           },
           "dimension_breakdown": {
@@ -3425,12 +3692,12 @@
             },
             "type": "array",
             "title": "Dimension Breakdown",
-            "description": "\uc790\uc0b0\uad70 \ucc28\uc6d0 \ube44\uc911 + \uc218\uc775\ub960 (\ubc14\ucc28\ud2b8\uc6a9)"
+            "description": "자산군 차원 비중 + 수익률 (바차트용)"
           },
           "win_rate_pct": {
             "type": "string",
             "title": "Win Rate Pct",
-            "description": "\ubcf4\uc720 \uc885\ubaa9 \uc911 pnl_pct > 0 \ube44\uc728 \u00d7 100 (\ubb38\uc790\uc5f4, \uc18c\uc218\uc810 2\uc790\ub9ac)",
+            "description": "보유 종목 중 pnl_pct > 0 비율 × 100 (문자열, 소수점 2자리)",
             "default": "0.00"
           },
           "market_leaders": {
@@ -3439,7 +3706,7 @@
             },
             "type": "array",
             "title": "Market Leaders",
-            "description": "value_krw \uc0c1\uc704 3\uac1c \uc885\ubaa9 (\ubcf4\uc720 \uc5c6\uc73c\uba74 S&P top3 fallback)"
+            "description": "value_krw 상위 3개 종목 (보유 없으면 S&P top3 fallback)"
           }
         },
         "type": "object",
@@ -3454,7 +3721,7 @@
           "holdings"
         ],
         "title": "PortfolioSummary",
-        "description": "GET /portfolio/summary \uc751\ub2f5.\n\nweek-3 \uae30\ubcf8 \ud544\ub4dc + sprint-07 \ub300\uc2dc\ubcf4\ub4dc \ud655\uc7a5 \ud544\ub4dc (holdings_count,\nworst_asset_pct, risk_score_pct, period_change_pct, dimension_breakdown)."
+        "description": "GET /portfolio/summary 응답.\n\nweek-3 기본 필드 + sprint-07 대시보드 확장 필드 (holdings_count,\nworst_asset_pct, risk_score_pct, period_change_pct, dimension_breakdown)."
       },
       "PriorTurn": {
         "properties": {
@@ -3478,7 +3745,7 @@
           "summary"
         ],
         "title": "PriorTurn",
-        "description": "\uc774\uc804 \ud134 \uc694\uc57d (follow-up \ucee8\ud14d\uc2a4\ud2b8 \uc8fc\uc785\uc6a9).\n\nraw LLM \ucd9c\ub825 / full plan / raw tool output \ud3ec\ud568 \uae08\uc9c0.\nquery \ub294 sanitized \uc6d0\ubb38, summary \ub294 final.card \uc694\uc57d\ub9cc \ud3ec\ud568."
+        "description": "이전 턴 요약 (follow-up 컨텍스트 주입용).\n\nraw LLM 출력 / full plan / raw tool output 포함 금지.\nquery 는 sanitized 원문, summary 는 final.card 요약만 포함."
       },
       "Quote": {
         "properties": {
@@ -3500,13 +3767,13 @@
           "change": {
             "type": "number",
             "title": "Change",
-            "description": "\uc804\uc77c \ub300\ube44 \ubcc0\ud654\ub7c9",
+            "description": "전일 대비 변화량",
             "default": 0.0
           },
           "change_pct": {
             "type": "number",
             "title": "Change Pct",
-            "description": "\uc804\uc77c \ub300\ube44 \ubcc0\ud654\uc728(%)",
+            "description": "전일 대비 변화율(%)",
             "default": 0.0
           },
           "volume": {
@@ -3523,7 +3790,7 @@
           "currency": {
             "type": "string",
             "title": "Currency",
-            "description": "KRW | USD | USDT \ub4f1",
+            "description": "KRW | USD | USDT 등",
             "default": "USD"
           },
           "timestamp": {
@@ -3602,7 +3869,7 @@
             "maximum": 1.0,
             "minimum": 0.0,
             "title": "Max Single Weight",
-            "description": "\ub2e8\uc77c \uc885\ubaa9 \ucd5c\ub300 \ube44\uc911",
+            "description": "단일 종목 최대 비중",
             "default": 0.5
           },
           "min_trade_krw": {
@@ -3617,13 +3884,13 @@
               }
             ],
             "title": "Min Trade Krw",
-            "description": "\ucd5c\uc18c \uac70\ub798\uc561(KRW)",
+            "description": "최소 거래액(KRW)",
             "default": "100000"
           },
           "allow_fractional": {
             "type": "boolean",
             "title": "Allow Fractional",
-            "description": "\uc18c\uc218\uc810 \uc218\ub7c9 \ud5c8\uc6a9 (\uc8fc\uc2dd\uc740 \uae30\ubcf8 False \uad8c\uc7a5)",
+            "description": "소수점 수량 허용 (주식은 기본 False 권장)",
             "default": true
           }
         },
@@ -3818,14 +4085,14 @@
           "intensity"
         ],
         "title": "SectorHeatmapTile",
-        "description": "\uc139\ud130 \ud788\ud2b8\ub9f5 \ub2e8\uc77c \ud0c0\uc77c."
+        "description": "섹터 히트맵 단일 타일."
       },
       "SectorKpi": {
         "properties": {
           "name": {
             "type": "string",
             "title": "Name",
-            "description": "\uc608: \ubc18\ub3c4\uccb4"
+            "description": "예: 반도체"
           },
           "change_pct": {
             "type": "string",
@@ -3834,7 +4101,7 @@
           "constituents": {
             "type": "integer",
             "title": "Constituents",
-            "description": "\ud3ec\ud568 \uc885\ubaa9 \uc218"
+            "description": "포함 종목 수"
           },
           "leaders": {
             "items": {
@@ -3842,7 +4109,7 @@
             },
             "type": "array",
             "title": "Leaders",
-            "description": "\uc608: ['AAPL', 'MSFT']"
+            "description": "예: ['AAPL', 'MSFT']"
           }
         },
         "type": "object",
@@ -3912,7 +4179,7 @@
           "preview"
         ],
         "title": "SessionMeta",
-        "description": "GET /copilot/sessions \ubaa9\ub85d \uc544\uc774\ud15c \u2014 \uc138\uc158\ubcc4 \uc694\uc57d \uba54\ud0c0."
+        "description": "GET /copilot/sessions 목록 아이템 — 세션별 요약 메타."
       },
       "SessionResponse": {
         "properties": {
@@ -3944,7 +4211,7 @@
           "turns"
         ],
         "title": "SessionResponse",
-        "description": "GET /copilot/session/{session_id} \uc751\ub2f5."
+        "description": "GET /copilot/session/{session_id} 응답."
       },
       "SessionTurn": {
         "properties": {
@@ -4011,7 +4278,7 @@
           "query"
         ],
         "title": "SessionTurn",
-        "description": "\ub2e8\uc77c \uc138\uc158 \ud134 \u2014 done \uc774\ubca4\ud2b8 \uc9c1\uc804\uc5d0 \uc800\uc7a5\ub41c\ub2e4."
+        "description": "단일 세션 턴 — done 이벤트 직전에 저장된다."
       },
       "SnapshotResponse": {
         "properties": {
@@ -4091,12 +4358,12 @@
           "symbol": {
             "type": "string",
             "title": "Symbol",
-            "description": "\ud2f0\ucee4 \uc2ec\ubcfc (\uc608: AAPL, KRW-BTC)"
+            "description": "티커 심볼 (예: AAPL, KRW-BTC)"
           },
           "name": {
             "type": "string",
             "title": "Name",
-            "description": "\uc790\uc0b0 \uc774\ub984"
+            "description": "자산 이름"
           },
           "asset_class": {
             "type": "string",
@@ -4113,7 +4380,7 @@
               }
             ],
             "title": "Exchange",
-            "description": "\uac70\ub798\uc18c \ucf54\ub4dc"
+            "description": "거래소 코드"
           },
           "market": {
             "anyOf": [
@@ -4185,7 +4452,7 @@
           "market"
         ],
         "title": "SymbolInfo",
-        "description": "\uc2ec\ubcfc \uac80\uc0c9 \uacb0\uacfc"
+        "description": "심볼 검색 결과"
       },
       "SymbolRef": {
         "properties": {
@@ -4197,7 +4464,7 @@
           "code": {
             "type": "string",
             "title": "Code",
-            "description": "\ud2f0\ucee4/\ucf54\ub4dc. \uc608: KRW-BTC, AAPL"
+            "description": "티커/코드. 예: KRW-BTC, AAPL"
           }
         },
         "type": "object",
@@ -4206,7 +4473,7 @@
           "code"
         ],
         "title": "SymbolRef",
-        "description": "\uc5c5\ub85c\ub4dc \uc5c6\uc774 \uc2ec\ubcfc\ub9cc\uc73c\ub85c \ubd84\uc11d\ud560 \ub54c \uc0ac\uc6a9\ud558\ub294 \ucc38\uc870."
+        "description": "업로드 없이 심볼만으로 분석할 때 사용하는 참조."
       },
       "TargetAllocation": {
         "properties": {
@@ -4248,7 +4515,7 @@
         },
         "type": "object",
         "title": "TargetAllocation",
-        "description": "\uc790\uc0b0\uad70\ubcc4 \ubaa9\ud45c \ube44\uc911. \ud569\uacc4 1.0 (\u00b10.001 \ud5c8\uc6a9)."
+        "description": "자산군별 목표 비중. 합계 1.0 (±0.001 허용)."
       },
       "ThemeSettings": {
         "properties": {
@@ -4295,7 +4562,7 @@
           "change_pct": {
             "type": "string",
             "title": "Change Pct",
-            "description": "\ub4f1\ub77d\ub960 \ubb38\uc790\uc5f4 (\uc608: +3.21)"
+            "description": "등락률 문자열 (예: +3.21)"
           },
           "views_24h": {
             "anyOf": [
@@ -4307,7 +4574,7 @@
               }
             ],
             "title": "Views 24H",
-            "description": "24\uc2dc\uac04 \uc870\ud68c\uc218 (popular \uc804\uc6a9)"
+            "description": "24시간 조회수 (popular 전용)"
           }
         },
         "type": "object",
@@ -4661,6 +4928,141 @@
         ],
         "title": "ValidationError"
       },
+      "WatchlistAlertCreate": {
+        "properties": {
+          "symbol": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Symbol",
+            "description": "심볼 (예: NVDA, KRW-BTC)"
+          },
+          "market": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Market",
+            "description": "마켓 (yahoo | upbit | naver_kr | binance)"
+          },
+          "direction": {
+            "type": "string",
+            "enum": [
+              "above",
+              "below"
+            ],
+            "title": "Direction",
+            "description": "above | below"
+          },
+          "threshold": {
+            "anyOf": [
+              {
+                "type": "number",
+                "exclusiveMinimum": 0.0
+              },
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+              }
+            ],
+            "title": "Threshold",
+            "description": "알림 임계가격"
+          }
+        },
+        "type": "object",
+        "required": [
+          "symbol",
+          "market",
+          "direction",
+          "threshold"
+        ],
+        "title": "WatchlistAlertCreate",
+        "description": "POST /watchlist/alerts 요청 본문."
+      },
+      "WatchlistAlertResponse": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "user_id": {
+            "type": "string",
+            "title": "User Id"
+          },
+          "symbol": {
+            "type": "string",
+            "title": "Symbol"
+          },
+          "market": {
+            "type": "string",
+            "title": "Market"
+          },
+          "direction": {
+            "type": "string",
+            "title": "Direction"
+          },
+          "threshold": {
+            "type": "string",
+            "title": "Threshold",
+            "description": "Decimal 문자열"
+          },
+          "enabled": {
+            "type": "boolean",
+            "title": "Enabled"
+          },
+          "created_at": {
+            "type": "string",
+            "title": "Created At",
+            "description": "ISO-8601 UTC"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "user_id",
+          "symbol",
+          "market",
+          "direction",
+          "threshold",
+          "enabled",
+          "created_at"
+        ],
+        "title": "WatchlistAlertResponse",
+        "description": "GET/POST/PATCH /watchlist/alerts 응답."
+      },
+      "WatchlistAlertUpdate": {
+        "properties": {
+          "enabled": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Enabled",
+            "description": "알림 활성화 여부"
+          },
+          "threshold": {
+            "anyOf": [
+              {
+                "type": "number",
+                "exclusiveMinimum": 0.0
+              },
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Threshold",
+            "description": "임계가격 변경"
+          }
+        },
+        "type": "object",
+        "title": "WatchlistAlertUpdate",
+        "description": "PATCH /watchlist/alerts/{id} 요청 본문 (부분 업데이트)."
+      },
       "WatchlistItemCreate": {
         "properties": {
           "market": {
@@ -4671,7 +5073,7 @@
           "code": {
             "type": "string",
             "title": "Code",
-            "description": "\uc2ec\ubcfc/\ucf54\ub4dc (\uc608: KRW-BTC, AAPL)"
+            "description": "심볼/코드 (예: KRW-BTC, AAPL)"
           },
           "memo": {
             "anyOf": [
@@ -4723,7 +5125,7 @@
             },
             "type": "array",
             "title": "Pnl 7D",
-            "description": "7\uc77c \uc885\uac00 \uc2a4\ud30c\ud06c\ub77c\uc778"
+            "description": "7일 종가 스파크라인"
           },
           "created_at": {
             "type": "string",
@@ -4745,27 +5147,27 @@
           "watched_count": {
             "type": "integer",
             "title": "Watched Count",
-            "description": "\uc6cc\uce58\ub9ac\uc2a4\ud2b8 \uc885\ubaa9 \uc218"
+            "description": "워치리스트 종목 수"
           },
           "up_avg_pct": {
             "type": "string",
             "title": "Up Avg Pct",
-            "description": "\uc0c1\uc2b9 \uc885\ubaa9 \ud3c9\uade0 \ub4f1\ub77d\ub960 (\uc608: +6.42)"
+            "description": "상승 종목 평균 등락률 (예: +6.42)"
           },
           "down_avg_pct": {
             "type": "string",
             "title": "Down Avg Pct",
-            "description": "\ud558\ub77d \uc885\ubaa9 \ud3c9\uade0 \ub4f1\ub77d\ub960 (\uc608: -4.33)"
+            "description": "하락 종목 평균 등락률 (예: -4.33)"
           },
           "top_gainer_name": {
             "type": "string",
             "title": "Top Gainer Name",
-            "description": "\ucd5c\ub300 \uc0c1\uc2b9 \uc885\ubaa9\uba85 (\uc608: \uc0bc\uc131\uc804\uc790)"
+            "description": "최대 상승 종목명 (예: 삼성전자)"
           },
           "top_gainer_pct": {
             "type": "string",
             "title": "Top Gainer Pct",
-            "description": "\ucd5c\ub300 \uc0c1\uc2b9\ub960 (\uc608: +12.4)"
+            "description": "최대 상승률 (예: +12.4)"
           }
         },
         "type": "object",
@@ -4783,7 +5185,7 @@
           "country_code": {
             "type": "string",
             "title": "Country Code",
-            "description": "ISO 2\uc790\ub9ac \uc608: US"
+            "description": "ISO 2자리 예: US"
           },
           "country_name": {
             "type": "string",
@@ -4813,7 +5215,7 @@
             "type": "string",
             "minLength": 1,
             "title": "Query",
-            "description": "\uc790\uc5f0\uc5b4 \uc9c8\uc758"
+            "description": "자연어 질의"
           },
           "session_id": {
             "anyOf": [
@@ -4825,7 +5227,7 @@
               }
             ],
             "title": "Session Id",
-            "description": "\uae30\uc874 \uc138\uc158 ID (\uc635\uc158)"
+            "description": "기존 세션 ID (옵션)"
           },
           "context": {
             "anyOf": [
@@ -4838,12 +5240,12 @@
               }
             ],
             "title": "Context",
-            "description": "\ucd94\uac00 \ucee8\ud14d\uc2a4\ud2b8 (\uc635\uc158)"
+            "description": "추가 컨텍스트 (옵션)"
           },
           "_harness_step_delay_ms": {
             "type": "integer",
             "title": "Harness Step Delay Ms",
-            "description": "[harness-only] \uac01 step \uc2e4\ud589 \uc804 \uc9c0\uc5f0 ms. \ubcd1\ub82c \uacb0\uc815\ub860\uc801 \ud14c\uc2a4\ud2b8\uc6a9.",
+            "description": "[harness-only] 각 step 실행 전 지연 ms. 병렬 결정론적 테스트용.",
             "default": 0
           }
         },
@@ -4852,7 +5254,7 @@
           "query"
         ],
         "title": "_InternalQueryRequest",
-        "description": "\ub0b4\ubd80 \uc804\uc6a9 \ud655\uc7a5 \u2014 OpenAPI \ubbf8\ub178\ucd9c.\n\n`_harness_step_delay_ms` : \uc624\ucf00\uc2a4\ud2b8\ub808\uc774\ud130\uac00 \uac01 step \uc9c4\uc785 \uc2dc\n`asyncio.sleep(delay_ms / 1000)` \uc73c\ub85c \ubcc0\ud658. \uacb0\uc815\ub860\uc801 \ubcd1\ub82c \ud14c\uc2a4\ud2b8\uc6a9.\n\nFastAPI \ub77c\uc6b0\ud2b8 \ud30c\ub77c\ubbf8\ud130\uc5d0 \uc774 \ud074\ub798\uc2a4\ub97c \uc0ac\uc6a9\ud558\uba74 `_InternalQueryRequest` \uac00\nOpenAPI components/schemas \uc5d0 \ub4f1\ub85d\ub41c\ub2e4. openapi_extra \uc758 requestBody override \ub85c\n\uc678\ubd80\uc5d0\ub294 `QueryRequest` \uc2a4\ud0a4\ub9c8\ub9cc \ub178\ucd9c\ud55c\ub2e4."
+        "description": "내부 전용 확장 — OpenAPI 미노출.\n\n`_harness_step_delay_ms` : 오케스트레이터가 각 step 진입 시\n`asyncio.sleep(delay_ms / 1000)` 으로 변환. 결정론적 병렬 테스트용.\n\nFastAPI 라우트 파라미터에 이 클래스를 사용하면 `_InternalQueryRequest` 가\nOpenAPI components/schemas 에 등록된다. openapi_extra 의 requestBody override 로\n외부에는 `QueryRequest` 스키마만 노출한다."
       }
     }
   }

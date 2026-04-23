@@ -8,13 +8,17 @@ from pydantic import BaseModel, Field, field_serializer
 
 
 class MarketLeader(BaseModel):
-    """대시보드·포트폴리오 상단 시장 리더 종목."""
+    """대시보드·포트폴리오 상단 시장 리더 종목 / GET /portfolio/market-leaders 응답."""
     rank: int
-    name: str
     ticker: str
+    name: str
+    market: str
+    price: str         # decimal string (예: "847.23", "115898000")
+    change_pct: str    # "+12.34" 또는 "-1.72" 포맷
+    currency: str      # "USD" | "KRW" | ...
+    # 하위호환 필드 (summary.market_leaders 에서 사용)
     logo_url: str | None = None
-    price_display: str
-    change_pct: str
+    price_display: str | None = None
     change_krw: str | None = None
 
 

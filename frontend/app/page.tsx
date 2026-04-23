@@ -23,7 +23,7 @@ import {
   PERIOD_DAYS,
   type PeriodKey,
 } from "@/components/dashboard/period-tabs";
-import { MarketLeaders, type MarketLeader } from "@/components/dashboard/market-leaders";
+import { MarketLeaders } from "@/components/dashboard/market-leaders";
 import { NetworthChart } from "@/components/portfolio/networth-chart";
 import { NewsPanel } from "@/components/dashboard/news-panel";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -62,30 +62,6 @@ function formatDate(d: Date): string {
   const mm = String(d.getMonth() + 1).padStart(2, "0");
   const dd = String(d.getDate()).padStart(2, "0");
   return `${yyyy}-${mm}-${dd}`;
-}
-
-/**
- * PortfolioSummary 에 market_leaders 가 아직 BE 미구현이면 fallback 으로
- * 상위 3개 holdings 를 MarketLeader 형태로 변환한다.
- */
-function deriveMarketLeaders(summary: PortfolioSummary): MarketLeader[] {
-  // BE 가 market_leaders 필드를 추가하면 아래 캐스트로 바로 사용 가능
-  const raw = (summary as unknown as { market_leaders?: MarketLeader[] }).market_leaders;
-  if (raw && raw.length > 0) return raw.slice(0, 3);
-
-  // fallback: holdings 상위 3개를 가공
-  return [...summary.holdings]
-    .sort((a, b) => Number(b.value_krw) - Number(a.value_krw))
-    .slice(0, 3)
-    .map((h, idx) => ({
-      rank: idx + 1,
-      name: h.code,
-      ticker: h.code,
-      logo_url: null,
-      price_display: formatKRWCompact(h.current_price_krw),
-      change_pct: h.pnl_pct,
-      change_krw: null,
-    }));
 }
 
 export default function DashboardHome() {
@@ -144,11 +120,6 @@ export default function DashboardHome() {
         };
       })
       .sort((a, b) => b.ratio - a.ratio);
-  }, [summary]);
-
-  const marketLeaders = useMemo<MarketLeader[]>(() => {
-    if (!summary) return [];
-    return deriveMarketLeaders(summary);
   }, [summary]);
 
   // 오늘 손익: daily_change_krw / daily_change_pct 재사용
@@ -376,15 +347,7 @@ export default function DashboardHome() {
           className="lg:col-span-3"
           testId="section-market-leaders"
         >
-          {isLoading ? (
-            <div className="space-y-2">
-              {Array.from({ length: 3 }).map((_, i) => (
-                <Skeleton key={i} className="h-16 w-full rounded-xl" />
-              ))}
-            </div>
-          ) : (
-            <MarketLeaders leaders={marketLeaders} />
-          )}
+          <MarketLeaders limit={5} />
         </SectionCard>
       </section>
 

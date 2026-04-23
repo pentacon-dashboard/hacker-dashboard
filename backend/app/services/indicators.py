@@ -116,6 +116,23 @@ def calc_bollinger(
     return uppers, mids, lowers
 
 
+def calc_ma(prices: list[float], period: int) -> list[float]:
+    """단순 이동평균(SMA) 계산.
+
+    반환 길이: len(prices) - period + 1
+    period 미만 길이 입력 시 빈 리스트 반환.
+    """
+    if len(prices) < period:
+        return []
+
+    arr = np.array(prices, dtype=float)
+    result: list[float] = []
+    for i in range(period - 1, len(arr)):
+        window = arr[i - period + 1 : i + 1]
+        result.append(round(float(np.mean(window)), 4))
+    return result
+
+
 def calc_stochastic(
     highs: list[float],
     lows: list[float],

@@ -101,6 +101,8 @@ class IndicatorMetrics(BaseModel):
     macd_latest: float
     macd_signal: str = Field(..., description="golden_cross | dead_cross | neutral")
     bollinger_position: str = Field(..., description="upper | mid | lower")
+    ma20_latest: float | None = Field(None, description="MA-20 최신값")
+    ma60_latest: float | None = Field(None, description="MA-60 최신값")
 
 
 class IndicatorBundle(BaseModel):
@@ -110,6 +112,8 @@ class IndicatorBundle(BaseModel):
     macd: list[MacdPoint]
     bollinger: BollingerBands
     stochastic: list[StochasticPoint]
+    ma20: list[IndicatorPoint] = Field(default_factory=list, description="MA-20 시계열")
+    ma60: list[IndicatorPoint] = Field(default_factory=list, description="MA-60 시계열")
     metrics: IndicatorMetrics
     signal: str = Field(..., description="buy | hold | sell")
 

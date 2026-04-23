@@ -56,3 +56,60 @@ export interface GainersLosersResponse {
 export async function getWatchlistGainersLosers(): Promise<GainersLosersResponse> {
   return apiFetch<GainersLosersResponse>("/watchlist/gainers-losers");
 }
+
+// --- Phase 2: /watchlist/alerts CRUD ---
+
+/** BE /watchlist/alerts GET 응답 */
+export interface WatchlistAlert {
+  id: number;
+  user_id: string;
+  symbol: string;
+  market: string;
+  direction: "above" | "below";
+  threshold: string;
+  enabled: boolean;
+  created_at: string;
+}
+
+/** POST /watchlist/alerts body */
+export interface AlertCreate {
+  symbol: string;
+  market: string;
+  direction: "above" | "below";
+  threshold: number;
+}
+
+/** PATCH /watchlist/alerts/{id} body */
+export interface AlertUpdate {
+  enabled?: boolean;
+  threshold?: number;
+}
+
+export async function getAlerts(): Promise<WatchlistAlert[]> {
+  return apiFetch<WatchlistAlert[]>("/watchlist/alerts");
+}
+
+export async function createAlert(
+  body: AlertCreate,
+): Promise<WatchlistAlert> {
+  return apiFetch<WatchlistAlert>("/watchlist/alerts", {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
+}
+
+export async function updateAlert(
+  id: number,
+  patch: AlertUpdate,
+): Promise<WatchlistAlert> {
+  return apiFetch<WatchlistAlert>(`/watchlist/alerts/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify(patch),
+  });
+}
+
+export async function deleteAlert(id: number): Promise<void> {
+  await apiFetch<void>(`/watchlist/alerts/${id}`, {
+    method: "DELETE",
+  });
+}

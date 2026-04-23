@@ -310,6 +310,7 @@ async def analyze(
         400: {"description": "CSV 파싱 실패 또는 빈 파일"},
         413: {"description": "파일 크기 10MB 초과"},
         415: {"description": "지원하지 않는 Content-Type"},
+        422: {"description": "요청 파라미터 검증 실패"},
     },
 )
 async def analyze_csv(

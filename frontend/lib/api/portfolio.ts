@@ -92,3 +92,27 @@ export async function getMonthlyReturns(year?: number): Promise<MonthlyReturnCel
 export async function getAiInsight(): Promise<AiInsightResponse> {
   return apiFetch<AiInsightResponse>("/portfolio/ai-insight");
 }
+
+// --- Phase 2: /portfolio/market-leaders ---
+
+/** BE /portfolio/market-leaders 응답 형태 */
+export interface MarketLeaderResponse {
+  rank: number;
+  ticker: string;
+  name: string;
+  market: string;
+  price: string;
+  change_pct: string;
+  currency: string;
+  logo_url: string | null;
+  price_display: string | null;
+  change_krw: string | null;
+}
+
+export async function getMarketLeaders(
+  limit = 5,
+): Promise<MarketLeaderResponse[]> {
+  return apiFetch<MarketLeaderResponse[]>(
+    `/portfolio/market-leaders?limit=${limit}`,
+  );
+}

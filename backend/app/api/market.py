@@ -426,6 +426,24 @@ async def get_symbol_indicators(
     elif rsi_latest > 70 and macd_signal_str == "dead_cross":
         overall_signal = "sell"
 
+    # MA20 / MA60
+    ma20_vals = ind_svc.calc_ma(closes, period=20)
+    ma20_ts_offset = len(closes) - len(ma20_vals)
+    ma20_series = [
+        IndicatorPoint(t=timestamps[ma20_ts_offset + i], v=round(v, 4))
+        for i, v in enumerate(ma20_vals)
+    ]
+
+    ma60_vals = ind_svc.calc_ma(closes, period=60)
+    ma60_ts_offset = len(closes) - len(ma60_vals)
+    ma60_series = [
+        IndicatorPoint(t=timestamps[ma60_ts_offset + i], v=round(v, 4))
+        for i, v in enumerate(ma60_vals)
+    ]
+
+    ma20_latest: float | None = round(ma20_vals[-1], 4) if ma20_vals else None
+    ma60_latest: float | None = round(ma60_vals[-1], 4) if ma60_vals else None
+
     return IndicatorBundle(
         interval=interval,
         period=period,
@@ -433,11 +451,15 @@ async def get_symbol_indicators(
         macd=macd_points,
         bollinger=bollinger,
         stochastic=stochastic,
+        ma20=ma20_series,
+        ma60=ma60_series,
         metrics=IndicatorMetrics(
             rsi_latest=round(rsi_latest, 2),
             macd_latest=round(macd_latest, 6),
             macd_signal=macd_signal_str,
             bollinger_position=bb_pos,
+            ma20_latest=ma20_latest,
+            ma60_latest=ma60_latest,
         ),
         signal=overall_signal,
     )

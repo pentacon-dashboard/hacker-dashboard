@@ -1,7 +1,10 @@
 """
-워치리스트 관련 Pydantic 스키마 — Sprint-08 B-2.
+워치리스트 관련 Pydantic 스키마 — Sprint-08 B-2 + Phase 2-D (알림 CRUD).
 """
 from __future__ import annotations
+
+from decimal import Decimal
+from typing import Literal
 
 from pydantic import BaseModel, Field
 
@@ -34,3 +37,37 @@ class TopListItem(BaseModel):
     name: str
     change_pct: str = Field(..., description="등락률 문자열 (예: +3.21)")
     views_24h: int | None = Field(None, description="24시간 조회수 (popular 전용)")
+
+
+# ── Phase 2-D: 알림 CRUD 스키마 ──────────────────────────────────────────────
+
+
+class WatchlistAlertCreate(BaseModel):
+    """POST /watchlist/alerts 요청 본문."""
+
+    symbol: str = Field(..., min_length=1, description="심볼 (예: NVDA, KRW-BTC)")
+    market: str = Field(..., min_length=1, description="마켓 (yahoo | upbit | naver_kr | binance)")
+    direction: Literal["above", "below"] = Field(..., description="above | below")
+    threshold: Decimal = Field(..., gt=Decimal("0"), description="알림 임계가격")
+
+
+class WatchlistAlertUpdate(BaseModel):
+    """PATCH /watchlist/alerts/{id} 요청 본문 (부분 업데이트)."""
+
+    enabled: bool | None = Field(None, description="알림 활성화 여부")
+    threshold: Decimal | None = Field(None, gt=Decimal("0"), description="임계가격 변경")
+
+
+class WatchlistAlertResponse(BaseModel):
+    """GET/POST/PATCH /watchlist/alerts 응답."""
+
+    id: int
+    user_id: str
+    symbol: str
+    market: str
+    direction: str
+    threshold: str = Field(..., description="Decimal 문자열")
+    enabled: bool
+    created_at: str = Field(..., description="ISO-8601 UTC")
+
+    model_config = {"from_attributes": True}

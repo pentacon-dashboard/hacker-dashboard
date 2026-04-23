@@ -17,6 +17,8 @@ import { SymbolAnalysisSection } from "@/components/symbol/symbol-analysis-secti
 import { TimeframeTabs, type Timeframe } from "@/components/symbol/timeframe-tabs";
 import { IndicatorGrid, type IndicatorMetrics } from "@/components/symbol/indicator-grid";
 import { IndicatorPanel, type IndicatorBundle } from "@/components/symbol/indicator-panel";
+import { IndicatorSubcharts } from "@/components/symbol/indicator-subcharts";
+import type { RsiPoint, MacdPoint } from "@/components/symbol/indicator-subcharts";
 import { KeyIssueList, type KeyIssue } from "@/components/symbol/key-issue-list";
 import { SymbolNewsPanel } from "@/components/symbol/symbol-news-panel";
 import { SectionCard } from "@/components/dashboard/section-card";
@@ -83,6 +85,9 @@ interface IndicatorsResponse {
   bollinger_lower: number | null;
   stochastic: number | null;
   signal: "buy" | "hold" | "sell";
+  // raw 시계열 — 서브차트용
+  rsi_series: RsiPoint[];
+  macd_series: MacdPoint[];
 }
 
 function calcMa(ohlc: OhlcBar[], period: number): number | null {
@@ -144,6 +149,8 @@ function normalizeIndicators(
     bollinger_lower: lastBolLower,
     stochastic: lastSto,
     signal: raw.signal,
+    rsi_series: raw.rsi_14,
+    macd_series: raw.macd,
   };
 }
 
@@ -277,6 +284,8 @@ export default function SymbolDetailPage() {
           bollinger_lower: null,
           stochastic: null,
           signal: "hold" as const,
+          rsi_series: [],
+          macd_series: [],
         };
       }
     },
@@ -353,6 +362,13 @@ export default function SymbolDetailPage() {
               </div>
             )}
           </div>
+
+          {/* RSI / MACD 서브차트 */}
+          <IndicatorSubcharts
+            rsi={indicatorsQuery.data?.rsi_series ?? []}
+            macd={indicatorsQuery.data?.macd_series ?? []}
+            isLoading={indicatorsQuery.isLoading}
+          />
 
           {/* 지표 카드 6개 */}
           <IndicatorGrid
