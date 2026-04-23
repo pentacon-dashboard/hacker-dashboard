@@ -60,6 +60,7 @@ async def get_search_news(
         "stub 모드에서는 in-memory 저장소에 적재한다. "
         "동일 source_url 은 멱등 처리 (중복 청크 미생성)."
     ),
+    responses={400: {"description": "Invalid request body (JSON parse error)"}},
 )
 async def post_news_ingest(body: IngestRequest) -> IngestResponse:
     doc = {

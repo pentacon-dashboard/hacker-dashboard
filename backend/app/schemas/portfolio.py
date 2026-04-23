@@ -9,8 +9,8 @@ from pydantic import BaseModel, Field, field_serializer
 
 
 class HoldingCreate(BaseModel):
-    market: str = Field(..., description="upbit | binance | yahoo | naver_kr")
-    code: str = Field(..., description="심볼/코드 (예: KRW-BTC, AAPL)")
+    market: str = Field(..., min_length=1, description="upbit | binance | yahoo | naver_kr")
+    code: str = Field(..., min_length=1, description="심볼/코드 (예: KRW-BTC, AAPL)")
     quantity: Decimal = Field(..., gt=Decimal("0"), description="보유 수량")
     avg_cost: Decimal = Field(..., gt=Decimal("0"), description="평균 매입 단가")
     currency: str = Field(..., min_length=3, max_length=4, description="통화 코드 (KRW/USD/USDT/EUR/JPY)")

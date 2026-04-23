@@ -544,7 +544,10 @@
             "required": true,
             "schema": {
               "type": "integer",
-              "title": "Holding Id"
+              "minimum": 1,
+              "maximum": 2147483647,
+              "title": "Holding Id",
+              "description": "보유 종목 ID"
             }
           }
         ],
@@ -568,6 +571,9 @@
                 }
               }
             }
+          },
+          "404": {
+            "description": "Holding not found"
           },
           "422": {
             "description": "Validation Error",
@@ -595,13 +601,19 @@
             "required": true,
             "schema": {
               "type": "integer",
-              "title": "Holding Id"
+              "minimum": 1,
+              "maximum": 2147483647,
+              "title": "Holding Id",
+              "description": "보유 종목 ID"
             }
           }
         ],
         "responses": {
           "204": {
             "description": "Successful Response"
+          },
+          "404": {
+            "description": "Holding not found"
           },
           "422": {
             "description": "Validation Error",
@@ -678,16 +690,12 @@
             "in": "query",
             "required": false,
             "schema": {
-              "anyOf": [
-                {
-                  "type": "string",
-                  "format": "date"
-                },
-                {
-                  "type": "null"
-                }
-              ],
+              "type": "string",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
               "description": "시작 날짜 (YYYY-MM-DD)",
+              "examples": [
+                "2024-01-01"
+              ],
               "title": "From"
             },
             "description": "시작 날짜 (YYYY-MM-DD)"
@@ -697,16 +705,12 @@
             "in": "query",
             "required": false,
             "schema": {
-              "anyOf": [
-                {
-                  "type": "string",
-                  "format": "date"
-                },
-                {
-                  "type": "null"
-                }
-              ],
+              "type": "string",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
               "description": "종료 날짜 (YYYY-MM-DD)",
+              "examples": [
+                "2024-12-31"
+              ],
               "title": "To"
             },
             "description": "종료 날짜 (YYYY-MM-DD)"
@@ -1128,6 +1132,9 @@
                 }
               }
             }
+          },
+          "400": {
+            "description": "Invalid request body (JSON parse error)"
           },
           "422": {
             "description": "Validation Error",
@@ -1698,11 +1705,13 @@
         "properties": {
           "market": {
             "type": "string",
+            "minLength": 1,
             "title": "Market",
             "description": "upbit | binance | yahoo | naver_kr"
           },
           "code": {
             "type": "string",
+            "minLength": 1,
             "title": "Code",
             "description": "심볼/코드 (예: KRW-BTC, AAPL)"
           },
@@ -2297,9 +2306,13 @@
             "type": "number",
             "maximum": 1.0,
             "minimum": 0.0,
+            "exclusiveMinimum": false,
             "title": "Max Single Weight",
-            "description": "단일 종목 최대 비중",
-            "default": 0.5
+            "description": "단일 종목 최대 비중 (number only, not boolean)",
+            "default": 0.5,
+            "not": {
+              "type": "boolean"
+            }
           },
           "min_trade_krw": {
             "anyOf": [

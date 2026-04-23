@@ -10,8 +10,9 @@ import time
 import uuid
 from datetime import date, datetime, timezone
 from decimal import Decimal
+from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response
+from fastapi import APIRouter, Depends, HTTPException, Path, Query, Request, Response
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -75,7 +76,11 @@ async def create_holding(
     try:
         get_adapter(body.market)
     except ValueError as exc:
-        raise HTTPException(status_code=422, detail=str(exc)) from exc
+        # HTTPValidationError 스키마 호환: detail 은 반드시 array
+        raise HTTPException(
+            status_code=422,
+            detail=[{"msg": str(exc), "type": "value_error", "loc": ["body", "market"]}],
+        ) from exc
 
     now = datetime.now(timezone.utc)
     holding = Holding(
@@ -106,10 +111,14 @@ async def list_holdings(
     return [_holding_to_response(h) for h in holdings]
 
 
-@router.patch("/holdings/{holding_id}", response_model=HoldingResponse)
+@router.patch(
+    "/holdings/{holding_id}",
+    response_model=HoldingResponse,
+    responses={404: {"description": "Holding not found"}},
+)
 async def update_holding(
-    holding_id: int,
     body: HoldingUpdate,
+    holding_id: int = Path(..., ge=1, le=2_147_483_647, description="보유 종목 ID"),
     db: AsyncSession = Depends(get_db),
 ) -> HoldingResponse:
     """수량/평단가 수정."""
@@ -131,9 +140,13 @@ async def update_holding(
     return _holding_to_response(holding)
 
 
-@router.delete("/holdings/{holding_id}", status_code=204)
+@router.delete(
+    "/holdings/{holding_id}",
+    status_code=204,
+    responses={404: {"description": "Holding not found"}},
+)
 async def delete_holding(
-    holding_id: int,
+    holding_id: int = Path(..., ge=1, le=2_147_483_647, description="보유 종목 ID"),
     db: AsyncSession = Depends(get_db),
 ) -> None:
     """보유 종목 삭제."""
@@ -186,13 +199,50 @@ async def get_summary(
 # ────────────────────── Snapshots ──────────────────────
 
 
-@router.get("/snapshots", response_model=list[SnapshotResponse])
+_SNAPSHOT_DATE_SCHEMA = {
+    "schema": {
+        "type": "string",
+        "pattern": r"^\d{4}-\d{2}-\d{2}$",
+        "title": "date",
+    }
+}
+
+
+@router.get(
+    "/snapshots",
+    response_model=list[SnapshotResponse],
+    openapi_extra={
+        "parameters": [
+            {
+                "name": "from",
+                "in": "query",
+                "required": False,
+                "description": "시작 날짜 (YYYY-MM-DD)",
+                **_SNAPSHOT_DATE_SCHEMA,
+            },
+            {
+                "name": "to",
+                "in": "query",
+                "required": False,
+                "description": "종료 날짜 (YYYY-MM-DD)",
+                **_SNAPSHOT_DATE_SCHEMA,
+            },
+        ]
+    },
+)
 async def list_snapshots(
-    from_date: date | None = Query(None, alias="from", description="시작 날짜 (YYYY-MM-DD)"),
-    to_date: date | None = Query(None, alias="to", description="종료 날짜 (YYYY-MM-DD)"),
+    from_str: str | None = Query(None, alias="from"),
+    to_str: str | None = Query(None, alias="to"),
     db: AsyncSession = Depends(get_db),
 ) -> list[SnapshotResponse]:
     """포트폴리오 스냅샷 조회 (날짜 범위 필터)."""
+    # "null" 리터럴 문자열은 미전달과 동일하게 처리 (schemathesis nullable 생성 대응)
+    from_date: date | None = (
+        date.fromisoformat(from_str) if from_str and from_str != "null" else None
+    )
+    to_date: date | None = (
+        date.fromisoformat(to_str) if to_str and to_str != "null" else None
+    )
     stmt = select(PortfolioSnapshot).where(PortfolioSnapshot.user_id == _DEMO_USER)
     if from_date:
         stmt = stmt.where(PortfolioSnapshot.snapshot_date >= from_date)

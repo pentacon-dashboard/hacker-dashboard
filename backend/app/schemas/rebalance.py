@@ -9,7 +9,7 @@ from __future__ import annotations
 from decimal import Decimal
 from typing import Literal
 
-from pydantic import BaseModel, Field, field_validator, model_validator
+from pydantic import BaseModel, Field, StrictBool, StrictFloat, field_validator, model_validator
 
 ActionType = Literal["buy", "sell"]
 AssetClassKey = Literal["stock_kr", "stock_us", "crypto", "cash", "fx"]
@@ -43,13 +43,13 @@ class TargetAllocation(BaseModel):
 
 
 class RebalanceConstraints(BaseModel):
-    max_single_weight: float = Field(
+    max_single_weight: StrictFloat = Field(
         0.5, ge=0, le=1, description="단일 종목 최대 비중"
     )
     min_trade_krw: Decimal = Field(
         Decimal("100000"), ge=0, description="최소 거래액(KRW)"
     )
-    allow_fractional: bool = Field(
+    allow_fractional: StrictBool = Field(
         True, description="소수점 수량 허용 (주식은 기본 False 권장)"
     )
 
