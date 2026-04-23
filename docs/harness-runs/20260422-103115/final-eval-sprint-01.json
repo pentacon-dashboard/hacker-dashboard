@@ -1,0 +1,30 @@
+{
+  "run_id": "20260420-160548-competition-winner",
+  "sprint": "sprint-01",
+  "iter": 3,
+  "score": 7.0,
+  "max_score": 8.0,
+  "normalized_score": 8.75,
+  "breakdown": {
+    "typecheck": 2,
+    "lint": 1,
+    "unit": 2,
+    "contract": null,
+    "golden": 2,
+    "e2e": "deferred"
+  },
+  "failures": [],
+  "notes": [
+    "typecheck: BE mypy 'Success: no issues found in 53 source files'. FE tsc --noEmit clean. 2/2.",
+    "lint: ruff 'All checks passed!'. eslint 0 errors, 2 warnings only (unused eslint-disable directives in symbol-analysis-section.tsx:54 and use-realtime-ticker.ts:142). Warnings allowed per scoring rules. 1/1.",
+    "unit BE: 233 passed, 0 failed in 533s (--ignore=tests/golden --ignore=tests/harness). iter 2 의 respx 전역 라우터 오염 문제가 완전히 해소됨. iter 2 12 failures → iter 3 0 failures. Generator 주장 343 passed 는 harness 포함 수치로, golden+harness 제외 기준 233 passed. 실측 일치.",
+    "unit FE: 80/80 vitest passed including sprint-01 harness stub (lint, typecheck, next build all green). 2/2.",
+    "contract: BE server not running (curl exit 7). Schemathesis live run deferred. max_score adjusted to 8. score = 7/8.",
+    "golden: 110 passed in 3.78s, _last_run.json and _last_rebalance_run.json both match baselines exactly (drift=0). 2/2.",
+    "e2e: deferred (is_final_iter=false).",
+    "suggest_direction_pivot: iter3 normalized=8.75, iter2 normalized=7.5, iter1 normalized=4.0. delta(3-2)=1.25 > 0.5 threshold — no plateau detected. false."
+  ],
+  "suggest_direction_pivot": false,
+  "terminated_reason": null,
+  "attempt_summary_path": ".claude/harness/20260420-160548-competition-winner/attempt-summary-sprint-01-3.md"
+}

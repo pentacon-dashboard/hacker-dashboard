@@ -1,0 +1,75 @@
+{
+  "run_id": "20260422-111542-nl-copilot",
+  "sprint": "sprint-01",
+  "iter": 2,
+  "score": 9.0,
+  "max_score": 9.0,
+  "normalized_score": 10.0,
+  "passed": true,
+  "breakdown": {
+    "typecheck": 2,
+    "lint": 1,
+    "unit": 2,
+    "contract": 2,
+    "golden": 2,
+    "e2e": "deferred"
+  },
+  "gates": {
+    "AC-01-0": "pass — 8개 게이트 전체 0-exit. ruff/mypy 전체 에러는 pre-existing(out-of-scope). sprint-01 신규 파일(planner.py/copilot.py/app/api/copilot.py) ruff 0, mypy 0 errors. pytest unit 215 passed. pytest golden 110 passed. npm lint 0 errors. npm typecheck exit 0. npm build exit 0. openapi drift 0(semantic SAME). pytest harness 7 passed. vitest 2 passed.",
+    "AC-01-1": "pass — GatePolicy.schema_check(alias='schema') + ConfigDict(populate_by_name=True)으로 BaseModel 충돌 해소. mypy app/schemas/copilot.py: 0 errors. 9-literal union CopilotStepAgent 정의 확인.",
+    "AC-01-2": "pass — POST /copilot/plan openapi.json 등재 확인. shared/openapi.json semantic diff = SAME (drift 0). CopilotPlan/CopilotStep/GatePolicy schema 컴포넌트 등재.",
+    "AC-01-3": "pass — pytest tests/harness/sprint_01_contract.py: 7 passed (iter 1에서 6 → 7, AC-01-6 신규 테스트 추가). monkeypatch app.agents.llm.call_llm으로 ANTHROPIC_API_KEY 없이 통과.",
+    "AC-01-4": "pass — vitest --run tests/harness/sprint-01.test.ts: 2 passed. import alias '@/shared/types/api' → '@shared/types/api' 수정 완료. npm run typecheck exit 0 (TS2307 해소).",
+    "AC-01-5": "pass — backend/app/agents/prompts/copilot_planner_system.md 존재. '## Allowed Agent Names' 섹션에 9개 리터럴 모두 명시.",
+    "AC-01-6": "pass — test_critique_gate_detects_unused_steps 1 passed. _fake_call_llm_unused_steps가 critique gate 호출 시 {'verdict':'fail','reason':'step s2 is unused...'} 반환. planner.py _critique_plan()이 verdict=fail 수신 시 gate_results['critique']='fail: ...' 기록 검증 완료. plan은 200 degraded로 반환."
+  },
+  "ac_scores": [
+    {
+      "id": "AC-01-0",
+      "score": 10,
+      "notes": "8개 게이트 모두 0-exit 확인. ruff check .(전체 116 errors)은 pre-existing out-of-scope, sprint-01 신규 파일 0 errors. mypy app(36 errors pre-existing), sprint-01 신규 파일 0 errors. pytest unit 215 passed. pytest golden 110 passed. eslint 0 errors. tsc --noEmit exit 0. npm build exit 0. openapi semantic SAME. pytest harness 7 passed. vitest 2 passed."
+    },
+    {
+      "id": "AC-01-1",
+      "score": 10,
+      "notes": "GatePolicy.schema_check(alias='schema')로 BaseModel 충돌 완전 해소. mypy 0 errors. ConfigDict(populate_by_name=True) 적용으로 GatePolicy(schema=True, domain=True, critique=True) 생성자 호출 정상 동작."
+    },
+    {
+      "id": "AC-01-2",
+      "score": 10,
+      "notes": "shared/openapi.json에 /copilot/plan POST 등재. CopilotStep.agent enum에 9개 리터럴 정확히 반영. semantic drift check SAME."
+    },
+    {
+      "id": "AC-01-3",
+      "score": 10,
+      "notes": "7 passed (6 기존 + 1 신규 AC-01-6 critique 테스트). FakeClient DI(monkeypatch) 패턴 정상 동작."
+    },
+    {
+      "id": "AC-01-4",
+      "score": 10,
+      "notes": "vitest 2 passed. import from '@shared/types/api' (tsconfig alias 수정). typecheck 0 exit. CopilotStep.agent: 'stock'|'crypto'|'fx'|'macro'|'portfolio'|'rebalance'|'comparison'|'simulator'|'news-rag' 9개 union 검증."
+    },
+    {
+      "id": "AC-01-5",
+      "score": 10,
+      "notes": "copilot_planner_system.md 파일 존재. Allowed Agent Names 섹션에 9개 리터럴 bullet 형식으로 명시."
+    },
+    {
+      "id": "AC-01-6",
+      "score": 10,
+      "notes": "critique gate verdict=fail 회귀 테스트 1 passed. planner.py: _critique_plan()에서 'instruction' 키 포함 JSON 전송 → _fake_call_llm_unused_steps가 verdict=fail 반환 → gate_results['critique']='fail: step s2 is unused for this query' 기록 → 응답 200 degraded plan. 완전 검증."
+    }
+  ],
+  "failures": [],
+  "notes": [
+    "iter 1 대비 개선: (1) GatePolicy.schema mypy 충돌 → schema_check(alias='schema') 패턴으로 완전 해소, (2) FE test import alias @/shared/types/api → @shared/types/api 수정으로 typecheck 통과, (3) planner.py ruff UP017/F541 수정으로 신규 파일 ruff 0 errors, (4) AC-01-6 critique verdict=fail 회귀 테스트 추가로 critique gate 검증 완료",
+    "잔존: ruff check .(전체) 116 errors, mypy app 36 errors — 모두 pre-existing, out-of-scope 규칙으로 차감 없음",
+    "e2e deferred: is_final_iter=false",
+    "contract tests: pytest tests/harness 는 ASGI in-process 격리(TestClient) 사용, BE 서버 기동 불필요",
+    "openapi drift 확인: uv run python -m app.export_openapi stdout과 shared/openapi.json semantic SAME (json.loads 비교)"
+  ],
+  "suggest_direction_pivot": false,
+  "terminated_reason": null,
+  "improvement_from_prev": 3.3,
+  "attempt_summary_path": ".claude/harness/20260422-111542-nl-copilot/attempt-summary-sprint-01-2.md"
+}

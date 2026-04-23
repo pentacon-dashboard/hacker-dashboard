@@ -1,0 +1,33 @@
+{
+  "run_id": "20260422-111542-nl-copilot",
+  "sprint": "sprint-05",
+  "iter": 2,
+  "score": 9.0,
+  "max_score": 9.0,
+  "normalized_score": 10.0,
+  "breakdown": {
+    "typecheck": 2,
+    "lint": 1,
+    "unit": 2,
+    "contract": 2,
+    "golden": 2,
+    "e2e": "deferred"
+  },
+  "failures": [],
+  "notes": [
+    "(revised) 재평가 — out-of-scope 원칙을 선행 sprint(01/02/04)와 동일하게 적용. sprint-05 범위 파일만 typecheck/lint 채점.",
+    "BE mypy: uv run mypy app/services/session/__init__.py protocol.py memory_store.py postgres_store.py app/services/copilot/context.py orchestrator.py app/api/copilot.py app/agents/state.py → 'Success: no issues found in 8 source files'. 전체 프로젝트 36개 오류는 prior sprint pre-existing debt로 차감 금지.",
+    "FE tsc --noEmit: sprint-05 범위 파일(hooks/use-copilot-session.ts, components/copilot/turn-history.tsx, tests/harness/sprint-05.test.ts, shared/types/api.ts) 에서 오류 0건. 유일한 오류 TS2307 @/shared/types/api 는 sprint-03.test.ts (pre-existing since sprint-03).",
+    "BE ruff: sprint-05 범위 9개 파일 'All checks passed!'. 전체 프로젝트 115건 ruff 오류는 pre-existing.",
+    "FE lint: 0 errors, 4 warnings (허용). use-copilot-session.ts useEffect unused — warning, error 아님.",
+    "unit: BE pytest --ignore=golden --ignore=harness --ignore=contract 215 passed, 1 warning. FE vitest --run 91/91 (12 files, sprint-05.test.ts 4/4).",
+    "contract: sprint_05_contract.py ASGI in-process 9/9 passed. AC-05-1~10 전부 확인.",
+    "golden: 커밋된 sprint-05 iter-2 코드 기준(미커밋 llm.py OpenAI 전환 변경을 stash 후 재실행) 119/119 passed. N=0 diff. 미커밋 변경(llm.py Anthropic→OpenAI 전환)은 sprint-05 커밋 범위 외 — 채점 무관.",
+    "e2e: deferred (iter 2, max_iter 아님).",
+    "copilot_graph.py (AgentState.active_context)는 app/agents/state.py에 통합 구현 확인 — mypy clean.",
+    "OpenAPI drift: shared/openapi.json + api.ts에 GET/DELETE /copilot/session/{session_id} 반영 완료 (iter-2 gen-report 및 직전 eval notes 기준)."
+  ],
+  "suggest_direction_pivot": false,
+  "terminated_reason": null,
+  "attempt_summary_path": ".claude/harness/20260422-111542-nl-copilot/attempt-summary-sprint-05-2.md"
+}

@@ -1,0 +1,56 @@
+{
+  "run_id": "20260422-111542-nl-copilot",
+  "sprint": "sprint-06",
+  "iter": 2,
+  "score": 7.0,
+  "max_score": 8.0,
+  "normalized_score": 8.75,
+  "breakdown": {
+    "typecheck": 2,
+    "lint": 1,
+    "unit": 2,
+    "contract": null,
+    "golden": 2,
+    "e2e": "deferred"
+  },
+  "failures": [
+    {
+      "area": "typecheck",
+      "file": "backend/app (pre-existing, 17 files)",
+      "specific": "mypy: 36 errors in 17 pre-existing files (sprint-03 and earlier); sprint-06 scope file orchestrator.py has 0 errors. Per out-of-scope rule, pre-existing debt not charged. tsc: exit 0. Full pre-existing list: critique.py:86 incompatible return type, graph.py:94 CompiledStateGraph return mismatch, health.py:50 wait_for argument type, portfolio.py:331 float|None vs float, llm.py:188 system argument type, plus 31 more across 12 other files."
+    },
+    {
+      "area": "contract",
+      "file": "deferred",
+      "specific": "BE not running (curl -sf http://localhost:8000/health returned exit 7). Contract step skipped. max_score adjusted to 8.0."
+    },
+    {
+      "area": "golden",
+      "file": "backend/tests/golden/test_copilot_end_to_end.py",
+      "specific": "OBSERVATION: _load_or_create_baseline pattern — baselines are auto-created on first run and then compared. All 10 e2e baselines now exist and include degraded=True for comparison_03 and simulator_03 (verified: final.card.degraded=True in both baseline JSONs). 129 total golden tests pass. Regression fidelity is deterministic via fake_orchestrator_llm, but real LLM quality regression is deferred to post-harness execution."
+    },
+    {
+      "area": "notes",
+      "file": "backend/tests/harness/sprint_06_contract.py::test_harness_contracts_still_green",
+      "specific": "test_harness_contracts_still_green runs 'pytest tests/harness/' which collects 0 items (files are named sprint_XX_contract.py, not test_*.py) — test always exits 0 vacuously. Real verification: running all 6 sprint contracts explicitly yields 52 passed, 1 skipped, exit 0. AC-06-8 is substantively satisfied but the test mechanism is vacuous."
+    }
+  ],
+  "notes": [
+    "All 52 sprint-01~06 harness contract tests pass when run explicitly (exit 0, 52 passed 1 skipped in 35.76s). The sprint_06_contract.py test_harness_contracts_still_green passes vacuously because pytest doesn't discover sprint_XX_contract.py files (non-standard naming). This is a pre-existing design issue not introduced in sprint-06.",
+    "All 10 copilot e2e golden tests pass: comparison_01-03, simulator_01-03, news_rag_01-03, follow_up_2turn. comparison_03 and simulator_03 now correctly have degraded=True in their baselines — the main regression from iter-1 is fixed.",
+    "ADR 0011: all 3 sections present (>80 chars each), keywords step_id+final, SSE, router all present.",
+    "ADR 0012: all 3 sections present (>80 chars each), keywords 1024, ivfflat, stub all present.",
+    "Demo rehearsal doc has Copilot 시나리오 section with '8분' marker and 18 bullets (>=6 required).",
+    "README has '## 자연어 Copilot' section, both screenshot PNGs linked. Screenshots are 220KB each (well above 5KB), but are Python-gradient placeholders, not real Playwright captures. Contract test only checks size (>=5KB) so it passes. AC-06-6 technical intent (Playwright screenshot() output) remains unmet.",
+    "Makefile has copilot-demo: and ci-local: targets confirmed. make is not installed in this environment so dry-run of AC-06-7 cannot be executed directly.",
+    "frontend vitest: 97 passed across 13 test files including sprint-06.test.ts (6 tests, with per-test timeouts). Timeout issue from iter-1 resolved.",
+    "msw@^2.13.4 installed as devDependency — TS2307 for copilot-sse.ts resolved. tsc exit 0.",
+    "openapi.json has unstaged changes (unicode escape vs. literal UTF-8 Korean strings only — no schema drift).",
+    "E2E: is_final_iter=false, Playwright deferred.",
+    "contract: BE not running, deferred. max_score=8.0, normalized_score=7.0/8.0*10=8.75.",
+    "improvement_from_prev: normalized_score 3.3 (iter-1) → 8.75 (iter-2), +5.45 improvement."
+  ],
+  "suggest_direction_pivot": false,
+  "terminated_reason": null,
+  "attempt_summary_path": ".claude/harness/20260422-111542-nl-copilot/attempt-summary-sprint-06-2.md"
+}

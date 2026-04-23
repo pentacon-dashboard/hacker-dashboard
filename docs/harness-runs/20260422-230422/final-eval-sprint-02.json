@@ -1,0 +1,33 @@
+{
+  "run_id": "20260422-111542-nl-copilot",
+  "sprint": "sprint-02",
+  "iter": 2,
+  "score": 9.0,
+  "max_score": 9.0,
+  "normalized_score": 10.0,
+  "improvement_from_prev": 3.0,
+  "breakdown": {
+    "typecheck": 2,
+    "lint": 1,
+    "unit": 2,
+    "contract": 2,
+    "golden": 2,
+    "e2e": "deferred"
+  },
+  "failures": [],
+  "notes": [
+    "typecheck 2/2: sprint-02 scope files (models.py, search.py, schemas/news.py, services/news/, services/rag/) pass mypy with 0 new errors. models.py lines 89/91 Mapped[dict]/Mapped[list] type-arg errors are pre-existing from baseline (confirmed via git show db56f5a). The 36-error overall mypy total is entirely pre-existing baseline debt — not charged per out-of-scope rule. Unused type: ignore comments introduced in sprint-02 iter-1 (models.py lines 12, 16, 133) are fully resolved in iter-2.",
+    "lint 1/1: sprint-02 scope files pass ruff cleanly (0 errors). Overall 112 ruff errors are all pre-existing non-sprint-02 files. Frontend eslint: 0 errors, 2 warnings only.",
+    "unit 2/2: BE 215 passed 0 failed (iter-1 had 25 failures due to missing DocumentChunk back_populates — now fixed at models.py line 143). FE vitest 79 passed 0 failed including sprint-02 harness (2/2 Citation type tests).",
+    "contract 2/2: tests/harness/sprint_02_contract.py — 9 passed, 1 skipped (test_alembic_head_applies deferred, COPILOT_PGVECTOR_URL not set — treated neutral per contract.md). All AC-02-0/1/4/8 verified: pgvector importable, migration file contains CREATE EXTENSION IF NOT EXISTS vector + VECTOR(1024) + ivfflat/hnsw DDL, fake_embed deterministic + L2-normalized + length 1024, stub mode deterministic.",
+    "golden 2/2: 110 golden tests passed 0 failed, 0 diff files. No regression.",
+    "e2e: deferred (is_final_iter=false).",
+    "DocumentChunk.document back_populates reverse relationship added correctly at models.py line 143. SQLAlchemy mapper no longer raises KeyError at startup.",
+    "AC-02-2 docker-compose pgvector/pgvector:pg16 image: confirmed present in docker-compose.yml from iter-1; no change in iter-2.",
+    "AC-02-6 openapi.json /search/news + /search/news/ingest: confirmed from iter-1; no openapi change in iter-2.",
+    "AC-02-7 7 fixture docs >= 6: confirmed from iter-1."
+  ],
+  "suggest_direction_pivot": false,
+  "terminated_reason": null,
+  "attempt_summary_path": ".claude/harness/20260422-111542-nl-copilot/attempt-summary-sprint-02-2.md"
+}

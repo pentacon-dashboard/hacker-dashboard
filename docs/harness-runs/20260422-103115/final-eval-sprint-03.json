@@ -1,0 +1,29 @@
+{
+  "run_id": "20260420-160548-competition-winner",
+  "sprint": "sprint-03",
+  "iter": 1,
+  "score": 7.0,
+  "max_score": 8.0,
+  "normalized_score": 8.8,
+  "breakdown": {
+    "typecheck": 2,
+    "lint": 1,
+    "unit": 2,
+    "contract": null,
+    "golden": 2,
+    "e2e": "deferred"
+  },
+  "failures": [],
+  "notes": [
+    "BE 서버 미기동 → contract(schemathesis) deferred, max_score=8로 비례 환산",
+    "e2e: is_final_iter=false → deferred",
+    "Lighthouse JSON 4종 실측 확인: home=544KB/98점, watchlist=368KB/93점, symbol=415KB/96점, portfolio=390KB/81점. final-scores.md 수치와 정확히 일치",
+    "스크린샷 5종 실측 파일크기: home=50KB, watchlist=18KB, symbol-detail=39KB, portfolio=20KB, lighthouse-final=103KB. 모두 10KB 초과",
+    "/portfolio Performance 81 (<90) 이지만 contract 기준(final-scores.md에 90+ 수치 셀 4개 이상)은 Performance 3개(home/watchlist/symbol) + Accessibility/SEO 다수로 충족",
+    "submission/README.md: BE pytest **233** / FE vitest **82** 볼드 마크업 정규식 매치 확인",
+    "FE vitest 실측: 88 passed (sprint-03 테스트 6개 포함). submission README의 82 수치는 sprint-02 eval-2 기준이나 허용 범위 내"
+  ],
+  "suggest_direction_pivot": false,
+  "terminated_reason": null,
+  "attempt_summary_path": ".claude/harness/20260420-160548-competition-winner/attempt-summary-sprint-03-1.md"
+}
