@@ -1,6 +1,6 @@
 import React from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, fireEvent, act } from "@testing-library/react";
 import { NewsPanel } from "./news-panel";
 import type { Citation } from "@/lib/api/news";
 
@@ -8,10 +8,23 @@ vi.mock("@/lib/api/news", () => ({
   searchNews: vi.fn(),
 }));
 
-// next/image 는 jsdom 에서 느릴 수 있어 단순 img 로 치환
+// next/image 는 jsdom 에서 느릴 수 있어 단순 img 로 치환 (onError 포워딩 포함)
 vi.mock("next/image", () => ({
-  default: ({ src, alt }: { src: string; alt: string }) =>
-    React.createElement("img", { src, alt, "data-testid": "news-thumb" }),
+  default: ({
+    src,
+    alt,
+    onError,
+  }: {
+    src: string;
+    alt: string;
+    onError?: React.ReactEventHandler<HTMLImageElement>;
+  }) =>
+    React.createElement("img", {
+      src,
+      alt,
+      "data-testid": "news-thumb",
+      onError,
+    }),
 }));
 
 import { searchNews } from "@/lib/api/news";
@@ -92,6 +105,24 @@ describe("NewsPanel", () => {
       expect(screen.getByTestId("news-panel-empty")).toBeInTheDocument();
     });
     expect(screen.getByText("네트워크 오류")).toBeInTheDocument();
+  });
+
+  it("broken image onError → 이니셜 박스로 폴백한다", async () => {
+    vi.mocked(searchNews).mockResolvedValue(NEWS_WITH_THUMB);
+    render(<NewsPanel symbols={["NVDA"]} />);
+    await waitFor(() => {
+      expect(screen.getByTestId("news-panel")).toBeInTheDocument();
+    });
+    // 처음에는 썸네일 img 가 렌더됨
+    const img = screen.getByTestId("news-thumb");
+    expect(img).toBeInTheDocument();
+    // onError 발화 → 이니셜 박스로 교체
+    await act(async () => {
+      fireEvent.error(img);
+    });
+    // img 가 사라지고 hostname 이니셜 박스가 나타나야 함
+    expect(screen.queryByTestId("news-thumb")).not.toBeInTheDocument();
+    expect(screen.getByText("fina")).toBeInTheDocument();
   });
 
   it("symbols 가 비어 있으면 '시장 동향' 쿼리로 searchNews 를 호출한다", async () => {

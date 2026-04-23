@@ -33,6 +33,7 @@ function hostname(url: string): string {
 export function NewsPanel({ symbols, query, limit = 5 }: NewsPanelProps) {
   const [items, setItems] = useState<Citation[] | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [brokenIds, setBrokenIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     let cancelled = false;
@@ -98,7 +99,7 @@ export function NewsPanel({ symbols, query, limit = 5 }: NewsPanelProps) {
             rel="noopener noreferrer"
             className="flex gap-3 rounded-md p-1.5 transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
-            {c.thumbnail_url ? (
+            {c.thumbnail_url && !brokenIds.has(`${c.doc_id}-${c.chunk_id}`) ? (
               <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded bg-muted">
                 <Image
                   src={c.thumbnail_url}
@@ -107,6 +108,9 @@ export function NewsPanel({ symbols, query, limit = 5 }: NewsPanelProps) {
                   sizes="48px"
                   className="object-cover"
                   unoptimized
+                  onError={() =>
+                    setBrokenIds((prev) => new Set(prev).add(`${c.doc_id}-${c.chunk_id}`))
+                  }
                 />
               </div>
             ) : (
