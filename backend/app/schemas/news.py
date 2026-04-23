@@ -12,6 +12,7 @@ class Citation(BaseModel):
 
     plan.md 기준:
       doc_id, chunk_id, source_url, title, published_at, excerpt, score
+    sprint-07 대시보드 확장: thumbnail_url (optional)
     """
 
     doc_id: int = Field(..., description="Document 테이블 PK")
@@ -21,6 +22,10 @@ class Citation(BaseModel):
     published_at: str | None = Field(None, description="발행일 ISO-8601")
     excerpt: str = Field(..., description="관련 청크 텍스트 발췌")
     score: float = Field(..., description="L2 거리 기반 유사도 점수 (낮을수록 가까움)")
+    thumbnail_url: str | None = Field(
+        None,
+        description="대시보드 뉴스 패널용 썸네일 이미지 URL (선택). 없으면 FE 쪽에서 이니셜 박스로 폴백.",
+    )
 
 
 class NewsSearchRequest(BaseModel):

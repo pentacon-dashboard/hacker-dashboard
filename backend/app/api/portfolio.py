@@ -32,7 +32,7 @@ from app.schemas.rebalance import (
     RebalanceSummary,
 )
 from app.services.market import get_adapter
-from app.services.portfolio import compute_summary, get_prev_snapshot
+from app.services.portfolio import compute_summary, get_period_snapshot, get_prev_snapshot
 from app.services.rebalance import (
     build_expected_allocation,
     build_summary,
@@ -153,16 +153,33 @@ async def delete_holding(
 
 @router.get("/summary", response_model=PortfolioSummary)
 async def get_summary(
+    period_days: int = Query(
+        30,
+        ge=1,
+        le=365,
+        description="period_change_pct 계산 기간 (일). 기본 30일.",
+    ),
     db: AsyncSession = Depends(get_db),
 ) -> PortfolioSummary:
-    """포트폴리오 집계 요약 (현재가 기반 실시간 계산)."""
+    """포트폴리오 집계 요약 (현재가 기반 실시간 계산).
+
+    6개 KPI + 자산군 비중 + 디멘션 breakdown + TOP 종목을 한 번에 반환.
+    """
     result = await db.execute(
         select(Holding).where(Holding.user_id == _DEMO_USER)
     )
     holdings = result.scalars().all()
 
     prev_snap = await get_prev_snapshot(db, user_id=_DEMO_USER)
-    summary = await compute_summary(list(holdings), prev_snapshot=prev_snap)
+    period_snap = await get_period_snapshot(
+        db, user_id=_DEMO_USER, period_days=period_days
+    )
+    summary = await compute_summary(
+        list(holdings),
+        prev_snapshot=prev_snap,
+        period_snapshot=period_snap,
+        period_days=period_days,
+    )
     return summary
 
 

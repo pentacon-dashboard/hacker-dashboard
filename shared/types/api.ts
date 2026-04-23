@@ -279,6 +279,8 @@ export interface paths {
         /**
          * Get Summary
          * @description 포트폴리오 집계 요약 (현재가 기반 실시간 계산).
+         *
+         *     6개 KPI + 자산군 비중 + 디멘션 breakdown + TOP 종목을 한 번에 반환.
          */
         get: operations["get_summary_portfolio_summary_get"];
         put?: never;
@@ -606,6 +608,7 @@ export interface components {
          *
          *     plan.md 기준:
          *       doc_id, chunk_id, source_url, title, published_at, excerpt, score
+         *     sprint-07 대시보드 확장: thumbnail_url (optional)
          */
         Citation: {
             /**
@@ -643,6 +646,11 @@ export interface components {
              * @description L2 거리 기반 유사도 점수 (낮을수록 가까움)
              */
             score: number;
+            /**
+             * Thumbnail Url
+             * @description 대시보드 뉴스 패널용 썸네일 이미지 URL (선택). 없으면 FE 쪽에서 이니셜 박스로 폴백.
+             */
+            thumbnail_url?: string | null;
         };
         /**
          * CopilotPlan
@@ -703,6 +711,27 @@ export interface components {
             /** Depends On */
             depends_on?: string[];
             gate_policy?: components["schemas"]["GatePolicy"];
+        };
+        /**
+         * DimensionItem
+         * @description 디멘션 분석 바 차트의 단일 항목 (자산군·섹터·통화 등 차원별 집계).
+         */
+        DimensionItem: {
+            /**
+             * Label
+             * @description 표시 라벨 (예: 'stock_us', 'crypto')
+             */
+            label: string;
+            /**
+             * Weight Pct
+             * @description 비중 %% (예: '43.20')
+             */
+            weight_pct: string;
+            /**
+             * Pnl Pct
+             * @description 해당 차원의 가중 수익률 %% (예: '+3.40')
+             */
+            pnl_pct: string;
         };
         /**
          * GatePolicy
@@ -906,6 +935,9 @@ export interface components {
         /**
          * PortfolioSummary
          * @description GET /portfolio/summary 응답.
+         *
+         *     week-3 기본 필드 + sprint-07 대시보드 확장 필드 (holdings_count,
+         *     worst_asset_pct, risk_score_pct, period_change_pct, dimension_breakdown).
          */
         PortfolioSummary: {
             /**
@@ -934,6 +966,41 @@ export interface components {
             };
             /** Holdings */
             holdings: components["schemas"]["HoldingDetail"][];
+            /**
+             * Holdings Count
+             * @description 보유 종목 수
+             * @default 0
+             */
+            holdings_count: number;
+            /**
+             * Worst Asset Pct
+             * @description 보유 종목 중 최저 손익률 %% (예: '-3.85')
+             * @default 0.00
+             */
+            worst_asset_pct: string;
+            /**
+             * Risk Score Pct
+             * @description HHI 기반 집중도 리스크 점수 %% (0: 완전분산 ~ 100: 단일자산)
+             * @default 0.00
+             */
+            risk_score_pct: string;
+            /**
+             * Period Change Pct
+             * @description period_days 전 스냅샷 대비 수익률 %% (기본 30일)
+             * @default 0.00
+             */
+            period_change_pct: string;
+            /**
+             * Period Days
+             * @description period_change_pct 계산에 쓰인 기간(일)
+             * @default 30
+             */
+            period_days: number;
+            /**
+             * Dimension Breakdown
+             * @description 자산군 차원 비중 + 수익률 (바차트용)
+             */
+            dimension_breakdown?: components["schemas"]["DimensionItem"][];
         };
         /**
          * PriorTurn
@@ -1774,7 +1841,10 @@ export interface operations {
     };
     get_summary_portfolio_summary_get: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description period_change_pct 계산 기간 (일). 기본 30일. */
+                period_days?: number;
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -1788,6 +1858,15 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PortfolioSummary"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
