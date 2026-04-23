@@ -259,3 +259,17 @@ class SessionResponse(BaseModel):
     session_id: str
     turns: list[SessionTurn]
     active_context: ActiveContext | None = None
+
+
+# ── sprint-08 B-7: 세션 히스토리 목록 스키마 ────────────────────────────────
+
+
+class SessionMeta(BaseModel):
+    """GET /copilot/sessions 목록 아이템 — 세션별 요약 메타."""
+
+    session_id: str
+    title: str           # 첫 질문 80자 truncate
+    last_turn_at: str
+    turn_count: int
+    preview: str         # 마지막 user 메시지 120자 truncate
+    tags: list[str] = []

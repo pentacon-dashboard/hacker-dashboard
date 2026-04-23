@@ -15,7 +15,7 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
 from app.agents.planner import build_copilot_plan
-from app.schemas.copilot import CopilotPlan, CopilotPlanRequest, SessionResponse
+from app.schemas.copilot import CopilotPlan, CopilotPlanRequest, SessionMeta, SessionResponse
 from app.services.copilot.context import build_active_context
 from app.services.session import get_session_store
 
@@ -173,6 +173,66 @@ async def query_copilot(body: _InternalQueryRequest) -> StreamingResponse:
             "Cache-Control": "no-cache",
             "Connection": "keep-alive",
         },
+    )
+
+
+# ── GET /copilot/sessions (sprint-08 B-7) ───────────────────────────────────
+
+
+@router.get(
+    "/sessions",
+    response_model=list[SessionMeta],
+    summary="세션 히스토리 목록 조회",
+    description=(
+        "저장된 코파일럿 세션 목록을 최근순으로 반환한다. "
+        "limit/offset 으로 페이지네이션. TTL 만료 세션은 제외."
+    ),
+)
+async def list_sessions(
+    limit: int = 20,
+    offset: int = 0,
+) -> list[SessionMeta]:
+    """GET /copilot/sessions — 세션 히스토리 목록 (최근순)."""
+    store = get_session_store()
+    if hasattr(store, "list_sessions"):
+        return store.list_sessions(limit=limit, offset=offset)
+    # list_sessions 가 없는 store (PostgresSessionStore 등) 는 빈 목록 반환
+    return []
+
+
+# ── GET /copilot/sessions/{session_id} alias (sprint-08 B-7) ────────────────
+
+
+@router.get(
+    "/sessions/{session_id}",
+    response_model=SessionResponse,
+    summary="세션 상세 조회 (sessions 경로)",
+    description="GET /copilot/session/{session_id} 의 alias. /sessions/ 경로로도 동일하게 접근 가능.",
+    responses={404: {"description": "세션을 찾을 수 없거나 TTL 만료"}},
+)
+async def get_session_alias(session_id: str) -> SessionResponse:
+    """GET /copilot/sessions/{session_id} — session 상세 조회 alias."""
+    store = get_session_store()
+
+    if hasattr(store, "exists"):
+        if not store.exists(session_id):
+            raise HTTPException(status_code=404, detail=f"session {session_id!r} not found or expired")
+        turns = await store.get_turns(session_id, limit=50)
+    else:
+        turns = await store.get_turns(session_id, limit=50)
+        if not turns:
+            raise HTTPException(status_code=404, detail=f"session {session_id!r} not found or expired")
+
+    active_ctx = await build_active_context(
+        session_id=session_id,
+        user_query="",
+        store=store,
+    )
+
+    return SessionResponse(
+        session_id=session_id,
+        turns=turns,
+        active_context=active_ctx,
     )
 
 

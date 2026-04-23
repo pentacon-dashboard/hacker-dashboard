@@ -10,7 +10,7 @@ import datetime
 import os
 import uuid
 
-from app.schemas.copilot import SessionTurn
+from app.schemas.copilot import SessionMeta, SessionTurn
 
 
 class InMemorySessionStore:
@@ -111,6 +111,60 @@ class InMemorySessionStore:
         if self._is_expired(session_id):
             return False
         return True
+
+    def list_sessions(
+        self,
+        limit: int = 20,
+        offset: int = 0,
+        user_id: str | None = None,
+    ) -> list[SessionMeta]:
+        """세션 목록을 최근순으로 반환한다 (limit/offset 페이지네이션).
+
+        user_id 는 현재 in-memory store 에서 세션별 소유자를 추적하지 않으므로 무시한다.
+        TTL 만료 세션은 제외한다.
+        """
+        metas: list[tuple[datetime.datetime, SessionMeta]] = []
+        for sid, turns in self._sessions.items():
+            if self._is_expired(sid):
+                continue
+            updated = self._updated_at.get(sid) or datetime.datetime.now(datetime.UTC)
+            meta = build_session_meta(sid, turns, updated)
+            metas.append((updated, meta))
+
+        # 최근순 정렬
+        metas.sort(key=lambda x: x[0], reverse=True)
+        sliced = metas[offset : offset + limit]
+        return [m for _, m in sliced]
+
+
+def build_session_meta(session_id: str, turns: list[SessionTurn], updated_at: datetime.datetime) -> SessionMeta:
+    """턴 목록에서 SessionMeta 를 빌드한다.
+
+    - title: 첫 번째 user 메시지 80자 truncate
+    - preview: 마지막 user 메시지 120자 truncate
+    """
+    if not turns:
+        return SessionMeta(
+            session_id=session_id,
+            title="(빈 세션)",
+            last_turn_at=updated_at.isoformat().replace("+00:00", "Z"),
+            turn_count=0,
+            preview="",
+        )
+
+    first_query = turns[0].query or ""
+    last_query = turns[-1].query or ""
+    title = first_query[:80] + ("..." if len(first_query) > 80 else "")
+    preview = last_query[:120] + ("..." if len(last_query) > 120 else "")
+    last_turn_at_str = turns[-1].created_at or updated_at.isoformat().replace("+00:00", "Z")
+
+    return SessionMeta(
+        session_id=session_id,
+        title=title,
+        last_turn_at=last_turn_at_str,
+        turn_count=len(turns),
+        preview=preview,
+    )
 
 
 def make_turn_id() -> str:
