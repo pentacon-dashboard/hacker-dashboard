@@ -38,6 +38,12 @@ frontend/coverage/
 
 # Playwright MCP 브라우저 검증 산물 — 로컬 디버깅용 스냅샷/콘솔 로그
 .playwright-mcp/
+# 루트에 임시로 떨어지는 비교용 캡처 (방지용 이중 가드)
+/compare-*.png
+/current-*.png
+
+# schemathesis CLI 결과물 (로컬 실행 아티팩트)
+/schemathesis-results.*
 
 # Env & secrets
 .env
