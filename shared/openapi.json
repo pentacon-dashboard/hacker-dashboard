@@ -109,7 +109,7 @@
           "market"
         ],
         "summary": "Get Quote",
-        "description": "단일 심볼 시세 조회 (stub — legacy 호환)",
+        "description": "단일 심볼 시세 조회 (stub -- legacy 호환)",
         "operationId": "get_quote_market_quotes__symbol__get",
         "parameters": [
           {
@@ -289,7 +289,7 @@
           "market"
         ],
         "summary": "List Watchlist",
-        "description": "워치리스트 조회 (user_id='demo' 고정).",
+        "description": "워치리스트 조회 (user_id='demo' 고정). pnl_7d 스파크라인 포함.",
         "operationId": "list_watchlist_market_watchlist_items_get",
         "responses": {
           "200": {
@@ -384,6 +384,189 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/market/symbol/{market}/{code}/indicators": {
+      "get": {
+        "tags": [
+          "market"
+        ],
+        "summary": "Get Symbol Indicators",
+        "description": "심볼 기술 지표 (RSI-14, MACD, 볼린저, 스토캐스틱).\n\n실제 OHLC 어댑터 시도 후 실패하면 stub 데이터로 폴백.",
+        "operationId": "get_symbol_indicators_market_symbol__market___code__indicators_get",
+        "parameters": [
+          {
+            "name": "market",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Market"
+            }
+          },
+          {
+            "name": "code",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Code"
+            }
+          },
+          {
+            "name": "interval",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "1m|5m|15m|60m|day|week|month",
+              "default": "day",
+              "title": "Interval"
+            },
+            "description": "1m|5m|15m|60m|day|week|month"
+          },
+          {
+            "name": "period",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 500,
+              "minimum": 10,
+              "default": 60,
+              "title": "Period"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IndicatorBundle"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "interval 값이 유효하지 않음"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/market/indices": {
+      "get": {
+        "tags": [
+          "market"
+        ],
+        "summary": "Get Market Indices",
+        "description": "KOSPI/KOSDAQ/S&P/NASDAQ/DOW/VIX/USD-KRW 7종 스냅샷 (stub).",
+        "operationId": "get_market_indices_market_indices_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/IndexSnapshot"
+                  },
+                  "type": "array",
+                  "title": "Response Get Market Indices Market Indices Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/market/sectors": {
+      "get": {
+        "tags": [
+          "market"
+        ],
+        "summary": "Get Market Sectors",
+        "description": "11 GICS 섹터 KPI (stub).",
+        "operationId": "get_market_sectors_market_sectors_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/SectorKpi"
+                  },
+                  "type": "array",
+                  "title": "Response Get Market Sectors Market Sectors Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/market/commodities": {
+      "get": {
+        "tags": [
+          "market"
+        ],
+        "summary": "Get Market Commodities",
+        "description": "원유/금/은/구리/천연가스 5종 (stub).",
+        "operationId": "get_market_commodities_market_commodities_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/CommodityItem"
+                  },
+                  "type": "array",
+                  "title": "Response Get Market Commodities Market Commodities Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/market/world-heatmap": {
+      "get": {
+        "tags": [
+          "market"
+        ],
+        "summary": "Get World Heatmap",
+        "description": "20개국 세계 히트맵 (stub).",
+        "operationId": "get_world_heatmap_market_world_heatmap_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/WorldHeatmapRegion"
+                  },
+                  "type": "array",
+                  "title": "Response Get World Heatmap Market World Heatmap Get"
                 }
               }
             }
@@ -843,6 +1026,112 @@
         }
       }
     },
+    "/portfolio/sectors/heatmap": {
+      "get": {
+        "tags": [
+          "portfolio"
+        ],
+        "summary": "섹터 히트맵",
+        "description": "섹터별 비중 + 가중 PnL 히트맵 데이터를 반환한다.\n\n보유 종목을 섹터로 분류하고 각 섹터의 value_krw 비중 및 손익률을 집계한다.\n미분류 종목은 '기타' 섹터로 통합.",
+        "operationId": "get_sector_heatmap_portfolio_sectors_heatmap_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/SectorHeatmapTile"
+                  },
+                  "type": "array",
+                  "title": "Response Get Sector Heatmap Portfolio Sectors Heatmap Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/portfolio/monthly-returns": {
+      "get": {
+        "tags": [
+          "portfolio"
+        ],
+        "summary": "월간(일간) 수익률 캘린더",
+        "description": "지정 연도의 일별 수익률 셀 목록을 반환한다 (365일).\n\n실제 스냅샷 서비스 미구축 시 결정론적 sin stub 값 제공.\nyear 미지정 시 현재 연도 사용.",
+        "operationId": "get_monthly_returns_portfolio_monthly_returns_get",
+        "parameters": [
+          {
+            "name": "year",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer",
+                  "maximum": 2100,
+                  "minimum": 2000
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "조회 연도 (기본: 현재 연도)",
+              "title": "Year"
+            },
+            "description": "조회 연도 (기본: 현재 연도)"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/MonthlyReturnCell"
+                  },
+                  "title": "Response Get Monthly Returns Portfolio Monthly Returns Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/portfolio/ai-insight": {
+      "get": {
+        "tags": [
+          "portfolio"
+        ],
+        "summary": "AI 포트폴리오 인사이트 (stub 모드)",
+        "description": "포트폴리오 요약 기반 AI 인사이트를 반환한다.\n\nADR-0012 stub 모드: LLM 호출 없이 결정론적 문단 생성.\ngates 필드로 3단 품질 게이트 통과 여부 표시.",
+        "operationId": "get_ai_insight_portfolio_ai_insight_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AiInsightResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/copilot/plan": {
       "post": {
         "tags": [
@@ -1211,6 +1500,184 @@
           }
         }
       }
+    },
+    "/upload/csv": {
+      "post": {
+        "tags": [
+          "upload"
+        ],
+        "summary": "CSV 파일 업로드 및 검증",
+        "description": "multipart/form-data 로 CSV 파일을 업로드한다. 필수 컬럼 (date, market, code, quantity, avg_cost, currency) 검증 후 UploadValidationResult 반환. upload_id 는 30분간 서버 메모리에 캐시된다.",
+        "operationId": "upload_csv_upload_csv_post",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_upload_csv_upload_csv_post"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UploadValidationResult"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/upload/analyze": {
+      "post": {
+        "tags": [
+          "upload"
+        ],
+        "summary": "업로드 데이터 분석 (SSE 스트림)",
+        "description": "upload_id 와 분석 설정을 받아 3단 게이트 분석 진행 이벤트를 SSE 로 스트리밍한다. media_type: text/event-stream. 각 이벤트는 data: {JSON} 형식.",
+        "operationId": "analyze_upload_upload_analyze_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AnalyzeStartRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              },
+              "text/event-stream": {}
+            }
+          },
+          "404": {
+            "description": "upload_id 미존재 또는 만료"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/upload/template": {
+      "get": {
+        "tags": [
+          "upload"
+        ],
+        "summary": "샘플 포트폴리오 CSV 다운로드",
+        "description": "업로드 형식을 확인할 수 있는 샘플 CSV 파일을 다운로드한다.",
+        "operationId": "get_template_upload_template_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response"
+          }
+        }
+      }
+    },
+    "/watchlist/summary": {
+      "get": {
+        "tags": [
+          "watchlist"
+        ],
+        "summary": "Get Watchlist Summary",
+        "description": "현재 워치리스트 기반 통계 요약.\n\ndemo user(_watchlist in-memory) 기준으로 집계.\n워치리스트가 비어 있으면 전부 0 반환.",
+        "operationId": "get_watchlist_summary_watchlist_summary_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WatchlistSummary"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/watchlist/popular": {
+      "get": {
+        "tags": [
+          "watchlist"
+        ],
+        "summary": "Get Popular",
+        "description": "전역 인기 종목 Top-5 (stub 하드코드 — AAPL/NVDA/005930/KRW-BTC/TSLA).",
+        "operationId": "get_popular_watchlist_popular_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/TopListItem"
+                  },
+                  "type": "array",
+                  "title": "Response Get Popular Watchlist Popular Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/watchlist/gainers-losers": {
+      "get": {
+        "tags": [
+          "watchlist"
+        ],
+        "summary": "Get Gainers Losers",
+        "description": "상승/하락 Top-5 (stub 하드코드, deterministic).\n\n응답: `{\"gainers\": [...], \"losers\": [...]}`",
+        "operationId": "get_gainers_losers_watchlist_gainers_losers_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "items": {
+                      "$ref": "#/components/schemas/TopListItem"
+                    },
+                    "type": "array"
+                  },
+                  "type": "object",
+                  "title": "Response Get Gainers Losers Watchlist Gainers Losers Get"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -1236,6 +1703,46 @@
         ],
         "title": "ActiveContext",
         "description": "Planner 에게 전달할 follow-up 컨텍스트.\n\nplanner 오케스트레이터는 이 객체를 user role 메시지로 병합한다 (system 오염 금지)."
+      },
+      "AiInsightResponse": {
+        "properties": {
+          "summary": {
+            "type": "string",
+            "title": "Summary"
+          },
+          "bullets": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Bullets"
+          },
+          "generated_at": {
+            "type": "string",
+            "title": "Generated At"
+          },
+          "stub_mode": {
+            "type": "boolean",
+            "title": "Stub Mode"
+          },
+          "gates": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object",
+            "title": "Gates"
+          }
+        },
+        "type": "object",
+        "required": [
+          "summary",
+          "bullets",
+          "generated_at",
+          "stub_mode",
+          "gates"
+        ],
+        "title": "AiInsightResponse",
+        "description": "AI 인사이트 stub 응답 (ADR-0012 stub 모드)."
       },
       "AnalyzeContext": {
         "properties": {
@@ -1436,6 +1943,23 @@
         ],
         "title": "AnalyzeResponse"
       },
+      "AnalyzeStartRequest": {
+        "properties": {
+          "upload_id": {
+            "type": "string",
+            "title": "Upload Id"
+          },
+          "config": {
+            "$ref": "#/components/schemas/UploadAnalyzerConfig"
+          }
+        },
+        "type": "object",
+        "required": [
+          "upload_id",
+          "config"
+        ],
+        "title": "AnalyzeStartRequest"
+      },
       "Body_analyze_csv_analyze_csv_post": {
         "properties": {
           "file": {
@@ -1464,6 +1988,52 @@
           "file"
         ],
         "title": "Body_analyze_csv_analyze_csv_post"
+      },
+      "Body_upload_csv_upload_csv_post": {
+        "properties": {
+          "file": {
+            "type": "string",
+            "contentMediaType": "application/octet-stream",
+            "title": "File"
+          }
+        },
+        "type": "object",
+        "required": [
+          "file"
+        ],
+        "title": "Body_upload_csv_upload_csv_post"
+      },
+      "BollingerBands": {
+        "properties": {
+          "upper": {
+            "items": {
+              "$ref": "#/components/schemas/IndicatorPoint"
+            },
+            "type": "array",
+            "title": "Upper"
+          },
+          "mid": {
+            "items": {
+              "$ref": "#/components/schemas/IndicatorPoint"
+            },
+            "type": "array",
+            "title": "Mid"
+          },
+          "lower": {
+            "items": {
+              "$ref": "#/components/schemas/IndicatorPoint"
+            },
+            "type": "array",
+            "title": "Lower"
+          }
+        },
+        "type": "object",
+        "required": [
+          "upper",
+          "mid",
+          "lower"
+        ],
+        "title": "BollingerBands"
       },
       "CacheMetrics": {
         "properties": {
@@ -1561,6 +2131,42 @@
         ],
         "title": "Citation",
         "description": "RAG 검색 결과의 단일 인용 항목.\n\nplan.md 기준:\n  doc_id, chunk_id, source_url, title, published_at, excerpt, score\nsprint-07 대시보드 확장: thumbnail_url (optional)"
+      },
+      "CommodityItem": {
+        "properties": {
+          "symbol": {
+            "type": "string",
+            "title": "Symbol",
+            "description": "예: GC=F"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name",
+            "description": "예: 금"
+          },
+          "price": {
+            "type": "string",
+            "title": "Price"
+          },
+          "change_pct": {
+            "type": "string",
+            "title": "Change Pct"
+          },
+          "unit": {
+            "type": "string",
+            "title": "Unit",
+            "description": "예: USD/oz"
+          }
+        },
+        "type": "object",
+        "required": [
+          "symbol",
+          "name",
+          "price",
+          "change_pct",
+          "unit"
+        ],
+        "title": "CommodityItem"
       },
       "CopilotPlan": {
         "properties": {
@@ -1984,6 +2590,155 @@
         "type": "object",
         "title": "HoldingUpdate"
       },
+      "IndexSnapshot": {
+        "properties": {
+          "ticker": {
+            "type": "string",
+            "title": "Ticker",
+            "description": "예: ^GSPC"
+          },
+          "display_name": {
+            "type": "string",
+            "title": "Display Name",
+            "description": "예: S&P 500"
+          },
+          "value": {
+            "type": "string",
+            "title": "Value"
+          },
+          "change_pct": {
+            "type": "string",
+            "title": "Change Pct"
+          },
+          "change_abs": {
+            "type": "string",
+            "title": "Change Abs"
+          },
+          "sparkline_7d": {
+            "items": {
+              "type": "number"
+            },
+            "type": "array",
+            "title": "Sparkline 7D"
+          }
+        },
+        "type": "object",
+        "required": [
+          "ticker",
+          "display_name",
+          "value",
+          "change_pct",
+          "change_abs",
+          "sparkline_7d"
+        ],
+        "title": "IndexSnapshot"
+      },
+      "IndicatorBundle": {
+        "properties": {
+          "interval": {
+            "type": "string",
+            "title": "Interval",
+            "description": "1m | 5m | 15m | 60m | day | week | month"
+          },
+          "period": {
+            "type": "integer",
+            "title": "Period"
+          },
+          "rsi_14": {
+            "items": {
+              "$ref": "#/components/schemas/IndicatorPoint"
+            },
+            "type": "array",
+            "title": "Rsi 14"
+          },
+          "macd": {
+            "items": {
+              "$ref": "#/components/schemas/MacdPoint"
+            },
+            "type": "array",
+            "title": "Macd"
+          },
+          "bollinger": {
+            "$ref": "#/components/schemas/BollingerBands"
+          },
+          "stochastic": {
+            "items": {
+              "$ref": "#/components/schemas/StochasticPoint"
+            },
+            "type": "array",
+            "title": "Stochastic"
+          },
+          "metrics": {
+            "$ref": "#/components/schemas/IndicatorMetrics"
+          },
+          "signal": {
+            "type": "string",
+            "title": "Signal",
+            "description": "buy | hold | sell"
+          }
+        },
+        "type": "object",
+        "required": [
+          "interval",
+          "period",
+          "rsi_14",
+          "macd",
+          "bollinger",
+          "stochastic",
+          "metrics",
+          "signal"
+        ],
+        "title": "IndicatorBundle"
+      },
+      "IndicatorMetrics": {
+        "properties": {
+          "rsi_latest": {
+            "type": "number",
+            "title": "Rsi Latest"
+          },
+          "macd_latest": {
+            "type": "number",
+            "title": "Macd Latest"
+          },
+          "macd_signal": {
+            "type": "string",
+            "title": "Macd Signal",
+            "description": "golden_cross | dead_cross | neutral"
+          },
+          "bollinger_position": {
+            "type": "string",
+            "title": "Bollinger Position",
+            "description": "upper | mid | lower"
+          }
+        },
+        "type": "object",
+        "required": [
+          "rsi_latest",
+          "macd_latest",
+          "macd_signal",
+          "bollinger_position"
+        ],
+        "title": "IndicatorMetrics"
+      },
+      "IndicatorPoint": {
+        "properties": {
+          "t": {
+            "type": "string",
+            "title": "T",
+            "description": "ISO timestamp"
+          },
+          "v": {
+            "type": "number",
+            "title": "V"
+          }
+        },
+        "type": "object",
+        "required": [
+          "t",
+          "v"
+        ],
+        "title": "IndicatorPoint"
+      },
       "IngestRequest": {
         "properties": {
           "source_url": {
@@ -2078,6 +2833,114 @@
           "narrative"
         ],
         "title": "LLMAnalysis"
+      },
+      "MacdPoint": {
+        "properties": {
+          "t": {
+            "type": "string",
+            "title": "T"
+          },
+          "macd": {
+            "type": "number",
+            "title": "Macd"
+          },
+          "signal": {
+            "type": "number",
+            "title": "Signal"
+          },
+          "histogram": {
+            "type": "number",
+            "title": "Histogram"
+          }
+        },
+        "type": "object",
+        "required": [
+          "t",
+          "macd",
+          "signal",
+          "histogram"
+        ],
+        "title": "MacdPoint"
+      },
+      "MarketLeader": {
+        "properties": {
+          "rank": {
+            "type": "integer",
+            "title": "Rank"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "ticker": {
+            "type": "string",
+            "title": "Ticker"
+          },
+          "logo_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Logo Url"
+          },
+          "price_display": {
+            "type": "string",
+            "title": "Price Display"
+          },
+          "change_pct": {
+            "type": "string",
+            "title": "Change Pct"
+          },
+          "change_krw": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Change Krw"
+          }
+        },
+        "type": "object",
+        "required": [
+          "rank",
+          "name",
+          "ticker",
+          "price_display",
+          "change_pct"
+        ],
+        "title": "MarketLeader",
+        "description": "대시보드·포트폴리오 상단 시장 리더 종목."
+      },
+      "MonthlyReturnCell": {
+        "properties": {
+          "date": {
+            "type": "string",
+            "title": "Date"
+          },
+          "return_pct": {
+            "type": "string",
+            "title": "Return Pct"
+          },
+          "cell_level": {
+            "type": "integer",
+            "title": "Cell Level"
+          }
+        },
+        "type": "object",
+        "required": [
+          "date",
+          "return_pct",
+          "cell_level"
+        ],
+        "title": "MonthlyReturnCell",
+        "description": "월간(일간) 수익률 캘린더 셀."
       },
       "OhlcBar": {
         "properties": {
@@ -2208,6 +3071,20 @@
             "type": "array",
             "title": "Dimension Breakdown",
             "description": "자산군 차원 비중 + 수익률 (바차트용)"
+          },
+          "win_rate_pct": {
+            "type": "string",
+            "title": "Win Rate Pct",
+            "description": "보유 종목 중 pnl_pct > 0 비율 × 100 (문자열, 소수점 2자리)",
+            "default": "0.00"
+          },
+          "market_leaders": {
+            "items": {
+              "$ref": "#/components/schemas/MarketLeader"
+            },
+            "type": "array",
+            "title": "Market Leaders",
+            "description": "value_krw 상위 3개 종목 (보유 없으면 S&P top3 fallback)"
           }
         },
         "type": "object",
@@ -2559,6 +3436,69 @@
         ],
         "title": "RebalanceSummary"
       },
+      "SectorHeatmapTile": {
+        "properties": {
+          "sector": {
+            "type": "string",
+            "title": "Sector"
+          },
+          "weight_pct": {
+            "type": "string",
+            "title": "Weight Pct"
+          },
+          "pnl_pct": {
+            "type": "string",
+            "title": "Pnl Pct"
+          },
+          "intensity": {
+            "type": "string",
+            "title": "Intensity"
+          }
+        },
+        "type": "object",
+        "required": [
+          "sector",
+          "weight_pct",
+          "pnl_pct",
+          "intensity"
+        ],
+        "title": "SectorHeatmapTile",
+        "description": "섹터 히트맵 단일 타일."
+      },
+      "SectorKpi": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name",
+            "description": "예: 반도체"
+          },
+          "change_pct": {
+            "type": "string",
+            "title": "Change Pct"
+          },
+          "constituents": {
+            "type": "integer",
+            "title": "Constituents",
+            "description": "포함 종목 수"
+          },
+          "leaders": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Leaders",
+            "description": "예: ['AAPL', 'MSFT']"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "change_pct",
+          "constituents",
+          "leaders"
+        ],
+        "title": "SectorKpi"
+      },
       "ServiceStatus": {
         "properties": {
           "db": {
@@ -2726,6 +3666,29 @@
         ],
         "title": "SnapshotResponse"
       },
+      "StochasticPoint": {
+        "properties": {
+          "t": {
+            "type": "string",
+            "title": "T"
+          },
+          "k": {
+            "type": "number",
+            "title": "K"
+          },
+          "d": {
+            "type": "number",
+            "title": "D"
+          }
+        },
+        "type": "object",
+        "required": [
+          "t",
+          "k",
+          "d"
+        ],
+        "title": "StochasticPoint"
+      },
       "Symbol": {
         "properties": {
           "symbol": {
@@ -2890,6 +3853,180 @@
         "title": "TargetAllocation",
         "description": "자산군별 목표 비중. 합계 1.0 (±0.001 허용)."
       },
+      "TopListItem": {
+        "properties": {
+          "rank": {
+            "type": "integer",
+            "title": "Rank"
+          },
+          "ticker": {
+            "type": "string",
+            "title": "Ticker"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "change_pct": {
+            "type": "string",
+            "title": "Change Pct",
+            "description": "등락률 문자열 (예: +3.21)"
+          },
+          "views_24h": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Views 24H",
+            "description": "24시간 조회수 (popular 전용)"
+          }
+        },
+        "type": "object",
+        "required": [
+          "rank",
+          "ticker",
+          "name",
+          "change_pct"
+        ],
+        "title": "TopListItem"
+      },
+      "UploadAnalyzerConfig": {
+        "properties": {
+          "analyzer": {
+            "type": "string",
+            "enum": [
+              "portfolio",
+              "crypto",
+              "stock"
+            ],
+            "title": "Analyzer"
+          },
+          "period_days": {
+            "type": "integer",
+            "maximum": 3650.0,
+            "minimum": 1.0,
+            "title": "Period Days",
+            "default": 365
+          },
+          "base_currency": {
+            "type": "string",
+            "enum": [
+              "KRW",
+              "USD"
+            ],
+            "title": "Base Currency",
+            "default": "KRW"
+          },
+          "include_fx": {
+            "type": "boolean",
+            "title": "Include Fx",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": [
+          "analyzer"
+        ],
+        "title": "UploadAnalyzerConfig"
+      },
+      "UploadErrorDetail": {
+        "properties": {
+          "row": {
+            "type": "integer",
+            "title": "Row"
+          },
+          "column": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Column"
+          },
+          "code": {
+            "type": "string",
+            "title": "Code"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          }
+        },
+        "type": "object",
+        "required": [
+          "row",
+          "code",
+          "message"
+        ],
+        "title": "UploadErrorDetail"
+      },
+      "UploadValidationResult": {
+        "properties": {
+          "upload_id": {
+            "type": "string",
+            "title": "Upload Id"
+          },
+          "total_rows": {
+            "type": "integer",
+            "title": "Total Rows"
+          },
+          "valid_rows": {
+            "type": "integer",
+            "title": "Valid Rows"
+          },
+          "error_rows": {
+            "type": "integer",
+            "title": "Error Rows"
+          },
+          "warning_rows": {
+            "type": "integer",
+            "title": "Warning Rows"
+          },
+          "errors": {
+            "items": {
+              "$ref": "#/components/schemas/UploadErrorDetail"
+            },
+            "type": "array",
+            "title": "Errors"
+          },
+          "preview": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Preview"
+          },
+          "schema_fingerprint": {
+            "type": "string",
+            "title": "Schema Fingerprint"
+          },
+          "created_at": {
+            "type": "string",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "upload_id",
+          "total_rows",
+          "valid_rows",
+          "error_rows",
+          "warning_rows",
+          "errors",
+          "preview",
+          "schema_fingerprint",
+          "created_at"
+        ],
+        "title": "UploadValidationResult"
+      },
       "ValidationError": {
         "properties": {
           "loc": {
@@ -2986,6 +4123,14 @@
             ],
             "title": "Memo"
           },
+          "pnl_7d": {
+            "items": {
+              "type": "number"
+            },
+            "type": "array",
+            "title": "Pnl 7D",
+            "description": "7일 종가 스파크라인"
+          },
           "created_at": {
             "type": "string",
             "title": "Created At",
@@ -3000,6 +4145,73 @@
           "created_at"
         ],
         "title": "WatchlistItemResponse"
+      },
+      "WatchlistSummary": {
+        "properties": {
+          "watched_count": {
+            "type": "integer",
+            "title": "Watched Count",
+            "description": "워치리스트 종목 수"
+          },
+          "up_avg_pct": {
+            "type": "string",
+            "title": "Up Avg Pct",
+            "description": "상승 종목 평균 등락률 (예: +6.42)"
+          },
+          "down_avg_pct": {
+            "type": "string",
+            "title": "Down Avg Pct",
+            "description": "하락 종목 평균 등락률 (예: -4.33)"
+          },
+          "top_gainer_name": {
+            "type": "string",
+            "title": "Top Gainer Name",
+            "description": "최대 상승 종목명 (예: 삼성전자)"
+          },
+          "top_gainer_pct": {
+            "type": "string",
+            "title": "Top Gainer Pct",
+            "description": "최대 상승률 (예: +12.4)"
+          }
+        },
+        "type": "object",
+        "required": [
+          "watched_count",
+          "up_avg_pct",
+          "down_avg_pct",
+          "top_gainer_name",
+          "top_gainer_pct"
+        ],
+        "title": "WatchlistSummary"
+      },
+      "WorldHeatmapRegion": {
+        "properties": {
+          "country_code": {
+            "type": "string",
+            "title": "Country Code",
+            "description": "ISO 2자리 예: US"
+          },
+          "country_name": {
+            "type": "string",
+            "title": "Country Name"
+          },
+          "change_pct": {
+            "type": "string",
+            "title": "Change Pct"
+          },
+          "market_cap_usd": {
+            "type": "string",
+            "title": "Market Cap Usd"
+          }
+        },
+        "type": "object",
+        "required": [
+          "country_code",
+          "country_name",
+          "change_pct",
+          "market_cap_usd"
+        ],
+        "title": "WorldHeatmapRegion"
       },
       "_InternalQueryRequest": {
         "properties": {

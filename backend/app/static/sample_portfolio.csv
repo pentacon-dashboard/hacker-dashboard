@@ -1,0 +1,4 @@
+date,market,code,quantity,avg_cost,currency,note
+2024-01-15,yahoo,AAPL,10,182.50,USD,애플 장기 보유
+2024-03-22,upbit,KRW-BTC,0.05,85000000,KRW,비트코인 분할 매수
+2024-06-10,naver_kr,005930,100,72000,KRW,삼성전자 적립식
