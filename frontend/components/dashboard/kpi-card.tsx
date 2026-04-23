@@ -80,7 +80,7 @@ export function KpiCard({
       </div>
       <div className="flex items-baseline justify-between gap-2">
         <span
-          className="min-w-0 truncate text-lg font-semibold tracking-tight md:text-xl"
+          className="min-w-0 truncate text-base font-semibold tracking-tight sm:text-lg md:text-xl"
           title={value}
         >
           {value}

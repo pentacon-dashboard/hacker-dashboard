@@ -73,7 +73,7 @@ export function Header() {
             <line x1="4" x2="20" y1="18" y2="18" />
           </svg>
         </button>
-        <span className="text-sm font-semibold text-muted-foreground">
+        <span className="hidden text-sm font-semibold text-muted-foreground md:inline">
           금융 대시보드
         </span>
       </div>

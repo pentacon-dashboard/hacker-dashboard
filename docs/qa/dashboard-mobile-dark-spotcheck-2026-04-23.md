@@ -63,3 +63,38 @@ dev 서버: `NEXT_PUBLIC_COPILOT_MOCK=1` 기동
 | 낮음 | 모바일 사이드바 미collapse | `frontend-engineer` |
 
 심사 전 수정 필수 항목은 없음.
+
+---
+
+## 2026-04-23 재캡처 해소
+
+재캡처 일시: 2026-04-23
+브랜치: `feat/qa-harness-20260422-111542-nl-copilot-sprint-06`
+커밋: `e17ed99` (KPI 포맷), `a6e048a` (사이드바 드로어)
+
+### 이슈 1: 일간 변동 KPI truncate — 해소
+
+**수정 내용**
+- `frontend/app/page.tsx`: `formatKRW` → `formatKRWCompact` 로 교체. 양수 부호(`+`) 명시 유지.
+- `frontend/components/dashboard/kpi-card.tsx`: value 폰트 `text-base sm:text-lg md:text-xl` 로 반응형 clamp 추가.
+
+**재캡처 확인**: 375x812 라이트/다크 모드 양쪽에서 "+2.04%" 및 "+₩373.1K" 모두 잘림 없이 표시됨.
+
+### 이슈 2: 모바일 사이드바 미collapse — 해소
+
+**수정 내용**
+- `frontend/stores/ui.ts`: `mobileMenuOpen` / `toggleMobileMenu` / `setMobileMenuOpen` 추가.
+- `frontend/components/layout/sidebar.tsx`: 고정(`fixed`) 햄버거 버튼 제거, 드로어 열림 상태를 Zustand store 에서 관리.
+- `frontend/components/layout/header.tsx`: 햄버거 버튼을 Header 좌측 `md:hidden` 전용으로 이동. "금융 대시보드" 텍스트는 `hidden md:inline` 처리로 모바일 여백 확보.
+
+**재캡처 확인**: 375x812 에서 사이드바가 화면에 노출되지 않음. 햄버거 버튼 클릭 시 Sheet 드로어 정상 오픈. 데스크탑(1440x900) 레이아웃 변경 없음.
+
+### 품질 게이트 결과
+
+| 게이트 | 결과 |
+|---|---|
+| `npm run lint` | PASS |
+| `npm run typecheck` | PASS |
+| `npm run test -- --run` | PASS (135/135) |
+| `npm run build` | PASS |
+| 재캡처 스크린샷 | `C:/Users/ehgus/AppData/Local/Temp/dashboard-mobile-375.png` 등 3장 갱신 |
