@@ -9,22 +9,48 @@ import { ConnectedAccounts, type ConnectedAccountsConfig } from "@/components/se
 import { SystemInfo } from "@/components/settings/system-info";
 import { API_BASE } from "@/lib/api/client";
 
+// BE /users/me/settings 실제 스키마 — system 필드 없음
 interface UserSettings {
-  display_name: string;
+  display_name?: string;
+  name?: string;
   email: string;
   language: string;
   timezone: string;
   notifications: NotificationConfig;
-  theme: string;
-  accent_color: string;
+  theme: { mode: string; accent: string } | string;
+  accent_color?: string;
   data: DataConfig;
-  connected_accounts: ConnectedAccountsConfig;
-  system: {
-    version: string;
-    api_status: "healthy" | "degraded" | "error";
-    build_time: string;
-    cache_size_mb: number;
-  };
+  connected_accounts: ConnectedAccountsConfig | Array<{ provider: string; email: string; connected_at: string }>;
+}
+
+// 시스템 메타 — BE 미보유 필드, 클라이언트 상수로 관리
+const SYSTEM_INFO = {
+  version: process.env.NEXT_PUBLIC_APP_VERSION ?? "0.3.1-sprint-08",
+  api_status: "healthy" as const,
+  build_time: process.env.NEXT_PUBLIC_BUILD_TIME ?? new Date().toISOString(),
+  cache_size_mb: 256,
+};
+
+function resolveDisplayName(s: UserSettings): string {
+  return s.display_name ?? s.name ?? "Demo User";
+}
+
+function resolveAccentColor(s: UserSettings): string {
+  if (typeof s.theme === "object" && s.theme !== null) return s.theme.accent ?? "violet";
+  return s.accent_color ?? "violet";
+}
+
+function resolveConnectedAccounts(s: UserSettings): ConnectedAccountsConfig {
+  if (Array.isArray(s.connected_accounts)) {
+    const providers = s.connected_accounts.map((a) => a.provider);
+    return {
+      google: providers.includes("google"),
+      apple: providers.includes("apple"),
+      kakao: providers.includes("kakao"),
+      github: providers.includes("github"),
+    };
+  }
+  return s.connected_accounts as ConnectedAccountsConfig;
 }
 
 const DEFAULT_SETTINGS: UserSettings = {
@@ -51,12 +77,6 @@ const DEFAULT_SETTINGS: UserSettings = {
     apple: false,
     kakao: false,
     github: true,
-  },
-  system: {
-    version: "0.3.1-sprint-08",
-    api_status: "healthy",
-    build_time: new Date().toISOString(),
-    cache_size_mb: 42,
   },
 };
 
@@ -127,7 +147,7 @@ export default function SettingsPage() {
       <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
         {/* 좌상: 기본 설정 */}
         <GeneralSettings
-          displayName={settings.display_name}
+          displayName={resolveDisplayName(settings)}
           email={settings.email}
           language={settings.language}
           timezone={settings.timezone}
@@ -141,7 +161,7 @@ export default function SettingsPage() {
 
         {/* 우상: 테마 설정 */}
         <ThemeSettings
-          accentColor={settings.accent_color}
+          accentColor={resolveAccentColor(settings)}
           onAccentChange={(accent_color) => patchSettings({ accent_color })}
         />
 
@@ -152,14 +172,14 @@ export default function SettingsPage() {
         />
 
         {/* 중하: 연결된 계정 */}
-        <ConnectedAccounts config={settings.connected_accounts} />
+        <ConnectedAccounts config={resolveConnectedAccounts(settings)} />
 
-        {/* 우하: 시스템 정보 */}
+        {/* 우하: 시스템 정보 — BE 미보유 필드, 클라이언트 상수 */}
         <SystemInfo
-          version={settings.system.version}
-          apiStatus={settings.system.api_status}
-          buildTime={settings.system.build_time}
-          cacheSizeMb={settings.system.cache_size_mb}
+          version={SYSTEM_INFO.version}
+          apiStatus={SYSTEM_INFO.api_status}
+          buildTime={SYSTEM_INFO.build_time}
+          cacheSizeMb={SYSTEM_INFO.cache_size_mb}
         />
       </div>
     </div>
