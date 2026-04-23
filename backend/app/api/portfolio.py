@@ -18,10 +18,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.db.models import Holding, PortfolioSnapshot
 from app.db.session import get_db
 from app.schemas.portfolio import (
+    AiInsightResponse,
     HoldingCreate,
     HoldingResponse,
     HoldingUpdate,
+    MonthlyReturnCell,
     PortfolioSummary,
+    SectorHeatmapTile,
     SnapshotResponse,
 )
 from app.schemas.rebalance import (
@@ -33,6 +36,7 @@ from app.schemas.rebalance import (
 )
 from app.services.market import get_adapter
 from app.services.portfolio import compute_summary, get_period_snapshot, get_prev_snapshot
+from app.services.portfolio_service import ai_insight_stub, monthly_returns, sector_heatmap
 from app.services.rebalance import (
     build_expected_allocation,
     build_summary,
@@ -396,7 +400,7 @@ async def rebalance(
         "critique_gate": "pending",
     }
     try:
-        from app.agents.analyzers.rebalance import RebalanceAnalyzer  # type: ignore[import]
+        from app.agents.analyzers.rebalance import RebalanceAnalyzer  # noqa: PGH003  # type: ignore
 
         analyzer = RebalanceAnalyzer()
         llm_analysis, gates = await analyzer.analyze(
@@ -440,3 +444,100 @@ async def rebalance(
             evidence_snippets=evidence_snippets,
         ),
     )
+
+
+# ────────────────────── Sprint-08 B-1: 포트폴리오 확장 엔드포인트 ──────────────────────
+
+
+@router.get(
+    "/sectors/heatmap",
+    response_model=list[SectorHeatmapTile],
+    summary="섹터 히트맵",
+)
+async def get_sector_heatmap(
+    db: AsyncSession = Depends(get_db),
+) -> list[SectorHeatmapTile]:
+    """섹터별 비중 + 가중 PnL 히트맵 데이터를 반환한다.
+
+    보유 종목을 섹터로 분류하고 각 섹터의 value_krw 비중 및 손익률을 집계한다.
+    미분류 종목은 '기타' 섹터로 통합.
+    """
+    result = await db.execute(
+        select(Holding).where(Holding.user_id == _DEMO_USER)
+    )
+    holdings_rows = list(result.scalars().all())
+
+    if not holdings_rows:
+        return []
+
+    prev_snap = await get_prev_snapshot(db, user_id=_DEMO_USER)
+    summary = await compute_summary(list(holdings_rows), prev_snapshot=prev_snap)
+
+    return sector_heatmap(summary.holdings)
+
+
+@router.get(
+    "/monthly-returns",
+    response_model=list[MonthlyReturnCell],
+    summary="월간(일간) 수익률 캘린더",
+)
+async def get_monthly_returns(
+    year: int | None = Query(
+        default=None,
+        ge=2000,
+        le=2100,
+        description="조회 연도 (기본: 현재 연도)",
+    ),
+    db: AsyncSession = Depends(get_db),
+) -> list[MonthlyReturnCell]:
+    """지정 연도의 일별 수익률 셀 목록을 반환한다 (365일).
+
+    실제 스냅샷 서비스 미구축 시 결정론적 sin stub 값 제공.
+    year 미지정 시 현재 연도 사용.
+    """
+    from datetime import date as _date
+
+    target_year = year if year is not None else _date.today().year
+
+    result = await db.execute(
+        select(Holding).where(Holding.user_id == _DEMO_USER)
+    )
+    holdings_rows = list(result.scalars().all())
+
+    if not holdings_rows:
+        return monthly_returns([], year=target_year)
+
+    prev_snap = await get_prev_snapshot(db, user_id=_DEMO_USER)
+    summary = await compute_summary(list(holdings_rows), prev_snapshot=prev_snap)
+
+    return monthly_returns(summary.holdings, year=target_year)
+
+
+@router.get(
+    "/ai-insight",
+    response_model=AiInsightResponse,
+    summary="AI 포트폴리오 인사이트 (stub 모드)",
+)
+async def get_ai_insight(
+    db: AsyncSession = Depends(get_db),
+) -> AiInsightResponse:
+    """포트폴리오 요약 기반 AI 인사이트를 반환한다.
+
+    ADR-0012 stub 모드: LLM 호출 없이 결정론적 문단 생성.
+    gates 필드로 3단 품질 게이트 통과 여부 표시.
+    """
+    result = await db.execute(
+        select(Holding).where(Holding.user_id == _DEMO_USER)
+    )
+    holdings_rows = list(result.scalars().all())
+
+    prev_snap = await get_prev_snapshot(db, user_id=_DEMO_USER)
+    period_snap = await get_period_snapshot(db, user_id=_DEMO_USER, period_days=30)
+    summary = await compute_summary(
+        list(holdings_rows),
+        prev_snapshot=prev_snap,
+        period_snapshot=period_snap,
+        period_days=30,
+    )
+
+    return ai_insight_stub(summary)
