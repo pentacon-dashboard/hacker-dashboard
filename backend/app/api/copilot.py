@@ -28,6 +28,7 @@ router = APIRouter(prefix="/copilot", tags=["copilot"])
 @router.post(
     "/plan",
     response_model=CopilotPlan,
+    responses={400: {"description": "JSON 파싱 실패"}},
     summary="NL Query → CopilotPlan",
     description=(
         "자연어 질의를 받아 멀티-스텝 에이전트 실행 계획(CopilotPlan)을 반환한다. "

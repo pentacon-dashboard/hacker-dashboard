@@ -223,7 +223,11 @@ def _parse_csv_bytes(raw_bytes: bytes) -> list[dict[str, Any]]:
 # ── 엔드포인트 ────────────────────────────────────────────────────────────────
 
 
-@router.post("", response_model=AnalyzeResponse)
+@router.post(
+    "",
+    response_model=AnalyzeResponse,
+    responses={400: {"description": "JSON 파싱 실패"}},
+)
 async def analyze(
     req: AnalyzeRequest,
     http_request: Request,
