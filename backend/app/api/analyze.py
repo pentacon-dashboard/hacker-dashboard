@@ -22,7 +22,6 @@ import uuid
 from typing import Any
 
 from fastapi import APIRouter, Depends, File, Form, Request, Response, UploadFile
-from fastapi.responses import JSONResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.agents import llm as llm_module
@@ -300,7 +299,15 @@ async def analyze(
     return result
 
 
-@router.post("/csv", response_model=AnalyzeResponse)
+@router.post(
+    "/csv",
+    response_model=AnalyzeResponse,
+    responses={
+        400: {"description": "CSV 파싱 실패 또는 빈 파일"},
+        413: {"description": "파일 크기 10MB 초과"},
+        415: {"description": "지원하지 않는 Content-Type"},
+    },
+)
 async def analyze_csv(
     http_request: Request,
     http_response: Response,

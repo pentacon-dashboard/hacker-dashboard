@@ -8,9 +8,8 @@ from __future__ import annotations
 import logging
 import time
 import uuid
-from datetime import date, datetime, timezone
+from datetime import UTC, date, datetime
 from decimal import Decimal
-from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Path, Query, Request, Response
 from sqlalchemy import select
@@ -82,7 +81,7 @@ async def create_holding(
             detail=[{"msg": str(exc), "type": "value_error", "loc": ["body", "market"]}],
         ) from exc
 
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     holding = Holding(
         user_id=_DEMO_USER,
         market=body.market,
@@ -133,7 +132,7 @@ async def update_holding(
         holding.quantity = body.quantity
     if body.avg_cost is not None:
         holding.avg_cost = body.avg_cost
-    holding.updated_at = datetime.now(timezone.utc)
+    holding.updated_at = datetime.now(UTC)
 
     await db.commit()
     await db.refresh(holding)
@@ -199,50 +198,28 @@ async def get_summary(
 # ────────────────────── Snapshots ──────────────────────
 
 
-_SNAPSHOT_DATE_SCHEMA = {
-    "schema": {
-        "type": "string",
-        "pattern": r"^\d{4}-\d{2}-\d{2}$",
-        "title": "date",
-    }
-}
-
-
 @router.get(
     "/snapshots",
     response_model=list[SnapshotResponse],
-    openapi_extra={
-        "parameters": [
-            {
-                "name": "from",
-                "in": "query",
-                "required": False,
-                "description": "시작 날짜 (YYYY-MM-DD)",
-                **_SNAPSHOT_DATE_SCHEMA,
-            },
-            {
-                "name": "to",
-                "in": "query",
-                "required": False,
-                "description": "종료 날짜 (YYYY-MM-DD)",
-                **_SNAPSHOT_DATE_SCHEMA,
-            },
-        ]
-    },
 )
 async def list_snapshots(
-    from_str: str | None = Query(None, alias="from"),
-    to_str: str | None = Query(None, alias="to"),
+    from_str: str | None = Query(
+        None,
+        alias="from",
+        pattern=r"^\d{4}-\d{2}-\d{2}$",
+        description="시작 날짜 (YYYY-MM-DD)",
+    ),
+    to_str: str | None = Query(
+        None,
+        pattern=r"^\d{4}-\d{2}-\d{2}$",
+        description="종료 날짜 (YYYY-MM-DD)",
+        alias="to",
+    ),
     db: AsyncSession = Depends(get_db),
 ) -> list[SnapshotResponse]:
-    """포트폴리오 스냅샷 조회 (날짜 범위 필터)."""
-    # "null" 리터럴 문자열은 미전달과 동일하게 처리 (schemathesis nullable 생성 대응)
-    from_date: date | None = (
-        date.fromisoformat(from_str) if from_str and from_str != "null" else None
-    )
-    to_date: date | None = (
-        date.fromisoformat(to_str) if to_str and to_str != "null" else None
-    )
+    """포트폴리오 스냅샷 조회 (날짜 범위 필터). pattern 불일치 시 422 자동 반환."""
+    from_date: date | None = date.fromisoformat(from_str) if from_str else None
+    to_date: date | None = date.fromisoformat(to_str) if to_str else None
     stmt = select(PortfolioSnapshot).where(PortfolioSnapshot.user_id == _DEMO_USER)
     if from_date:
         stmt = stmt.where(PortfolioSnapshot.snapshot_date >= from_date)
@@ -271,7 +248,34 @@ async def list_snapshots(
 # ────────────────────── 리밸런싱 제안 ──────────────────────
 
 
-@router.post("/rebalance", response_model=RebalanceResponse)
+@router.post(
+    "/rebalance",
+    response_model=RebalanceResponse,
+    openapi_extra={
+        "requestBody": {
+            "required": True,
+            "content": {
+                "application/json": {
+                    "schema": {"$ref": "#/components/schemas/RebalanceRequest"},
+                    "example": {
+                        "target_allocation": {
+                            "stock_kr": 0.3,
+                            "stock_us": 0.3,
+                            "crypto": 0.2,
+                            "cash": 0.1,
+                            "fx": 0.1,
+                        },
+                        "constraints": {
+                            "max_single_weight": 0.5,
+                            "min_trade_krw": 100000,
+                            "allow_fractional": True,
+                        },
+                    },
+                }
+            },
+        }
+    },
+)
 async def rebalance(
     body: RebalanceRequest,
     http_request: Request,
