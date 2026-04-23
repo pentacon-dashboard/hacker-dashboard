@@ -17,8 +17,8 @@ interface UserSettings {
   language: string;
   timezone: string;
   notifications: NotificationConfig;
-  theme: { mode: string; accent: string } | string;
-  accent_color?: string;
+  // BE 저장 경로: theme.mode / theme.accent (nested object)
+  theme: { mode: string; accent: string };
   data: DataConfig;
   connected_accounts: ConnectedAccountsConfig | Array<{ provider: string; email: string; connected_at: string }>;
 }
@@ -36,8 +36,11 @@ function resolveDisplayName(s: UserSettings): string {
 }
 
 function resolveAccentColor(s: UserSettings): string {
-  if (typeof s.theme === "object" && s.theme !== null) return s.theme.accent ?? "violet";
-  return s.accent_color ?? "violet";
+  return s.theme.accent ?? "violet";
+}
+
+function resolveThemeMode(s: UserSettings): string {
+  return s.theme.mode ?? "system";
 }
 
 function resolveConnectedAccounts(s: UserSettings): ConnectedAccountsConfig {
@@ -64,8 +67,7 @@ const DEFAULT_SETTINGS: UserSettings = {
     price_threshold_pct: 5.0,
     daily_digest: true,
   },
-  theme: "dark",
-  accent_color: "violet",
+  theme: { mode: "system", accent: "violet" },
   data: {
     refresh_interval_sec: 30,
     auto_refresh: true,
@@ -97,7 +99,12 @@ export default function SettingsPage() {
 
   const patchSettings = useCallback(
     async (patch: Partial<UserSettings>) => {
-      const optimistic = { ...settings, ...patch };
+      // theme 은 nested 병합 — 상위 spread 만으로는 덮어쓰기됨
+      const mergedTheme: UserSettings["theme"] =
+        patch.theme != null
+          ? { ...settings.theme, ...patch.theme }
+          : settings.theme;
+      const optimistic: UserSettings = { ...settings, ...patch, theme: mergedTheme };
       setSettings(optimistic);
 
       try {
@@ -151,6 +158,17 @@ export default function SettingsPage() {
           email={settings.email}
           language={settings.language}
           timezone={settings.timezone}
+          onChange={(patch) => {
+            const apiPatch: Partial<UserSettings> = {};
+            if (patch.displayName !== undefined) {
+              // BE 는 "name" 필드로 수신
+              apiPatch.name = patch.displayName;
+              apiPatch.display_name = patch.displayName;
+            }
+            if (patch.language !== undefined) apiPatch.language = patch.language;
+            if (patch.timezone !== undefined) apiPatch.timezone = patch.timezone;
+            void patchSettings(apiPatch);
+          }}
         />
 
         {/* 중상: 알림 설정 */}
@@ -162,7 +180,9 @@ export default function SettingsPage() {
         {/* 우상: 테마 설정 */}
         <ThemeSettings
           accentColor={resolveAccentColor(settings)}
-          onAccentChange={(accent_color) => patchSettings({ accent_color })}
+          onAccentChange={(accent) =>
+            patchSettings({ theme: { mode: resolveThemeMode(settings), accent } })
+          }
         />
 
         {/* 좌하: 데이터 설정 */}

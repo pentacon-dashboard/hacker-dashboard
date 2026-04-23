@@ -25,6 +25,7 @@ import {
 } from "@/components/dashboard/period-tabs";
 import { MarketLeaders, type MarketLeader } from "@/components/dashboard/market-leaders";
 import { NetworthChart } from "@/components/portfolio/networth-chart";
+import { NewsPanel } from "@/components/dashboard/news-panel";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   getPortfolioSummary,
@@ -384,6 +385,27 @@ export default function DashboardHome() {
           ) : (
             <MarketLeaders leaders={marketLeaders} />
           )}
+        </SectionCard>
+      </section>
+
+      {/* 최신 뉴스 섹션 */}
+      <section data-testid="section-news">
+        <SectionCard
+          title="최신 뉴스"
+          testId="section-news-card"
+          action={
+            <span className="text-xs text-muted-foreground">보유 종목 연관 기사</span>
+          }
+        >
+          <NewsPanel
+            symbols={summary?.holdings.map((h) => h.code) ?? []}
+            query={(() => {
+              if (!summary) return undefined;
+              const codes = summary.holdings.map((h) => h.code);
+              return codes.length > 0 ? codes.slice(0, 5).join(" OR ") : "market";
+            })()}
+            limit={5}
+          />
         </SectionCard>
       </section>
     </div>

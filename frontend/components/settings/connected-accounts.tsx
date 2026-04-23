@@ -3,6 +3,7 @@
 import { Link2, Link2Off } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 
 export interface ConnectedAccountsConfig {
   google: boolean;
@@ -79,6 +80,9 @@ export function ConnectedAccounts({ config }: ConnectedAccountsProps) {
         <CardTitle className="flex items-center gap-2 text-sm font-semibold">
           <Link2 className="h-4 w-4 text-primary" aria-hidden="true" />
           연결된 계정
+          <Badge variant="outline" className="ml-auto text-[10px] text-muted-foreground">
+            DEMO
+          </Badge>
         </CardTitle>
         <p className="text-xs text-muted-foreground">소셜 계정 연결 관리 (데모 모드 — 실 OAuth 없음)</p>
       </CardHeader>
@@ -110,7 +114,8 @@ export function ConnectedAccounts({ config }: ConnectedAccountsProps) {
                   variant="outline"
                   size="sm"
                   disabled
-                  className="h-7 px-2 text-xs opacity-50"
+                  className="h-7 cursor-not-allowed px-2 text-xs opacity-50"
+                  title="데모 모드 — 실 OAuth 연동은 다음 스프린트에 추가됩니다"
                   aria-label={`${account.label} ${connected ? "연결 해제" : "연결"}`}
                 >
                   {connected ? "해제" : "연결"}
