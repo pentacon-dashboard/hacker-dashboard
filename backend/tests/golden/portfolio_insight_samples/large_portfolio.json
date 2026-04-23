@@ -1,0 +1,14 @@
+{
+  "description": "대형 포트폴리오 인사이트 골든 샘플 (5개 종목)",
+  "holdings": [
+    {"id": 1, "market": "yahoo", "code": "AAPL", "quantity": "10.00000000", "avg_cost": "182.5000", "currency": "USD", "current_price": "189.3000", "current_price_krw": "252300.00", "value_krw": "2523000.00", "cost_krw": "2431750.00", "pnl_krw": "91250.00", "pnl_pct": "3.75"},
+    {"id": 2, "market": "upbit", "code": "KRW-BTC", "quantity": "0.05000000", "avg_cost": "85000000.0000", "currency": "KRW", "current_price": "92000000.0000", "current_price_krw": "92000000.00", "value_krw": "4600000.00", "cost_krw": "4250000.00", "pnl_krw": "350000.00", "pnl_pct": "8.24"},
+    {"id": 3, "market": "naver_kr", "code": "005930", "quantity": "100.00000000", "avg_cost": "72000.0000", "currency": "KRW", "current_price": "75000.0000", "current_price_krw": "75000.00", "value_krw": "7500000.00", "cost_krw": "7200000.00", "pnl_krw": "300000.00", "pnl_pct": "4.17"},
+    {"id": 4, "market": "binance", "code": "ETHUSDT", "quantity": "2.50000000", "avg_cost": "3200.0000", "currency": "USDT", "current_price": "3100.0000", "current_price_krw": "4130000.00", "value_krw": "10325000.00", "cost_krw": "10640000.00", "pnl_krw": "-315000.00", "pnl_pct": "-2.96"},
+    {"id": 5, "market": "yahoo", "code": "MSFT", "quantity": "5.00000000", "avg_cost": "410.0000", "currency": "USD", "current_price": "415.2000", "current_price_krw": "553716.00", "value_krw": "2768580.00", "cost_krw": "2731500.00", "pnl_krw": "37080.00", "pnl_pct": "1.36"}
+  ],
+  "expected_win_rate_pct": "80.00",
+  "expected_market_leaders_count": 3,
+  "expected_sector_tiles_min": 3,
+  "notes": "4/5 종목 수익권 → win_rate 80%. ETH 마이너스."
+}
