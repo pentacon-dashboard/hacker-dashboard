@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState } from "react";
 import { cn } from "@/lib/utils";
 import { useUiStore } from "@/stores/ui";
 import { Sheet } from "@/components/ui/sheet";
@@ -91,49 +90,20 @@ function NavContent({
 }
 
 export function Sidebar() {
-  const { sidebarCollapsed, toggleSidebar } = useUiStore();
-  const [mobileOpen, setMobileOpen] = useState(false);
+  const { sidebarCollapsed, toggleSidebar, mobileMenuOpen, setMobileMenuOpen } =
+    useUiStore();
 
   return (
     <>
-      {/* 모바일 햄버거 버튼 (md 미만) */}
-      <button
-        onClick={() => setMobileOpen(true)}
-        className={cn(
-          "fixed left-3 top-3.5 z-40 flex h-7 w-7 items-center justify-center rounded p-1",
-          "hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-          "md:hidden",
-        )}
-        aria-label="메뉴 열기"
-        type="button"
-      >
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          width="18"
-          height="18"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          aria-hidden="true"
-        >
-          <line x1="4" x2="20" y1="6" y2="6" />
-          <line x1="4" x2="20" y1="12" y2="12" />
-          <line x1="4" x2="20" y1="18" y2="18" />
-        </svg>
-      </button>
-
-      {/* 모바일 Drawer */}
-      <Sheet open={mobileOpen} onClose={() => setMobileOpen(false)} side="left">
+      {/* 모바일 Drawer (<md) — 햄버거 버튼은 Header 에 배치, 여기서는 Sheet 만 관리 */}
+      <Sheet open={mobileMenuOpen} onClose={() => setMobileMenuOpen(false)} side="left">
         <div className="flex h-full flex-col">
           <div className="flex h-14 items-center justify-between px-3">
             <span className="text-sm font-semibold tracking-tight">
               Hacker Dashboard
             </span>
             <button
-              onClick={() => setMobileOpen(false)}
+              onClick={() => setMobileMenuOpen(false)}
               className="rounded p-1 hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               aria-label="메뉴 닫기"
               type="button"
@@ -155,7 +125,7 @@ export function Sidebar() {
               </svg>
             </button>
           </div>
-          <NavContent collapsed={false} onLinkClick={() => setMobileOpen(false)} />
+          <NavContent collapsed={false} onLinkClick={() => setMobileMenuOpen(false)} />
         </div>
       </Sheet>
 

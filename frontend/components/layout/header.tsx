@@ -5,6 +5,7 @@ import { useTheme } from "@/hooks/use-theme";
 import { Button } from "@/components/ui/button";
 import { getHealth } from "@/lib/api/health";
 import { CommandBar } from "@/components/layout/command-bar";
+import { useUiStore } from "@/stores/ui";
 
 type HealthStatus = "ok" | "error" | "pending";
 
@@ -39,6 +40,7 @@ function useHealthPolling(intervalMs = 10000): HealthStatus {
 export function Header() {
   const { theme, setTheme, isDark, mounted } = useTheme();
   const healthStatus = useHealthPolling(10000);
+  const toggleMobileMenu = useUiStore((s) => s.toggleMobileMenu);
 
   function handleToggle() {
     setTheme(isDark ? "light" : "dark");
@@ -47,6 +49,30 @@ export function Header() {
   return (
     <header className="flex h-14 items-center justify-between border-b bg-background px-4">
       <div className="flex items-center gap-2">
+        {/* 모바일 햄버거 버튼 (<md) */}
+        <button
+          onClick={toggleMobileMenu}
+          className="flex h-8 w-8 items-center justify-center rounded hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring md:hidden"
+          aria-label="메뉴 열기"
+          type="button"
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="18"
+            height="18"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden="true"
+          >
+            <line x1="4" x2="20" y1="6" y2="6" />
+            <line x1="4" x2="20" y1="12" y2="12" />
+            <line x1="4" x2="20" y1="18" y2="18" />
+          </svg>
+        </button>
         <span className="text-sm font-semibold text-muted-foreground">
           금융 대시보드
         </span>
