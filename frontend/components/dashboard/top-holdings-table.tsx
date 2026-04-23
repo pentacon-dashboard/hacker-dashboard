@@ -20,12 +20,18 @@ interface TopHoldingsTableProps {
   holdings: HoldingDetail[];
   limit?: number;
   totalValueKrw?: number;
+  /** 평균가 컬럼 표시 여부 (7컬럼 모드) */
+  showAvgCost?: boolean;
+  /** 현재가 컬럼 표시 여부 (7컬럼 모드) */
+  showCurrentPrice?: boolean;
 }
 
 export function TopHoldingsTable({
   holdings,
   limit = 5,
   totalValueKrw,
+  showAvgCost = false,
+  showCurrentPrice = false,
 }: TopHoldingsTableProps) {
   if (holdings.length === 0) {
     return (
@@ -51,6 +57,12 @@ export function TopHoldingsTable({
             <TableHead className="h-7 w-6 px-1 text-[10px]">#</TableHead>
             <TableHead className="h-7 px-1 text-[10px]">종목</TableHead>
             <TableHead className="h-7 px-1 text-[10px]">시장</TableHead>
+            {showAvgCost && (
+              <TableHead className="h-7 px-1 text-right text-[10px]">평균가</TableHead>
+            )}
+            {showCurrentPrice && (
+              <TableHead className="h-7 px-1 text-right text-[10px]">현재가</TableHead>
+            )}
             <TableHead className="h-7 px-1 text-right text-[10px]">평가액</TableHead>
             <TableHead className="h-7 px-1 text-right text-[10px]">수익률</TableHead>
             <TableHead className="h-7 px-1 text-right text-[10px]">비중</TableHead>
@@ -79,6 +91,16 @@ export function TopHoldingsTable({
                 <TableCell className="px-1 py-1.5 text-[11px] uppercase text-muted-foreground">
                   {h.market}
                 </TableCell>
+                {showAvgCost && (
+                  <TableCell className="px-1 py-1.5 text-right text-[11px] tabular-nums text-muted-foreground">
+                    {formatKRWCompact(h.avg_cost)}
+                  </TableCell>
+                )}
+                {showCurrentPrice && (
+                  <TableCell className="px-1 py-1.5 text-right text-[11px] tabular-nums">
+                    {formatKRWCompact(h.current_price_krw)}
+                  </TableCell>
+                )}
                 <TableCell className="px-1 py-1.5 text-right text-[11px] tabular-nums">
                   {formatKRWCompact(h.value_krw)}
                 </TableCell>

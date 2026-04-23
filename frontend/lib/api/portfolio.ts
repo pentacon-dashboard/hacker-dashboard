@@ -1,5 +1,8 @@
 import type { components, paths } from "@shared/types/api";
 import { apiFetch } from "./client";
+import type { SectorHeatmapTile } from "@/components/portfolio/sector-heatmap";
+import type { MonthlyReturnCell } from "@/components/portfolio/monthly-return-calendar";
+import type { AiInsightResponse } from "@/components/portfolio/ai-insight-card";
 
 // --- 타입 재내보내기 (수동 선언 금지 — 생성 타입만 사용) ---
 export type HoldingResponse = components["schemas"]["HoldingResponse"];
@@ -73,4 +76,19 @@ export async function getSnapshots(
   return apiFetch<ListSnapshotsResponse>(
     `/portfolio/snapshots${qs ? `?${qs}` : ""}`,
   );
+}
+
+// --- Sprint-08 B-α 신규 엔드포인트 (BE 미구현 시 MSW fallback) ---
+
+export async function getSectorHeatmap(): Promise<SectorHeatmapTile[]> {
+  return apiFetch<SectorHeatmapTile[]>("/portfolio/sectors/heatmap");
+}
+
+export async function getMonthlyReturns(year?: number): Promise<MonthlyReturnCell[]> {
+  const qs = year != null ? `?year=${year}` : "";
+  return apiFetch<MonthlyReturnCell[]>(`/portfolio/monthly-returns${qs}`);
+}
+
+export async function getAiInsight(): Promise<AiInsightResponse> {
+  return apiFetch<AiInsightResponse>("/portfolio/ai-insight");
 }

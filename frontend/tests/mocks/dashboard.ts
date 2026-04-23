@@ -119,6 +119,36 @@ const SUMMARY = {
     { label: "cash", weight_pct: "9.20", pnl_pct: "0.00" },
     { label: "fx", weight_pct: "7.00", pnl_pct: "-1.20" },
   ],
+  // B-α 완료 후 BE 가 추가하는 필드. MSW 에서 미리 픽스처 제공.
+  market_leaders: [
+    {
+      rank: 1,
+      name: "NVIDIA",
+      ticker: "NVDA",
+      logo_url: null,
+      price_display: "$512.40",
+      change_pct: "3.12",
+      change_krw: "₩4,420",
+    },
+    {
+      rank: 2,
+      name: "삼성전자",
+      ticker: "005930",
+      logo_url: null,
+      price_display: "₩74,200",
+      change_pct: "4.51",
+      change_krw: null,
+    },
+    {
+      rank: 3,
+      name: "Bitcoin",
+      ticker: "KRW-BTC",
+      logo_url: null,
+      price_display: "₩73.40M",
+      change_pct: "11.21",
+      change_krw: "₩7.36M",
+    },
+  ],
 };
 
 // period_days → (누적 수익률 %, 시작 평가액)

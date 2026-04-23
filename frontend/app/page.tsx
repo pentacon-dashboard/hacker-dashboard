@@ -6,13 +6,12 @@ import {
   TrendingUp,
   LineChart as LineChartIcon,
   Layers,
-  TrendingDown,
+  BadgeDollarSign,
   AlertTriangle,
 } from "lucide-react";
 import { KpiCard } from "@/components/dashboard/kpi-card";
 import { RiskGauge } from "@/components/dashboard/risk-gauge";
 import { DimensionBars } from "@/components/dashboard/dimension-bars";
-import { NewsPanel } from "@/components/dashboard/news-panel";
 import { TopHoldingsTable } from "@/components/dashboard/top-holdings-table";
 import { SectionCard } from "@/components/dashboard/section-card";
 import {
@@ -24,6 +23,7 @@ import {
   PERIOD_DAYS,
   type PeriodKey,
 } from "@/components/dashboard/period-tabs";
+import { MarketLeaders, type MarketLeader } from "@/components/dashboard/market-leaders";
 import { NetworthChart } from "@/components/portfolio/networth-chart";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -61,6 +61,30 @@ function formatDate(d: Date): string {
   const mm = String(d.getMonth() + 1).padStart(2, "0");
   const dd = String(d.getDate()).padStart(2, "0");
   return `${yyyy}-${mm}-${dd}`;
+}
+
+/**
+ * PortfolioSummary 에 market_leaders 가 아직 BE 미구현이면 fallback 으로
+ * 상위 3개 holdings 를 MarketLeader 형태로 변환한다.
+ */
+function deriveMarketLeaders(summary: PortfolioSummary): MarketLeader[] {
+  // BE 가 market_leaders 필드를 추가하면 아래 캐스트로 바로 사용 가능
+  const raw = (summary as unknown as { market_leaders?: MarketLeader[] }).market_leaders;
+  if (raw && raw.length > 0) return raw.slice(0, 3);
+
+  // fallback: holdings 상위 3개를 가공
+  return [...summary.holdings]
+    .sort((a, b) => Number(b.value_krw) - Number(a.value_krw))
+    .slice(0, 3)
+    .map((h, idx) => ({
+      rank: idx + 1,
+      name: h.code,
+      ticker: h.code,
+      logo_url: null,
+      price_display: formatKRWCompact(h.current_price_krw),
+      change_pct: h.pnl_pct,
+      change_krw: null,
+    }));
 }
 
 export default function DashboardHome() {
@@ -121,13 +145,14 @@ export default function DashboardHome() {
       .sort((a, b) => b.ratio - a.ratio);
   }, [summary]);
 
-  const topSymbols = useMemo(() => {
+  const marketLeaders = useMemo<MarketLeader[]>(() => {
     if (!summary) return [];
-    return [...summary.holdings]
-      .sort((a, b) => Number(b.value_krw) - Number(a.value_krw))
-      .slice(0, 5)
-      .map((h) => h.code);
+    return deriveMarketLeaders(summary);
   }, [summary]);
+
+  // 오늘 손익: daily_change_krw / daily_change_pct 재사용
+  const todayPnlKrw = summary ? summary.daily_change_krw : "0";
+  const todayPnlPct = summary ? summary.daily_change_pct : "0";
 
   const dateRange = useMemo(() => {
     const to = new Date();
@@ -137,7 +162,6 @@ export default function DashboardHome() {
   }, [period]);
 
   const hasError = error !== null;
-  // 데이터 없음/에러/로딩 모두 KPI 스트립은 skeleton으로 유지 (layout 유지)
   const isLoading = summary === null;
 
   return (
@@ -170,7 +194,7 @@ export default function DashboardHome() {
         </div>
       )}
 
-      {/* KPI 스트립 */}
+      {/* KPI 스트립 — 5번째: 오늘 손익 */}
       <section aria-label="핵심 지표" className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-6">
         {isLoading ? (
           Array.from({ length: 6 }).map((_, i) => (
@@ -219,13 +243,15 @@ export default function DashboardHome() {
               accent="slate"
               testId="kpi-holdings-count"
             />
+            {/* KPI 5번째: 오늘 손익 (목업 교체) */}
             <KpiCard
-              label="최저 수익률"
-              value={formatPct(summary.worst_asset_pct, { signed: true })}
-              deltaValue={Number(summary.worst_asset_pct)}
-              icon={<TrendingDown className="h-4 w-4" />}
+              label="오늘 손익"
+              value={formatKRWCompact(todayPnlKrw)}
+              delta={formatPct(todayPnlPct, { signed: true })}
+              deltaValue={Number(todayPnlPct)}
+              icon={<BadgeDollarSign className="h-4 w-4" />}
               accent="rose"
-              testId="kpi-worst-asset"
+              testId="kpi-today-pnl"
             />
             <KpiCard
               label="집중도 리스크"
@@ -252,27 +278,11 @@ export default function DashboardHome() {
         ) : null}
       </section>
 
-      {/* 중단 그리드: 포트폴리오 비중 / 자산 가치 추이 / 리스크 게이지 */}
+      {/* 중단 그리드: 목업 기준 좌-우 재배치
+          왼쪽(큰) = 자산 가치 추이 라인차트
+          가운데 = AllocationBreakdown (도넛 + 3컬럼)
+          우측 = 집중도 게이지 */}
       <section className="grid grid-cols-1 gap-4 lg:grid-cols-12">
-        <SectionCard
-          title="포트폴리오 비중"
-          className="lg:col-span-4"
-          testId="section-allocation"
-          action={
-            summary ? (
-              <span className={`text-xs font-semibold ${signedColorClass(Number(summary.total_pnl_pct))}`}>
-                {formatPct(summary.total_pnl_pct, { signed: true })}
-              </span>
-            ) : null
-          }
-        >
-          {isLoading ? (
-            <Skeleton className="h-48 w-full" />
-          ) : (
-            <AllocationBreakdown data={allocationSlices} />
-          )}
-        </SectionCard>
-
         <SectionCard
           title="자산 가치 추이"
           className="lg:col-span-5"
@@ -291,6 +301,25 @@ export default function DashboardHome() {
         </SectionCard>
 
         <SectionCard
+          title="자산 배분"
+          className="lg:col-span-4"
+          testId="section-allocation"
+          action={
+            summary ? (
+              <span className={`text-xs font-semibold ${signedColorClass(Number(summary.total_pnl_pct))}`}>
+                {formatPct(summary.total_pnl_pct, { signed: true })}
+              </span>
+            ) : null
+          }
+        >
+          {isLoading ? (
+            <Skeleton className="h-48 w-full" />
+          ) : (
+            <AllocationBreakdown data={allocationSlices} />
+          )}
+        </SectionCard>
+
+        <SectionCard
           title="집중도 리스크"
           className="lg:col-span-3"
           testId="section-risk"
@@ -305,7 +334,7 @@ export default function DashboardHome() {
         </SectionCard>
       </section>
 
-      {/* 하단 그리드: 보유 자산 TOP 5 / 디멘션 분석 / 뉴스 */}
+      {/* 하단 그리드: 보유 자산 TOP 5 (7컬럼) / 디멘션 분석(섹터) / 시장 주도주 */}
       <section className="grid grid-cols-1 gap-4 lg:grid-cols-12">
         <SectionCard
           title="보유 자산 TOP 5"
@@ -323,12 +352,14 @@ export default function DashboardHome() {
               holdings={summary.holdings}
               limit={5}
               totalValueKrw={Number(summary.total_value_krw)}
+              showAvgCost
+              showCurrentPrice
             />
           )}
         </SectionCard>
 
         <SectionCard
-          title="디멘션 분석 (자산군 수익률)"
+          title="디멘션 분석 (섹터별 수익률)"
           className="lg:col-span-5"
           testId="section-dimension"
         >
@@ -340,11 +371,19 @@ export default function DashboardHome() {
         </SectionCard>
 
         <SectionCard
-          title="관련 뉴스"
+          title="시장 주도주"
           className="lg:col-span-3"
-          testId="section-news"
+          testId="section-market-leaders"
         >
-          <NewsPanel symbols={topSymbols} limit={5} />
+          {isLoading ? (
+            <div className="space-y-2">
+              {Array.from({ length: 3 }).map((_, i) => (
+                <Skeleton key={i} className="h-16 w-full rounded-xl" />
+              ))}
+            </div>
+          ) : (
+            <MarketLeaders leaders={marketLeaders} />
+          )}
         </SectionCard>
       </section>
     </div>
