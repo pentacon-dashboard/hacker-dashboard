@@ -21,12 +21,11 @@ function getTimeString(date: Date): string {
  * - 우측: "실시간 지연 약 20분 · 업데이트: {현재 시각 ko-KR}" — 1분마다 갱신
  */
 export function AppFooter() {
-  const [updateTime, setUpdateTime] = useState<string>(() =>
-    getTimeString(new Date()),
-  );
+  // SSR 하이드레이션 미스매치 방지: 서버 초기 렌더는 placeholder, 클라이언트 mount 후 실시각
+  const [updateTime, setUpdateTime] = useState<string>("—");
 
-  // 1분마다 업데이트 시각 갱신
   useEffect(() => {
+    setUpdateTime(getTimeString(new Date()));
     const id = setInterval(() => {
       setUpdateTime(getTimeString(new Date()));
     }, 60_000);

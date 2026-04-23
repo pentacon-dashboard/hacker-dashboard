@@ -40,19 +40,19 @@ interface MarketStatusCardProps {
  * - BE 연동 없이 클라이언트 시각 + 하드코드 세션 로직으로 우선 구현
  */
 export function MarketStatusCard({ collapsed = false }: MarketStatusCardProps) {
-  const [now, setNow] = useState<Date>(() => new Date());
+  // SSR 하이드레이션 미스매치 방지: 서버 초기 렌더는 placeholder, 클라이언트 mount 후 실시각으로 채움
+  const [now, setNow] = useState<Date | null>(null);
 
-  // 1분마다 현재 시각 갱신
   useEffect(() => {
+    setNow(new Date());
     const id = setInterval(() => setNow(new Date()), 60_000);
     return () => clearInterval(id);
   }, []);
 
-  const session = getMarketSession(now);
-  const timeStr = new Intl.DateTimeFormat("ko-KR", {
-    hour: "numeric",
-    minute: "numeric",
-  }).format(now);
+  const session: MarketSession = now ? getMarketSession(now) : "휴장";
+  const timeStr = now
+    ? new Intl.DateTimeFormat("ko-KR", { hour: "numeric", minute: "numeric" }).format(now)
+    : "--:--";
 
   if (collapsed) {
     return (

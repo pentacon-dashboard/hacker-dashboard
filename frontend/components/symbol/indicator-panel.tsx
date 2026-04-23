@@ -21,15 +21,18 @@ function IndicatorRow({
   suffix,
 }: {
   label: string;
-  value: number | null;
+  value: number | string | null;
   suffix?: string;
 }) {
+  const numeric = typeof value === "string" ? Number(value) : value;
+  const display =
+    numeric != null && Number.isFinite(numeric)
+      ? `${numeric.toFixed(2)}${suffix ?? ""}`
+      : "-";
   return (
     <div className="flex items-center justify-between gap-2 py-1 border-b last:border-0">
       <span className="text-xs text-muted-foreground">{label}</span>
-      <span className="text-xs font-semibold tabular-nums">
-        {value != null ? `${value.toFixed(2)}${suffix ?? ""}` : "-"}
-      </span>
+      <span className="text-xs font-semibold tabular-nums">{display}</span>
     </div>
   );
 }
