@@ -12,14 +12,14 @@ from httpx import AsyncClient, Response
 from app.services.market.base import set_http_client
 from app.services.market.cache import set_redis
 
-
 # ── 픽스처 ──────────────────────────────────────────────────────────────
 
 @pytest.fixture
 async def api_client():
     """FastAPI test client."""
-    from app.main import app
     from httpx import ASGITransport
+
+    from app.main import app
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
         yield ac
 

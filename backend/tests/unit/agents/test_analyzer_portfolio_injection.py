@@ -13,14 +13,13 @@ from __future__ import annotations
 
 import json
 from typing import Any
-from unittest.mock import AsyncMock, patch
+from unittest.mock import patch
 
 import pytest
 
 from app.agents.analyzers.base import BaseAnalyzer
 from app.agents.analyzers.mixed import MixedAnalyzer
 from app.agents.state import AgentState
-
 
 # ── 테스트용 최소 Analyzer 구현 ───────────────────────────────────────────────
 

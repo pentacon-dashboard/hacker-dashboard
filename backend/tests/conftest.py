@@ -1,8 +1,9 @@
 from __future__ import annotations
 
 import json
+from collections.abc import AsyncGenerator
 from dataclasses import dataclass, field
-from typing import Any, AsyncGenerator
+from typing import Any
 
 import pytest
 from httpx import ASGITransport, AsyncClient
@@ -218,15 +219,12 @@ async def client() -> AsyncClient:
 @pytest.fixture
 async def db_session() -> AsyncGenerator[AsyncSession, None]:
     """SQLite in-memory AsyncSession — 포트폴리오 서비스 단위 테스트용."""
-    from app.db.models import Base
 
     engine = create_async_engine(
         "sqlite+aiosqlite:///:memory:",
         echo=False,
     )
     # SQLite 는 JSONB 미지원 → JSON 으로 폴백
-    from sqlalchemy.dialects import postgresql
-    from sqlalchemy import JSON
 
     # JSONB → JSON 교체 (SQLite 호환)
     from sqlalchemy.dialects.postgresql import JSONB as PG_JSONB  # noqa: F401
@@ -244,8 +242,18 @@ async def db_session() -> AsyncGenerator[AsyncSession, None]:
 
 def _create_tables_sqlite(conn: Any) -> None:
     """SQLite 환경에서 JSONB → JSON 으로 교체해 테이블 생성."""
-    from sqlalchemy import Column, Date, DateTime, Integer, JSON, Numeric, String, UniqueConstraint, text
-    from sqlalchemy import MetaData, Table
+    from sqlalchemy import (
+        JSON,
+        Column,
+        Date,
+        DateTime,
+        Integer,
+        MetaData,
+        Numeric,
+        String,
+        Table,
+        UniqueConstraint,
+    )
 
     metadata = MetaData()
 

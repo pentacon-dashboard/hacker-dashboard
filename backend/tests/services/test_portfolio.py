@@ -1,16 +1,14 @@
 """포트폴리오 집계 서비스 단위 테스트 — compute_summary."""
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from decimal import Decimal
 from typing import Any
 from unittest.mock import AsyncMock, patch
 
 import pytest
 
-from app.schemas.portfolio import PortfolioSummary
-from app.services.portfolio import compute_summary, _classify_asset
-
+from app.services.portfolio import _classify_asset, compute_summary
 
 # ──────────── 테스트용 더미 Holding ────────────
 
@@ -22,7 +20,7 @@ def _make_holding(
     avg_cost: str,
     currency: str,
 ) -> dict[str, Any]:
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     return {
         "id": id,
         "user_id": "demo",
@@ -37,8 +35,9 @@ def _make_holding(
 
 
 def _mock_quote(price: float, currency: str) -> Any:
+    from datetime import datetime
+
     from app.schemas.market import Quote
-    from datetime import datetime, timezone
 
     return Quote(
         symbol="TEST",
@@ -47,7 +46,7 @@ def _mock_quote(price: float, currency: str) -> Any:
         change=0.0,
         change_pct=0.0,
         currency=currency,
-        timestamp=datetime.now(timezone.utc).isoformat(),
+        timestamp=datetime.now(UTC).isoformat(),
     )
 
 
@@ -127,8 +126,6 @@ async def test_compute_summary_multiple_currencies() -> None:
         _make_holding(2, "yahoo", "TSLA", "5", "200", "USD"),           # USD
         _make_holding(3, "binance", "BTCUSDT", "0.1", "40000", "USDT"), # USDT
     ]
-
-    call_count = 0
 
     async def mock_get_rate(base: str, quote: str) -> float:
         if base in ("USD", "USDT") and quote == "KRW":

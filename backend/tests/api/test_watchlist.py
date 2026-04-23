@@ -80,6 +80,7 @@ async def test_watchlist_delete_not_found(client: AsyncClient) -> None:
 
 @pytest.mark.asyncio
 async def test_watchlist_add_invalid_market(client: AsyncClient) -> None:
+    # market 은 MarketLiteral enum — 지원하지 않는 값은 422 (Pydantic 스키마 검증 실패)
     resp = await client.post(
         "/market/watchlist/items", json={"market": "nonexistent", "code": "XXXYYY"}
     )

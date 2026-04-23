@@ -23,7 +23,6 @@ from app.agents.analyzers.portfolio import (
     diversification_score,
 )
 
-
 _SAMPLES = Path(__file__).parent / "samples"
 
 

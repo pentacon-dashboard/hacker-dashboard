@@ -9,7 +9,6 @@ Week-2 OHLC 컨텍스트 주입 테스트.
 """
 from __future__ import annotations
 
-import json
 from typing import Any
 
 import pytest
@@ -19,7 +18,6 @@ from httpx import AsyncClient, Response
 from app.agents import llm as llm_module
 from app.agents.analyzers.base import compute_indicators
 from tests.golden.conftest import FakeAnthropicClient, _Usage
-
 
 # ───────────────────────── 테스트용 OHLC 생성기 ────────────────────────
 
@@ -52,7 +50,6 @@ def _upbit_candles(n: int = 90, base: float = 50_000_000.0) -> list[dict[str, An
 
 def _yahoo_chart(n: int = 90, base: float = 170.0) -> dict[str, Any]:
     """Yahoo /v8/finance/chart 응답 형식. 오름차순 타임스탬프."""
-    import time as _time
 
     now_ts = 1_700_000_000
     day = 86_400

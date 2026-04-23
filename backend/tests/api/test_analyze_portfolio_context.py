@@ -12,7 +12,6 @@ LLM 호출은 conftest.FakeAnthropicClient 를 통해 mock — 실 Anthropic API
 """
 from __future__ import annotations
 
-import json
 from typing import Any
 from unittest.mock import AsyncMock, patch
 
@@ -21,7 +20,6 @@ from httpx import ASGITransport, AsyncClient
 
 from app.main import app
 from app.services import analyze_cache
-
 
 # ── 공통 Mock 응답 ────────────────────────────────────────────────────────────
 
@@ -273,6 +271,11 @@ async def test_cache_key_separation_portfolio_on_off(client: AsyncClient) -> Non
 
     from app.agents import llm as llm_module
     from app.schemas.analyze import PortfolioContext, PortfolioHolding
+    from app.services import analyze_cache
+
+    # Redis 잔여 데이터 방지 — LRU 전용 모드로 격리
+    analyze_cache.reset_for_testing()
+    analyze_cache._redis_available = False
 
     fake_base = _make_fake_client(use_portfolio=False)
     fake_portfolio = _make_fake_client(use_portfolio=True)

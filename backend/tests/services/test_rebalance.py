@@ -4,12 +4,12 @@
 """
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from decimal import Decimal
 
 import pytest
 
-from app.schemas.rebalance import RebalanceConstraints, RebalanceAction, TargetAllocation
+from app.schemas.rebalance import RebalanceAction, RebalanceConstraints, TargetAllocation
 from app.services.rebalance import (
     build_expected_allocation,
     build_summary,
@@ -18,7 +18,6 @@ from app.services.rebalance import (
     compute_drift,
     infer_asset_class,
 )
-
 
 # ──────────── 테스트용 Holding 스텁 ────────────
 

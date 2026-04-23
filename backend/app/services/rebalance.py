@@ -10,7 +10,7 @@
 from __future__ import annotations
 
 import logging
-from decimal import Decimal, ROUND_DOWN
+from decimal import ROUND_DOWN, Decimal
 from typing import Any
 
 from app.schemas.rebalance import (
@@ -281,9 +281,6 @@ def build_expected_allocation(
 
     # holdings별 조정된 값 계산
     adjusted_values = {h_id: val for h_id, val in current_values_krw.items()}
-
-    # holding_id → (market, code) 매핑
-    id_to_holding = {int(h.id): h for h in holdings}
 
     for action in actions:
         # code + market으로 holding 찾기

@@ -5,17 +5,13 @@ respx로 외부 HTTP 호출을 모킹 — 실 네트워크 없이 동작.
 """
 from __future__ import annotations
 
-import json
-from datetime import datetime, timezone
-
 import pytest
 import respx
 from httpx import AsyncClient, Response
 
 from app.services.market.base import set_http_client
 from app.services.market.binance import BinanceAdapter
-from app.services.market.cache import cache_get, cache_set, quote_key, set_redis
-from app.services.market.registry import get_adapter
+from app.services.market.cache import cache_get, cache_set, set_redis
 from app.services.market.upbit import UpbitAdapter
 from app.services.market.yahoo import YahooAdapter
 
@@ -327,7 +323,6 @@ class TestCacheHit:
     @pytest.mark.asyncio
     async def test_cache_hit_with_fake_redis(self):
         """캐시 히트 시 저장된 값이 반환된다."""
-        import redis.asyncio as aioredis
 
         # fakeredis 대신 간단한 dict 기반 가짜 redis 구현
         class FakeRedis:

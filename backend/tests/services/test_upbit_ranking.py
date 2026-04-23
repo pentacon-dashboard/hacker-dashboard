@@ -77,7 +77,6 @@ class TestScoreFunction:
 
     def test_krw_bonus(self):
         item_krw = {"market": "KRW-BTC", "korean_name": "비트코인", "english_name": "Bitcoin"}
-        item_btc = {"market": "BTC-ETH", "korean_name": "이더리움", "english_name": "Ethereum"}
         # 동일 조건에서 KRW 마켓이 보너스 +50
         score_krw = _score_upbit(item_krw, "Bitcoin")
         score_btc_pair = _score_upbit(

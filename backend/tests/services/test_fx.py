@@ -5,7 +5,7 @@ import httpx
 import pytest
 import respx
 
-from app.services.fx import FxAdapter, _FALLBACK_RATES
+from app.services.fx import _FALLBACK_RATES, FxAdapter
 
 
 @pytest.fixture
