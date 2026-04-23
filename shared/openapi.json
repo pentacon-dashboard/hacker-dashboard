@@ -1259,6 +1259,110 @@
         }
       }
     },
+    "/copilot/sessions": {
+      "get": {
+        "tags": [
+          "copilot"
+        ],
+        "summary": "세션 히스토리 목록 조회",
+        "description": "저장된 코파일럿 세션 목록을 최근순으로 반환한다. limit/offset 으로 페이지네이션. TTL 만료 세션은 제외.",
+        "operationId": "list_sessions_copilot_sessions_get",
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 20,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 0,
+              "title": "Offset"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/SessionMeta"
+                  },
+                  "title": "Response List Sessions Copilot Sessions Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/copilot/sessions/{session_id}": {
+      "get": {
+        "tags": [
+          "copilot"
+        ],
+        "summary": "세션 상세 조회 (sessions 경로)",
+        "description": "GET /copilot/session/{session_id} 의 alias. /sessions/ 경로로도 동일하게 접근 가능.",
+        "operationId": "get_session_alias_copilot_sessions__session_id__get",
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Session Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SessionResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "세션을 찾을 수 없거나 TTL 만료"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/copilot/session/{session_id}": {
       "get": {
         "tags": [
@@ -1672,6 +1776,164 @@
                   },
                   "type": "object",
                   "title": "Response Get Gainers Losers Watchlist Gainers Losers Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/users/me": {
+      "get": {
+        "tags": [
+          "users"
+        ],
+        "summary": "현재 사용자 정보 조회",
+        "description": "X-User-Id 헤더 기반 fake auth. 헤더 없으면 user_id='demo-user' 로 fallback.",
+        "operationId": "get_me_users_me_get",
+        "parameters": [
+          {
+            "name": "X-User-Id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-User-Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserMe"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/users/me/settings": {
+      "get": {
+        "tags": [
+          "users"
+        ],
+        "summary": "사용자 설정 조회",
+        "description": "현재 사용자의 설정을 반환한다. 없으면 기본값을 생성 후 반환.",
+        "operationId": "get_settings_users_me_settings_get",
+        "parameters": [
+          {
+            "name": "X-User-Id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-User-Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserSettings"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "users"
+        ],
+        "summary": "사용자 설정 부분 업데이트",
+        "description": "partial update. 전달된 필드만 deep-merge 로 반영하고 updated_at 갱신.",
+        "operationId": "patch_settings_users_me_settings_patch",
+        "parameters": [
+          {
+            "name": "X-User-Id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-User-Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UserSettingsPatch"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserSettings"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
                 }
               }
             }
@@ -2168,6 +2430,47 @@
         ],
         "title": "CommodityItem"
       },
+      "ConnectedAccount": {
+        "properties": {
+          "provider": {
+            "type": "string",
+            "enum": [
+              "google",
+              "apple",
+              "kakao",
+              "github"
+            ],
+            "title": "Provider"
+          },
+          "email": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Email"
+          },
+          "connected_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Connected At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "provider"
+        ],
+        "title": "ConnectedAccount"
+      },
       "CopilotPlan": {
         "properties": {
           "plan_id": {
@@ -2280,6 +2583,32 @@
         ],
         "title": "CopilotStep",
         "description": "플랜의 단일 실행 단계."
+      },
+      "DataSettings": {
+        "properties": {
+          "refresh_interval_sec": {
+            "type": "integer",
+            "title": "Refresh Interval Sec",
+            "default": 60
+          },
+          "auto_refresh": {
+            "type": "boolean",
+            "title": "Auto Refresh",
+            "default": true
+          },
+          "auto_backup": {
+            "type": "boolean",
+            "title": "Auto Backup",
+            "default": false
+          },
+          "cache_size_mb": {
+            "type": "integer",
+            "title": "Cache Size Mb",
+            "default": 256
+          }
+        },
+        "type": "object",
+        "title": "DataSettings"
       },
       "DimensionItem": {
         "properties": {
@@ -2942,6 +3271,32 @@
         "title": "MonthlyReturnCell",
         "description": "월간(일간) 수익률 캘린더 셀."
       },
+      "NotificationSettings": {
+        "properties": {
+          "email_alerts": {
+            "type": "boolean",
+            "title": "Email Alerts",
+            "default": true
+          },
+          "push_alerts": {
+            "type": "boolean",
+            "title": "Push Alerts",
+            "default": false
+          },
+          "price_threshold_pct": {
+            "type": "number",
+            "title": "Price Threshold Pct",
+            "default": 5.0
+          },
+          "daily_digest": {
+            "type": "boolean",
+            "title": "Daily Digest",
+            "default": true
+          }
+        },
+        "type": "object",
+        "title": "NotificationSettings"
+      },
       "OhlcBar": {
         "properties": {
           "ts": {
@@ -3517,6 +3872,48 @@
         ],
         "title": "ServiceStatus"
       },
+      "SessionMeta": {
+        "properties": {
+          "session_id": {
+            "type": "string",
+            "title": "Session Id"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "last_turn_at": {
+            "type": "string",
+            "title": "Last Turn At"
+          },
+          "turn_count": {
+            "type": "integer",
+            "title": "Turn Count"
+          },
+          "preview": {
+            "type": "string",
+            "title": "Preview"
+          },
+          "tags": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Tags",
+            "default": []
+          }
+        },
+        "type": "object",
+        "required": [
+          "session_id",
+          "title",
+          "last_turn_at",
+          "turn_count",
+          "preview"
+        ],
+        "title": "SessionMeta",
+        "description": "GET /copilot/sessions 목록 아이템 — 세션별 요약 메타."
+      },
       "SessionResponse": {
         "properties": {
           "session_id": {
@@ -3853,6 +4250,34 @@
         "title": "TargetAllocation",
         "description": "자산군별 목표 비중. 합계 1.0 (±0.001 허용)."
       },
+      "ThemeSettings": {
+        "properties": {
+          "mode": {
+            "type": "string",
+            "enum": [
+              "light",
+              "dark",
+              "system"
+            ],
+            "title": "Mode",
+            "default": "system"
+          },
+          "accent": {
+            "type": "string",
+            "enum": [
+              "violet",
+              "cyan",
+              "blue",
+              "orange",
+              "rose"
+            ],
+            "title": "Accent",
+            "default": "violet"
+          }
+        },
+        "type": "object",
+        "title": "ThemeSettings"
+      },
       "TopListItem": {
         "properties": {
           "rank": {
@@ -4026,6 +4451,175 @@
           "created_at"
         ],
         "title": "UploadValidationResult"
+      },
+      "UserMe": {
+        "properties": {
+          "user_id": {
+            "type": "string",
+            "title": "User Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "email": {
+            "type": "string",
+            "title": "Email"
+          },
+          "avatar_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Avatar Url"
+          }
+        },
+        "type": "object",
+        "required": [
+          "user_id",
+          "name",
+          "email"
+        ],
+        "title": "UserMe"
+      },
+      "UserSettings": {
+        "properties": {
+          "user_id": {
+            "type": "string",
+            "title": "User Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "email": {
+            "type": "string",
+            "title": "Email"
+          },
+          "language": {
+            "type": "string",
+            "enum": [
+              "ko",
+              "en"
+            ],
+            "title": "Language",
+            "default": "ko"
+          },
+          "timezone": {
+            "type": "string",
+            "title": "Timezone",
+            "default": "Asia/Seoul"
+          },
+          "theme": {
+            "$ref": "#/components/schemas/ThemeSettings"
+          },
+          "notifications": {
+            "$ref": "#/components/schemas/NotificationSettings"
+          },
+          "data": {
+            "$ref": "#/components/schemas/DataSettings"
+          },
+          "connected_accounts": {
+            "items": {
+              "$ref": "#/components/schemas/ConnectedAccount"
+            },
+            "type": "array",
+            "title": "Connected Accounts"
+          },
+          "updated_at": {
+            "type": "string",
+            "title": "Updated At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "user_id",
+          "name",
+          "email",
+          "theme",
+          "notifications",
+          "data",
+          "connected_accounts",
+          "updated_at"
+        ],
+        "title": "UserSettings"
+      },
+      "UserSettingsPatch": {
+        "properties": {
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "language": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "ko",
+                  "en"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Language"
+          },
+          "timezone": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Timezone"
+          },
+          "theme": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ThemeSettings"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "notifications": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/NotificationSettings"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "data": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DataSettings"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "title": "UserSettingsPatch"
       },
       "ValidationError": {
         "properties": {
