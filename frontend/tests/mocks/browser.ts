@@ -6,5 +6,6 @@
  */
 import { setupWorker } from "msw/browser";
 import { copilotSseHandler } from "./copilot-sse";
+import { dashboardHandlers } from "./dashboard";
 
-export const worker = setupWorker(copilotSseHandler);
+export const worker = setupWorker(copilotSseHandler, ...dashboardHandlers);
