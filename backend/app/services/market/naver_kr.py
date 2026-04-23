@@ -3,11 +3,15 @@
 비공식 API: GET https://m.stock.naver.com/api/search/all?keyword={q}
 공모전 MVP 허용 범위 내에서 사용.
 네트워크/파싱 에러 시 빈 리스트 반환 (silent fail).
+
+fetch_quote / fetch_ohlc 는 심사 데모용 고정 시드 모드로 동작.
+실 네이버 크롤링은 이번 세션 밖 작업으로 TODO 처리.
 """
 from __future__ import annotations
 
 import logging
-from datetime import datetime, timezone
+import random
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from app.schemas.market import OhlcBar, Quote, SymbolInfo
@@ -17,7 +21,26 @@ logger = logging.getLogger(__name__)
 
 _SEARCH_URL = "https://m.stock.naver.com/api/search/all"
 
-# 스텁 aliases — fetch_quote 용도로만 잔존. 검색은 실 API + aliases 모듈로 처리.
+# ─── 심사 데모용 고정 stub quote 데이터 ───────────────────────────────────────
+# 실 크롤링 전까지 이 값으로 대시보드 / 포트폴리오 / 섹터 히트맵에 노출됨.
+# key: 6자리 종목코드 (문자열)
+_STUB_QUOTES: dict[str, dict[str, Any]] = {
+    "005930": {"price": 72000.0, "change": 400.0, "change_pct": 0.56, "volume": 12345678, "name": "삼성전자"},
+    "000660": {"price": 231000.0, "change": -2500.0, "change_pct": -1.07, "volume": 4567890, "name": "SK하이닉스"},
+    "035420": {"price": 215500.0, "change": 1500.0, "change_pct": 0.70, "volume": 1234567, "name": "NAVER"},
+    "035720": {"price": 51800.0, "change": -200.0, "change_pct": -0.38, "volume": 2345678, "name": "카카오"},
+    "005380": {"price": 245000.0, "change": 3500.0, "change_pct": 1.45, "volume": 987654, "name": "현대차"},
+    "051910": {"price": 385000.0, "change": -5000.0, "change_pct": -1.28, "volume": 543210, "name": "LG화학"},
+    "006400": {"price": 165000.0, "change": 2000.0, "change_pct": 1.23, "volume": 876543, "name": "삼성SDI"},
+    "207940": {"price": 725000.0, "change": 8000.0, "change_pct": 1.12, "volume": 234567, "name": "삼성바이오로직스"},
+    "005490": {"price": 590000.0, "change": -3000.0, "change_pct": -0.51, "volume": 345678, "name": "POSCO홀딩스"},
+    "028260": {"price": 98000.0, "change": 1200.0, "change_pct": 1.24, "volume": 654321, "name": "삼성물산"},
+}
+
+_DEFAULT_STUB_PRICE = 50000.0  # _STUB_QUOTES 에 없는 종목 fallback
+_DEFAULT_STUB_VOLUME = 500000.0
+
+# 스텁 aliases — search_symbols 용도. 검색은 실 API + aliases 모듈로 처리.
 _STUB_SYMBOLS: list[dict[str, str]] = [
     {"symbol": "005930", "name": "삼성전자"},
     {"symbol": "035720", "name": "카카오"},
@@ -163,16 +186,35 @@ class NaverKrAdapter(MarketAdapter):
     market = "naver_kr"
 
     async def fetch_quote(self, symbol: str) -> Quote:
-        """스텁: 실 네트워크 없이 고정 응답 반환."""
-        name = _find_name(symbol)
-        ts = datetime.now(timezone.utc).isoformat()
+        """심사 데모용 고정 stub 응답 반환.
+
+        _STUB_QUOTES 에 있는 종목은 실제 시세 근사값을 반환.
+        없는 종목은 _DEFAULT_STUB_PRICE + 0 변동으로 fallback.
+        TODO: 실 네이버 크롤링 연동 시 이 메서드를 교체.
+        """
+        stub = _STUB_QUOTES.get(symbol)
+        ts = datetime.now(UTC).isoformat()
+
+        if stub is not None:
+            return Quote(
+                symbol=symbol,
+                market=self.market,
+                price=stub["price"],
+                change=stub["change"],
+                change_pct=stub["change_pct"],
+                volume=float(stub["volume"]),
+                currency="KRW",
+                timestamp=ts,
+            )
+
+        # 알 수 없는 심볼 — fallback
         return Quote(
             symbol=symbol,
             market=self.market,
-            price=1.0,  # stub
+            price=_DEFAULT_STUB_PRICE,
             change=0.0,
             change_pct=0.0,
-            volume=None,
+            volume=_DEFAULT_STUB_VOLUME,
             currency="KRW",
             timestamp=ts,
         )
@@ -184,8 +226,56 @@ class NaverKrAdapter(MarketAdapter):
         interval: str = "1d",
         limit: int = 100,
     ) -> list[OhlcBar]:
-        """스텁: 빈 리스트 반환. TODO: 실 API 연동."""
-        return []
+        """심사 데모용 stub OHLC 생성.
+
+        symbol 해시를 시드로 random.Random 을 초기화해
+        재현 가능한 ±2% 랜덤워크 100개 바를 반환.
+        TODO: 실 네이버 크롤링 연동 시 이 메서드를 교체.
+        """
+        stub = _STUB_QUOTES.get(symbol)
+        base_price = stub["price"] if stub is not None else _DEFAULT_STUB_PRICE
+        base_volume = float(stub["volume"]) if stub is not None else _DEFAULT_STUB_VOLUME
+
+        rng = random.Random(hash(symbol))  # noqa: S311 — 보안 목적 아님
+
+        # 100거래일 역산. timedelta(days=i) 로 주말 skip 없이 근사.
+        # 실 거래일 정확도보다 데모 연속성 우선.
+        now = datetime.now(UTC)
+        trading_days: list[datetime] = []
+        offset = 0
+        while len(trading_days) < limit:
+            offset += 1
+            candidate = now - timedelta(days=offset)
+            # 토(5)/일(6) skip
+            if candidate.weekday() < 5:
+                trading_days.append(candidate)
+        # 오래된 날짜 → 최신 날짜 순 정렬
+        trading_days.reverse()
+
+        bars: list[OhlcBar] = []
+        prev_close = base_price
+        for day in trading_days:
+            # ±2% 랜덤워크
+            pct_change = rng.uniform(-0.02, 0.02)
+            close = round(prev_close * (1.0 + pct_change), 0)
+            open_ = round(prev_close * (1.0 + rng.uniform(-0.005, 0.005)), 0)
+            high = round(max(open_, close) * 1.01, 0)
+            low = round(min(open_, close) * 0.99, 0)
+            volume = round(base_volume * rng.uniform(0.7, 1.3), 0)
+
+            bars.append(
+                OhlcBar(
+                    ts=day.replace(hour=0, minute=0, second=0, microsecond=0).isoformat(),
+                    open=open_,
+                    high=high,
+                    low=low,
+                    close=close,
+                    volume=volume,
+                )
+            )
+            prev_close = close
+
+        return bars
 
     async def search_symbols(self, query: str) -> list[SymbolInfo]:
         """네이버 통합 검색 API 호출. 실패 시 빈 리스트 반환."""
@@ -226,6 +316,9 @@ class NaverKrAdapter(MarketAdapter):
 
 
 def _find_name(symbol: str) -> str:
+    stub = _STUB_QUOTES.get(symbol)
+    if stub is not None:
+        return str(stub["name"])
     for item in _STUB_SYMBOLS:
         if item["symbol"] == symbol:
             return item["name"]

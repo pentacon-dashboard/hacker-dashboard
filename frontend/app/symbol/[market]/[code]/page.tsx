@@ -6,6 +6,7 @@ import { useParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { Suspense } from "react";
 import { getOhlc, getQuote, type OhlcBar } from "@/lib/api/symbols";
+import { listHoldings, type HoldingResponse } from "@/lib/api/portfolio";
 import { apiFetch } from "@/lib/api/client";
 import { ApiError } from "@/lib/api/client";
 import { AssetBadge } from "@/components/common/asset-badge";
@@ -20,6 +21,7 @@ import { KeyIssueList, type KeyIssue } from "@/components/symbol/key-issue-list"
 import { SymbolNewsPanel } from "@/components/symbol/symbol-news-panel";
 import { SectionCard } from "@/components/dashboard/section-card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { formatUSD, formatKRW } from "@/lib/utils/format";
 
 const ASSET_CLASS_MAP: Record<string, string> = {
   upbit: "crypto",
@@ -83,7 +85,34 @@ interface IndicatorsResponse {
   signal: "buy" | "hold" | "sell";
 }
 
-function normalizeIndicators(raw: BeIndicatorsRaw, changePct: string, volume: string): IndicatorsResponse {
+function calcMa(ohlc: OhlcBar[], period: number): number | null {
+  if (ohlc.length < period) return null;
+  const slice = ohlc.slice(-period);
+  const sum = slice.reduce((s, b) => s + Number(b.close), 0);
+  return sum / period;
+}
+
+function formatAvgCost(avgCost: string, currency: string): string {
+  const n = Number(avgCost);
+  if (Number.isNaN(n)) return avgCost;
+  if (currency === "KRW") return formatKRW(n);
+  return formatUSD(n);
+}
+
+function formatMa(val: number | null, currency: string): string | null {
+  if (val === null) return null;
+  if (currency === "KRW") return formatKRW(val);
+  return formatUSD(val);
+}
+
+function normalizeIndicators(
+  raw: BeIndicatorsRaw,
+  changePct: string,
+  volume: string,
+  ohlc: OhlcBar[],
+  currentHolding: HoldingResponse | null,
+  currency: string,
+): IndicatorsResponse {
   const lastRsi = raw.metrics.rsi_latest ?? (raw.rsi_14.at(-1)?.v ?? null);
   const lastMacd = raw.metrics.macd_latest ?? (raw.macd.at(-1)?.macd ?? null);
   const lastMacdSig = raw.metrics.macd_signal ?? (raw.macd.at(-1)?.signal ?? null);
@@ -91,12 +120,20 @@ function normalizeIndicators(raw: BeIndicatorsRaw, changePct: string, volume: st
   const lastBolLower = raw.bollinger.lower.at(-1)?.v ?? null;
   const lastSto = raw.stochastic.at(-1)?.k ?? null;
 
+  const ma20Raw = calcMa(ohlc, 20);
+  const ma60Raw = calcMa(ohlc, 60);
+
+  const avgCost =
+    currentHolding != null
+      ? formatAvgCost(currentHolding.avg_cost, currency)
+      : null;
+
   return {
     metrics: {
       change_pct: changePct,
-      avg_cost: null,
-      ma20: null,
-      ma60: null,
+      avg_cost: avgCost,
+      ma20: formatMa(ma20Raw, currency),
+      ma60: formatMa(ma60Raw, currency),
       volume,
       signal: raw.signal,
     },
@@ -168,25 +205,69 @@ export default function SymbolDetailPage() {
     staleTime: 30_000,
   });
 
-  const indicatorsQuery = useQuery<IndicatorsResponse | null>({
-    queryKey: ["symbol", "indicators", decodedMarket, decodedCode, timeframe],
+  const holdingsQuery = useQuery<HoldingResponse[]>({
+    queryKey: ["portfolio", "holdings"],
     queryFn: async () => {
-      const changePct = quoteQuery.data?.change_pct != null ? String(quoteQuery.data.change_pct) : "0";
-      const volume = quoteQuery.data?.volume != null ? String(quoteQuery.data.volume) : "-";
+      try {
+        return await listHoldings();
+      } catch {
+        return [];
+      }
+    },
+    staleTime: 60_000,
+  });
+
+  const assetClass = ASSET_CLASS_MAP[decodedMarket] ?? "macro";
+  const currency = quoteQuery.data?.currency ?? (decodedMarket === "upbit" ? "KRW" : "USD");
+
+  const currentHolding =
+    holdingsQuery.data?.find(
+      (h) => h.market === decodedMarket && h.code === decodedCode,
+    ) ?? null;
+
+  const indicatorsQuery = useQuery<IndicatorsResponse | null>({
+    queryKey: [
+      "symbol",
+      "indicators",
+      decodedMarket,
+      decodedCode,
+      timeframe,
+      quoteQuery.data?.change_pct,
+      quoteQuery.data?.volume,
+      ohlcQuery.data?.length,
+      currentHolding?.avg_cost,
+    ],
+    queryFn: async () => {
+      const quote = quoteQuery.data;
+      const changePct =
+        quote?.change_pct != null
+          ? String(quote.change_pct)
+          : "0";
+      const volumeRaw = quote?.volume;
+      const volumeStr =
+        volumeRaw != null
+          ? formatVolume(Number(volumeRaw), currency)
+          : "-";
+      const ohlc = ohlcQuery.data ?? [];
       try {
         const raw = await apiFetch<BeIndicatorsRaw>(
           `/market/symbol/${encodeURIComponent(decodedMarket)}/${encodeURIComponent(decodedCode)}/indicators?interval=${timeframe}&period=60`,
         );
-        return normalizeIndicators(raw, changePct, volume);
+        return normalizeIndicators(raw, changePct, volumeStr, ohlc, currentHolding, currency);
       } catch {
         // BE 오류 시 stub fallback — 페이지 crash 방지
+        const ma20Raw = calcMa(ohlc, 20);
+        const ma60Raw = calcMa(ohlc, 60);
         return {
           metrics: {
             change_pct: changePct,
-            avg_cost: null,
-            ma20: null,
-            ma60: null,
-            volume,
+            avg_cost:
+              currentHolding != null
+                ? formatAvgCost(currentHolding.avg_cost, currency)
+                : null,
+            ma20: formatMa(ma20Raw, currency),
+            ma60: formatMa(ma60Raw, currency),
+            volume: volumeStr,
             signal: "hold" as const,
           },
           rsi_14: null,
@@ -201,9 +282,6 @@ export default function SymbolDetailPage() {
     },
     staleTime: 30_000,
   });
-
-  const assetClass = ASSET_CLASS_MAP[decodedMarket] ?? "macro";
-  const currency = quoteQuery.data?.currency ?? (decodedMarket === "upbit" ? "KRW" : "USD");
 
   const indicatorBundle: IndicatorBundle | null = indicatorsQuery.data
     ? {

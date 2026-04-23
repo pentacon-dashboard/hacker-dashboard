@@ -1,13 +1,15 @@
 "use client";
 
+import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { User } from "lucide-react";
 
-interface GeneralSettingsProps {
+export interface GeneralSettingsProps {
   displayName?: string;
   email?: string;
   language?: string;
   timezone?: string;
+  onChange?: (patch: Partial<Omit<GeneralSettingsProps, "onChange">>) => void;
 }
 
 export function GeneralSettings({
@@ -15,7 +17,12 @@ export function GeneralSettings({
   email = "demo@example.com",
   language = "ko",
   timezone = "Asia/Seoul",
+  onChange,
 }: GeneralSettingsProps) {
+  const [localName, setLocalName] = useState(displayName);
+  const [localLanguage, setLocalLanguage] = useState(language);
+  const [localTimezone, setLocalTimezone] = useState(timezone);
+
   return (
     <Card data-testid="general-settings">
       <CardHeader className="pb-3">
@@ -33,19 +40,23 @@ export function GeneralSettings({
           <input
             id="gs-name"
             type="text"
-            defaultValue={displayName}
-            disabled
-            className="w-full rounded-md border border-input bg-muted/50 px-3 py-1.5 text-sm text-foreground opacity-70 cursor-not-allowed"
+            value={localName}
+            onChange={(e) => {
+              setLocalName(e.target.value);
+              onChange?.({ displayName: e.target.value });
+            }}
+            className="w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           />
         </div>
         <div className="space-y-1.5">
           <label className="text-xs font-medium text-muted-foreground" htmlFor="gs-email">
             이메일
           </label>
+          {/* 이메일은 user_id 참조 안전을 위해 편집 불가 */}
           <input
             id="gs-email"
             type="email"
-            defaultValue={email}
+            value={email}
             disabled
             className="w-full rounded-md border border-input bg-muted/50 px-3 py-1.5 text-sm text-foreground opacity-70 cursor-not-allowed"
           />
@@ -57,9 +68,12 @@ export function GeneralSettings({
             </label>
             <select
               id="gs-lang"
-              defaultValue={language}
-              disabled
-              className="w-full rounded-md border border-input bg-muted/50 px-3 py-1.5 text-sm text-foreground opacity-70 cursor-not-allowed"
+              value={localLanguage}
+              onChange={(e) => {
+                setLocalLanguage(e.target.value);
+                onChange?.({ language: e.target.value });
+              }}
+              className="w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
               <option value="ko">한국어</option>
               <option value="en">English</option>
@@ -71,9 +85,12 @@ export function GeneralSettings({
             </label>
             <select
               id="gs-tz"
-              defaultValue={timezone}
-              disabled
-              className="w-full rounded-md border border-input bg-muted/50 px-3 py-1.5 text-sm text-foreground opacity-70 cursor-not-allowed"
+              value={localTimezone}
+              onChange={(e) => {
+                setLocalTimezone(e.target.value);
+                onChange?.({ timezone: e.target.value });
+              }}
+              className="w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
               <option value="Asia/Seoul">Asia/Seoul (KST)</option>
               <option value="America/New_York">America/New_York (EST)</option>
@@ -81,9 +98,6 @@ export function GeneralSettings({
             </select>
           </div>
         </div>
-        <p className="text-xs text-muted-foreground/60">
-          * 계정 정보 변경은 관리자에게 문의하세요 (데모 모드)
-        </p>
       </CardContent>
     </Card>
   );

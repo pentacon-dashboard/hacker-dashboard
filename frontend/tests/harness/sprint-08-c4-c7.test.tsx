@@ -7,6 +7,14 @@
 import React from "react";
 import { render, screen, fireEvent } from "@testing-library/react";
 import { describe, it, expect, vi } from "vitest";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+
+function makeWrapper() {
+  const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  return function Wrapper({ children }: { children: React.ReactNode }) {
+    return <QueryClientProvider client={qc}>{children}</QueryClientProvider>;
+  };
+}
 
 // ─── C-4: 시장 분석 ─────────────────────────────────────────────────────────
 
@@ -281,10 +289,20 @@ describe("C-7: GeneralSettings", () => {
     expect(screen.getByDisplayValue("Demo User")).toBeInTheDocument();
   });
 
-  it("입력 필드가 비활성화 상태다 (데모 모드)", () => {
+  it("이메일 필드는 비활성화, 이름은 편집 가능하다", () => {
     render(<GeneralSettings />);
     const nameInput = screen.getByDisplayValue("Demo User");
-    expect(nameInput).toBeDisabled();
+    const emailInput = screen.getByDisplayValue("demo@example.com");
+    expect(nameInput).not.toBeDisabled();
+    expect(emailInput).toBeDisabled();
+  });
+
+  it("이름 변경 시 onChange 콜백을 호출한다", () => {
+    const onChange = vi.fn();
+    render(<GeneralSettings onChange={onChange} />);
+    const nameInput = screen.getByDisplayValue("Demo User");
+    fireEvent.change(nameInput, { target: { value: "New Name" } });
+    expect(onChange).toHaveBeenCalledWith({ displayName: "New Name" });
   });
 
   it("커스텀 이름을 표시한다", () => {
@@ -346,18 +364,18 @@ describe("C-7: NotificationSettings", () => {
 
 describe("C-7: SystemInfo", () => {
   it("버전 정보를 표시한다", () => {
-    render(<SystemInfo version="0.3.1-test" />);
+    render(<SystemInfo version="0.3.1-test" />, { wrapper: makeWrapper() });
     expect(screen.getByTestId("system-info")).toBeInTheDocument();
     expect(screen.getByText("0.3.1-test")).toBeInTheDocument();
   });
 
   it("API 상태 정상 표시", () => {
-    render(<SystemInfo apiStatus="healthy" />);
+    render(<SystemInfo apiStatus="healthy" />, { wrapper: makeWrapper() });
     expect(screen.getByText("정상")).toBeInTheDocument();
   });
 
   it("캐시 비우기 버튼이 작동한다", () => {
-    render(<SystemInfo />);
+    render(<SystemInfo />, { wrapper: makeWrapper() });
     const btn = screen.getByTestId("clear-cache-btn");
     fireEvent.click(btn);
     expect(screen.getByText("캐시 삭제 완료")).toBeInTheDocument();

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { Info, Trash2, CheckCircle, AlertCircle } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -19,12 +20,22 @@ export function SystemInfo({
   cacheSizeMb = 42,
 }: SystemInfoProps) {
   const [cacheCleared, setCacheCleared] = useState(false);
+  const queryClient = useQueryClient();
 
   const formattedBuild = buildTime
     ? new Date(buildTime).toLocaleString("ko-KR")
     : new Date().toLocaleString("ko-KR");
 
   function handleClearCache() {
+    // TanStack Query 캐시 전체 제거
+    queryClient.clear();
+    // localStorage 에서 대시보드 데이터 캐시 제거 (next-themes 'theme' 키는 유지)
+    if (typeof window !== "undefined") {
+      const keysToKeep = ["theme"];
+      Object.keys(localStorage).forEach((k) => {
+        if (!keysToKeep.includes(k)) localStorage.removeItem(k);
+      });
+    }
     setCacheCleared(true);
     setTimeout(() => setCacheCleared(false), 3000);
   }
