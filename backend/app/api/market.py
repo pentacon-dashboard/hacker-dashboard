@@ -209,7 +209,7 @@ async def list_watchlist() -> list[WatchlistItemResponse]:
     result = []
     for item in _watchlist.values():
         pnl = sparkline_7d(str(item["market"]), str(item["code"]))
-        result.append(WatchlistItemResponse(**item, pnl_7d=pnl))  # type: ignore[arg-type]
+        result.append(WatchlistItemResponse(**item, pnl_7d=pnl))
     return result
 
 
@@ -243,7 +243,7 @@ async def add_watchlist(body: WatchlistItemCreate) -> WatchlistItemResponse:
         "created_at": ts,
     }
     _watchlist[item_id] = record
-    return WatchlistItemResponse(**record)  # type: ignore[arg-type]
+    return WatchlistItemResponse(**record)
 
 
 @router.delete(
@@ -449,22 +449,22 @@ async def get_symbol_indicators(
 @router.get("/indices", response_model=list[IndexSnapshot])
 async def get_market_indices() -> list[IndexSnapshot]:
     """KOSPI/KOSDAQ/S&P/NASDAQ/DOW/VIX/USD-KRW 7종 스냅샷 (stub)."""
-    return [IndexSnapshot(**row) for row in fixtures.INDEX_SNAPSHOTS]  # type: ignore[arg-type]
+    return [IndexSnapshot(**row) for row in fixtures.INDEX_SNAPSHOTS]
 
 
 @router.get("/sectors", response_model=list[SectorKpi])
 async def get_market_sectors() -> list[SectorKpi]:
     """11 GICS 섹터 KPI (stub)."""
-    return [SectorKpi(**row) for row in fixtures.SECTOR_KPIS]  # type: ignore[arg-type]
+    return [SectorKpi(**row) for row in fixtures.SECTOR_KPIS]
 
 
 @router.get("/commodities", response_model=list[CommodityItem])
 async def get_market_commodities() -> list[CommodityItem]:
     """원유/금/은/구리/천연가스 5종 (stub)."""
-    return [CommodityItem(**row) for row in fixtures.COMMODITIES]  # type: ignore[arg-type]
+    return [CommodityItem(**row) for row in fixtures.COMMODITIES]
 
 
 @router.get("/world-heatmap", response_model=list[WorldHeatmapRegion])
 async def get_world_heatmap() -> list[WorldHeatmapRegion]:
     """20개국 세계 히트맵 (stub)."""
-    return [WorldHeatmapRegion(**row) for row in fixtures.WORLD_HEATMAP]  # type: ignore[arg-type]
+    return [WorldHeatmapRegion(**row) for row in fixtures.WORLD_HEATMAP]
