@@ -7,70 +7,47 @@ import { cn } from "@/lib/utils";
 import { useUiStore } from "@/stores/ui";
 import { Sheet } from "@/components/ui/sheet";
 
+import {
+  LayoutDashboard,
+  Eye,
+  Briefcase,
+  LineChart as LineChartIcon,
+  Newspaper,
+  Settings,
+} from "lucide-react";
+
+const ICON_CLASS = "h-[18px] w-[18px]";
+
 const navItems = [
   {
     href: "/",
     label: "대시보드",
-    icon: (
-      <svg
-        xmlns="http://www.w3.org/2000/svg"
-        width="18"
-        height="18"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        aria-hidden="true"
-      >
-        <rect width="7" height="9" x="3" y="3" rx="1" />
-        <rect width="7" height="5" x="14" y="3" rx="1" />
-        <rect width="7" height="9" x="14" y="12" rx="1" />
-        <rect width="7" height="5" x="3" y="16" rx="1" />
-      </svg>
-    ),
+    icon: <LayoutDashboard className={ICON_CLASS} aria-hidden="true" />,
   },
   {
     href: "/watchlist",
     label: "워치리스트",
-    icon: (
-      <svg
-        xmlns="http://www.w3.org/2000/svg"
-        width="18"
-        height="18"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        aria-hidden="true"
-      >
-        <path d="M2.586 17.414A2 2 0 0 0 2 18.828V21a1 1 0 0 0 1 1h3a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h1a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h.172a2 2 0 0 0 1.414-.586l.814-.814a6.5 6.5 0 1 0-4-4z" />
-        <circle cx="16.5" cy="7.5" r=".5" fill="currentColor" />
-      </svg>
-    ),
+    icon: <Eye className={ICON_CLASS} aria-hidden="true" />,
   },
   {
     href: "/portfolio",
     label: "포트폴리오",
-    icon: (
-      <svg
-        xmlns="http://www.w3.org/2000/svg"
-        width="18"
-        height="18"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        aria-hidden="true"
-      >
-        <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" />
-      </svg>
-    ),
+    icon: <Briefcase className={ICON_CLASS} aria-hidden="true" />,
+  },
+  {
+    href: "/analyze",
+    label: "분석",
+    icon: <LineChartIcon className={ICON_CLASS} aria-hidden="true" />,
+  },
+  {
+    href: "/news",
+    label: "뉴스",
+    icon: <Newspaper className={ICON_CLASS} aria-hidden="true" />,
+  },
+  {
+    href: "/settings",
+    label: "설정",
+    icon: <Settings className={ICON_CLASS} aria-hidden="true" />,
   },
 ];
 
