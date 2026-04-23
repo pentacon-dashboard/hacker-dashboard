@@ -33,7 +33,6 @@ import {
   type SnapshotResponse,
 } from "@/lib/api/portfolio";
 import {
-  formatKRW,
   formatKRWCompact,
   formatPct,
   signedColorClass,
@@ -194,7 +193,11 @@ export default function DashboardHome() {
             <KpiCard
               label="일간 변동"
               value={formatPct(summary.daily_change_pct, { signed: true })}
-              delta={formatKRW(summary.daily_change_krw)}
+              delta={(() => {
+                const krw = Number(summary.daily_change_krw);
+                const compact = formatKRWCompact(krw);
+                return krw > 0 ? `+${compact}` : compact;
+              })()}
               deltaValue={Number(summary.daily_change_pct)}
               icon={<TrendingUp className="h-4 w-4" />}
               accent="green"
