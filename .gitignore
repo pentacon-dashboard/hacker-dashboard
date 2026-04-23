@@ -27,8 +27,14 @@ build/
 # Frontend tooling
 frontend/.vercel/
 frontend/playwright-report/
+frontend/e2e/playwright-report/
+frontend/e2e/playwright-results.xml
 frontend/test-results/
 frontend/coverage/
+
+# Local IDE / MCP 설정 — 사용자별이라 공유 금지
+.mcp.json
+.claude/settings.local.json
 
 # Env & secrets
 .env
