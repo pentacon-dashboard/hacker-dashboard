@@ -12,7 +12,7 @@ Domain Gate — 도메인 sanity check.
 """
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 from app.agents.state import AgentState
@@ -46,7 +46,7 @@ def _to_date(v: Any) -> datetime | None:
     except ValueError:
         return None
     if dt.tzinfo is None:
-        dt = dt.replace(tzinfo=timezone.utc)
+        dt = dt.replace(tzinfo=UTC)
     return dt
 
 
@@ -94,7 +94,7 @@ def _check_holdings(rows: list[dict[str, Any]]) -> str | None:
 
 def _check_dates(rows: list[dict[str, Any]]) -> str | None:
     dates: list[tuple[int, datetime]] = []
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     for i, row in enumerate(rows):
         if not isinstance(row, dict):
             continue

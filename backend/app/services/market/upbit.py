@@ -8,7 +8,7 @@ API 문서: https://docs.upbit.com/reference/
 """
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 from app.schemas.market import OhlcBar, Quote, SymbolInfo
@@ -175,7 +175,7 @@ def _parse_upbit_ts(date_kst: str, time_kst: str) -> str:
         # KST = UTC+9
         from datetime import timedelta
         dt = datetime.strptime(dt_str, "%Y%m%d %H%M%S")
-        dt_utc = dt.replace(tzinfo=timezone.utc) - timedelta(hours=9)
+        dt_utc = dt.replace(tzinfo=UTC) - timedelta(hours=9)
         return dt_utc.isoformat()
     except (ValueError, TypeError):
-        return datetime.now(timezone.utc).isoformat()
+        return datetime.now(UTC).isoformat()

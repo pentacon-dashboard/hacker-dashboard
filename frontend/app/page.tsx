@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Wallet,
   TrendingUp,
@@ -28,6 +28,7 @@ import { NetworthChart } from "@/components/portfolio/networth-chart";
 import { NewsPanel } from "@/components/dashboard/news-panel";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useLocale } from "@/lib/i18n/locale-provider";
+import { useDataSettings } from "@/lib/hooks/use-data-settings";
 import {
   getPortfolioSummary,
   getSnapshots,
@@ -71,6 +72,10 @@ export default function DashboardHome() {
   const [error, setError] = useState<string | null>(null);
   const [period, setPeriod] = useState<PeriodKey>("1M");
   const { t } = useLocale();
+  const { refreshIntervalMs, autoRefresh } = useDataSettings();
+
+  // Stable ref to the fetch function so the interval can always call the latest version
+  const fetchRef = useRef<(() => void) | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -79,33 +84,48 @@ export default function DashboardHome() {
     setSnapshots(null);
 
     const days = PERIOD_DAYS[period];
-    const to = new Date();
-    const from = new Date();
-    from.setDate(to.getDate() - days);
-    const fromStr = formatDate(from);
-    const toStr = formatDate(to);
 
-    Promise.all([
-      getPortfolioSummary(days),
-      getSnapshots(fromStr, toStr).catch(() => [] as SnapshotResponse[]),
-    ])
-      .then(([s, snaps]) => {
-        if (cancelled) return;
-        setSummary(s);
-        setSnapshots(snaps);
-      })
-      .catch((err) => {
-        if (!cancelled) {
-          setError(
-            err instanceof Error ? err.message : "대시보드 데이터 로드 실패",
-          );
-        }
-      });
+    function doFetch() {
+      const to = new Date();
+      const from = new Date();
+      from.setDate(to.getDate() - days);
+      const fromStr = formatDate(from);
+      const toStr = formatDate(to);
+
+      Promise.all([
+        getPortfolioSummary(days),
+        getSnapshots(fromStr, toStr).catch(() => [] as SnapshotResponse[]),
+      ])
+        .then(([s, snaps]) => {
+          if (cancelled) return;
+          setSummary(s);
+          setSnapshots(snaps);
+        })
+        .catch((err) => {
+          if (!cancelled) {
+            setError(
+              err instanceof Error ? err.message : "대시보드 데이터 로드 실패",
+            );
+          }
+        });
+    }
+
+    fetchRef.current = doFetch;
+    doFetch();
 
     return () => {
       cancelled = true;
     };
   }, [period]);
+
+  // Auto-refresh interval — responds to settings changes without re-fetching from scratch
+  useEffect(() => {
+    if (!autoRefresh) return;
+    const id = setInterval(() => {
+      fetchRef.current?.();
+    }, refreshIntervalMs);
+    return () => clearInterval(id);
+  }, [autoRefresh, refreshIntervalMs]);
 
   const allocationSlices = useMemo<AllocationSlice[]>(() => {
     if (!summary) return [];

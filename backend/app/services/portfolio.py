@@ -10,7 +10,7 @@ compute_summary(holdings) → PortfolioSummary:
 from __future__ import annotations
 
 import logging
-from decimal import Decimal, ROUND_HALF_UP
+from decimal import ROUND_HALF_UP, Decimal
 from typing import Any
 
 from sqlalchemy import select
@@ -237,7 +237,7 @@ async def build_portfolio_context(
     user_id: str = "demo",
     target_market: str | None = None,
     target_code: str | None = None,
-) -> "Any | None":
+) -> Any | None:
     """DB에서 holdings + 최근 스냅샷을 읽어 PortfolioContext 구성.
 
     target_market/code가 주어지고 holdings에 일치하는 항목이 있으면 matched_holding 세팅.
@@ -332,8 +332,9 @@ async def build_portfolio_context(
 
 async def get_latest_snapshot(session: AsyncSession, user_id: str = "demo") -> Any | None:
     """가장 최근 포트폴리오 스냅샷 조회."""
-    from app.db.models import PortfolioSnapshot
     from sqlalchemy import desc
+
+    from app.db.models import PortfolioSnapshot
 
     result = await session.execute(
         select(PortfolioSnapshot)
@@ -348,8 +349,9 @@ async def get_prev_snapshot(session: AsyncSession, user_id: str = "demo") -> Any
     """전일(오늘 제외) 포트폴리오 스냅샷 조회 — 일간 변동 계산용."""
     from datetime import date
 
-    from app.db.models import PortfolioSnapshot
     from sqlalchemy import desc
+
+    from app.db.models import PortfolioSnapshot
 
     today = date.today()
     result = await session.execute(
@@ -373,8 +375,9 @@ async def get_period_snapshot(
     """
     from datetime import date, timedelta
 
-    from app.db.models import PortfolioSnapshot
     from sqlalchemy import desc
+
+    from app.db.models import PortfolioSnapshot
 
     anchor = date.today() - timedelta(days=period_days)
     result = await session.execute(

@@ -17,6 +17,7 @@ import {
   getWatchlistGainersLosers,
 } from "@/lib/api/watchlist";
 import { useLocale } from "@/lib/i18n/locale-provider";
+import { useDataSettings } from "@/lib/hooks/use-data-settings";
 
 export const dynamic = "force-dynamic";
 
@@ -31,22 +32,27 @@ function KpiSkeleton() {
 
 export default function WatchlistPage() {
   const { t } = useLocale();
+  const { refreshIntervalMs, autoRefresh } = useDataSettings();
+
   const summaryQuery = useQuery({
     queryKey: ["watchlist", "summary"],
     queryFn: getWatchlistSummary,
     staleTime: 30_000,
+    refetchInterval: autoRefresh ? refreshIntervalMs : false,
   });
 
   const popularQuery = useQuery({
     queryKey: ["watchlist", "popular"],
     queryFn: getWatchlistPopular,
     staleTime: 60_000,
+    refetchInterval: autoRefresh ? refreshIntervalMs : false,
   });
 
   const gainersLosersQuery = useQuery({
     queryKey: ["watchlist", "gainers-losers"],
     queryFn: getWatchlistGainersLosers,
     staleTime: 60_000,
+    refetchInterval: autoRefresh ? refreshIntervalMs : false,
   });
 
   const summary = summaryQuery.data;

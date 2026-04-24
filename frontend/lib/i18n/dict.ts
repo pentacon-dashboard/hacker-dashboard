@@ -233,6 +233,17 @@ export const DICT: Dict = {
   },
   "symbol.routerEvidence": { ko: "Router 분석 근거", en: "Router Evidence" },
   "symbol.viewEvidence": { ko: "근거 보기", en: "View evidence" },
+  "symbol.routerEvidence.title": { ko: "Router 분석 근거", en: "Router Evidence" },
+  "symbol.routerEvidence.body": {
+    ko: "Router 는 입력 데이터/질의를 분석해 적절한 Analyzer 를 동적 선택합니다. 선택된 Analyzer 는 자산군별 특화 분석 체인(LangGraph 서브그래프)을 실행하며, 3단 품질 게이트(Schema / Domain / Critique)를 통과한 응답만 UI 에 렌더됩니다.",
+    en: "The Router analyzes the input data and query to dynamically select the appropriate Analyzer. The selected Analyzer runs an asset-class-specific analysis chain (LangGraph subgraph), and only responses that pass the 3-stage quality gate (Schema / Domain / Critique) are rendered in the UI.",
+  },
+  "symbol.routerEvidence.selectedAnalyzer": { ko: "선택된 Analyzer", en: "Selected Analyzer" },
+  "symbol.routerEvidence.symbolCode": { ko: "심볼", en: "Symbol" },
+  "symbol.routerEvidence.gates": { ko: "3단 품질 게이트", en: "3-Stage Quality Gate" },
+  "symbol.routerEvidence.gateSchema": { ko: "Schema pass", en: "Schema pass" },
+  "symbol.routerEvidence.gateDomain": { ko: "Domain pass", en: "Domain pass" },
+  "symbol.routerEvidence.gateCritique": { ko: "Critique pass", en: "Critique pass" },
   "symbol.metric.changePct": { ko: "등락율", en: "Change %" },
   "symbol.metric.avgCost": { ko: "평단가", en: "Avg Cost" },
   "symbol.metric.volume": { ko: "거래량", en: "Volume" },
@@ -551,6 +562,34 @@ export const DICT: Dict = {
   "portfolio.calendar.high": { ko: "높음", en: "High" },
   "portfolio.aiInsight.generating": { ko: "AI 분석 중...", en: "Generating AI insight..." },
   "portfolio.aiInsight.empty": { ko: "AI 인사이트 데이터 없음", en: "No AI insight data" },
+
+  // Portfolio sector heatmap — BE may return Korean or English sector names
+  // These supplement the market.sector.* keys used in market-analyze
+  "portfolio.sector.technology": { ko: "정보기술", en: "Technology" },
+  "portfolio.sector.semiconductor": { ko: "반도체", en: "Semiconductor" },
+  "portfolio.sector.financials": { ko: "금융", en: "Financials" },
+  "portfolio.sector.healthcare": { ko: "헬스케어", en: "Healthcare" },
+  "portfolio.sector.energy": { ko: "에너지", en: "Energy" },
+  "portfolio.sector.consumer": { ko: "소비재", en: "Consumer Disc." },
+  "portfolio.sector.industrials": { ko: "산업재", en: "Industrials" },
+  "portfolio.sector.materials": { ko: "소재", en: "Materials" },
+  "portfolio.sector.utilities": { ko: "유틸리티", en: "Utilities" },
+  "portfolio.sector.realEstate": { ko: "부동산", en: "Real Estate" },
+  "portfolio.sector.communication": { ko: "통신", en: "Communication" },
+  "portfolio.sector.crypto": { ko: "암호화폐", en: "Crypto" },
+  "portfolio.sector.tech": { ko: "기술", en: "Tech" },
+
+  // Symbol names — Korean ↔ English for watchlist popular items
+  "symbol.name.005930": { ko: "삼성전자", en: "Samsung Electronics" },
+  "symbol.name.000660": { ko: "SK하이닉스", en: "SK Hynix" },
+  "symbol.name.035420": { ko: "NAVER", en: "NAVER" },
+  "symbol.name.005380": { ko: "현대자동차", en: "Hyundai Motor" },
+  "symbol.name.051910": { ko: "LG화학", en: "LG Chem" },
+  "symbol.name.006400": { ko: "삼성SDI", en: "Samsung SDI" },
+  "symbol.name.012330": { ko: "현대모비스", en: "Hyundai Mobis" },
+  "symbol.name.207940": { ko: "삼성바이오로직스", en: "Samsung Biologics" },
+  "symbol.name.068270": { ko: "셀트리온", en: "Celltrion" },
+  "symbol.name.028260": { ko: "삼성물산", en: "Samsung C&T" },
 
   // Asset pie chart labels
   "asset.label.stock_kr": { ko: "국내주식", en: "KR Stocks" },

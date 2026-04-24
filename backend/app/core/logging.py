@@ -9,7 +9,6 @@ from __future__ import annotations
 
 import logging
 import sys
-import uuid
 from contextvars import ContextVar
 
 # 요청 컨텍스트 — 코루틴별 격리

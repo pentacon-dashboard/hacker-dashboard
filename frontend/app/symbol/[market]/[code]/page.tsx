@@ -12,7 +12,7 @@ import { ApiError } from "@/lib/api/client";
 import { AssetBadge } from "@/components/common/asset-badge";
 import { ChartWrapper } from "@/components/symbol/chart-wrapper";
 import { RealtimePrice } from "@/components/symbol/realtime-price";
-import { RouterReasonPanel } from "@/components/symbol/router-reason-panel";
+import { RouterEvidenceModal } from "@/components/symbol/router-evidence-modal";
 import { SymbolAnalysisSection } from "@/components/symbol/symbol-analysis-section";
 import { TimeframeTabs, type Timeframe } from "@/components/symbol/timeframe-tabs";
 import { IndicatorGrid, type IndicatorMetrics } from "@/components/symbol/indicator-grid";
@@ -424,7 +424,7 @@ export default function SymbolDetailPage() {
           </SectionCard>
 
           {/* Router 결정 근거 */}
-          <RouterReasonPanel />
+          <RouterEvidenceModal market={decodedMarket} code={decodedCode} />
         </aside>
       </div>
 

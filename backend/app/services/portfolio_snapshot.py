@@ -11,13 +11,12 @@ import asyncio
 import logging
 from datetime import date, timedelta
 from decimal import Decimal
-from typing import Any
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.models import Holding, PortfolioSnapshot
-from app.services.portfolio import _d, _fmt, _classify_asset, compute_summary
+from app.services.portfolio import compute_summary
 
 logger = logging.getLogger(__name__)
 

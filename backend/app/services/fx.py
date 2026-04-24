@@ -53,14 +53,14 @@ _mem_store: dict[str, float] = {}
 class FxAdapter:
     """환율 어댑터 싱글턴."""
 
-    _instance: "FxAdapter | None" = None
+    _instance: FxAdapter | None = None
 
     def __init__(self, http_client: httpx.AsyncClient | None = None) -> None:
         self._client = http_client
         self._redis: Any | None = None  # aioredis.Redis — 지연 주입
 
     @classmethod
-    def get_instance(cls) -> "FxAdapter":
+    def get_instance(cls) -> FxAdapter:
         if cls._instance is None:
             cls._instance = cls()
         return cls._instance

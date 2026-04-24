@@ -35,7 +35,9 @@ describe("SectorHeatmap", () => {
 
   it("버튼에 aria-label이 설정된다", () => {
     render(<SectorHeatmap tiles={[MOCK_TILES[0]!]} />);
-    const btn = screen.getByRole("button", { name: /Tech 섹터 수익률/ });
-    expect(btn).toBeInTheDocument();
+    // aria-label uses translated sector name; use data-testid for reliable selection
+    const btn = screen.getByTestId("heatmap-tile-Tech");
+    expect(btn).toHaveAttribute("aria-label");
+    expect(btn.getAttribute("aria-label")).toMatch(/섹터 수익률/);
   });
 });

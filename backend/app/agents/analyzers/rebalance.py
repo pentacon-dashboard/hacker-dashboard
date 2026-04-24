@@ -16,7 +16,6 @@ from __future__ import annotations
 import json
 import logging
 import re
-from decimal import Decimal
 from typing import Any
 
 from app.agents.llm import (

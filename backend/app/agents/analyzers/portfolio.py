@@ -33,7 +33,6 @@ from app.agents.analyzers.base import BaseAnalyzer
 from app.agents.llm import call_llm, extract_json, select_model
 from app.agents.state import AgentState
 
-
 # ──────────────────────── Pure metric helpers ────────────────────────
 
 

@@ -9,7 +9,7 @@ from __future__ import annotations
 from decimal import Decimal
 from typing import Literal
 
-from pydantic import BaseModel, Field, StrictBool, StrictFloat, field_validator, model_validator
+from pydantic import BaseModel, Field, StrictBool, StrictFloat, field_validator
 
 ActionType = Literal["buy", "sell"]
 AssetClassKey = Literal["stock_kr", "stock_us", "crypto", "cash", "fx"]

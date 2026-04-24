@@ -59,7 +59,7 @@ class AnalyzerOutput(BaseModel):
         return v
 
     @model_validator(mode="after")
-    def _require_text(self) -> "AnalyzerOutput":
+    def _require_text(self) -> AnalyzerOutput:
         if not (self.summary or self.headline):
             raise ValueError("either 'summary' or 'headline' must be present")
         return self

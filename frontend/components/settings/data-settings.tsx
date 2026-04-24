@@ -75,15 +75,21 @@ export function DataSettings({ config, onChange }: DataSettingsProps) {
           />
         </div>
 
-        <div className="flex items-center justify-between rounded-lg border border-border bg-muted/20 px-3 py-2">
+        <div className="flex items-center justify-between rounded-lg border border-border bg-muted/20 px-3 py-2 opacity-60">
           <div>
-            <p className="text-xs font-medium">{t("settings.data.autoBackup")}</p>
+            <p className="flex items-center gap-1.5 text-xs font-medium">
+              {t("settings.data.autoBackup")}
+              <span className="rounded bg-amber-100 px-1 py-0.5 text-[9px] font-bold uppercase tracking-wide text-amber-700 dark:bg-amber-900/40 dark:text-amber-300">
+                {t("common.demo")}
+              </span>
+            </p>
             <p className="text-xs text-muted-foreground">{t("settings.data.autoBackupDesc")}</p>
           </div>
           <Switch
             checked={config.auto_backup}
             onCheckedChange={(v) => update("auto_backup", v)}
             aria-label={t("settings.data.autoBackup")}
+            disabled
           />
         </div>
 

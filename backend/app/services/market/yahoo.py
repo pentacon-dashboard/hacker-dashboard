@@ -6,7 +6,7 @@ API:
 """
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 from app.schemas.market import OhlcBar, Quote, SymbolInfo
@@ -126,9 +126,9 @@ def _extract_chart(data: Any) -> dict[str, Any]:
 
 def _epoch_to_iso(epoch: int) -> str:
     try:
-        return datetime.fromtimestamp(epoch, tz=timezone.utc).isoformat()
+        return datetime.fromtimestamp(epoch, tz=UTC).isoformat()
     except (ValueError, OSError):
-        return datetime.now(timezone.utc).isoformat()
+        return datetime.now(UTC).isoformat()
 
 
 def _map_asset_class(qtype: str) -> str:

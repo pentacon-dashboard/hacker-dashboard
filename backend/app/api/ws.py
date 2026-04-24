@@ -13,9 +13,8 @@ GET /ws/ticks?markets=upbit:KRW-BTC,binance:BTCUSDT
 from __future__ import annotations
 
 import asyncio
-import json
 import logging
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 
@@ -71,7 +70,7 @@ async def ws_ticks(websocket: WebSocket, markets: str = "") -> None:
                 try:
                     async with httpx.AsyncClient(timeout=3.0) as client:
                         resp = await client.get(
-                            f"https://api.upbit.com/v1/ticker",
+                            "https://api.upbit.com/v1/ticker",
                             params={"markets": sym},
                         )
                         data = resp.json()
@@ -83,7 +82,7 @@ async def ws_ticks(websocket: WebSocket, markets: str = "") -> None:
                                 "price": float(t.get("trade_price", 0)),
                                 "change_pct": float(t.get("signed_change_rate", 0)) * 100,
                                 "volume": float(t.get("acc_trade_volume_24h", 0)),
-                                "ts": datetime.now(timezone.utc).isoformat(),
+                                "ts": datetime.now(UTC).isoformat(),
                             }
                             await websocket.send_json(tick)
                 except Exception as exc:
@@ -101,7 +100,7 @@ async def ws_ticks(websocket: WebSocket, markets: str = "") -> None:
                 try:
                     async with httpx.AsyncClient(timeout=3.0) as client:
                         resp = await client.get(
-                            f"https://api.binance.com/api/v3/ticker/24hr",
+                            "https://api.binance.com/api/v3/ticker/24hr",
                             params={"symbol": sym},
                         )
                         data = resp.json()
@@ -111,7 +110,7 @@ async def ws_ticks(websocket: WebSocket, markets: str = "") -> None:
                             "price": float(data.get("lastPrice", 0)),
                             "change_pct": float(data.get("priceChangePercent", 0)),
                             "volume": float(data.get("volume", 0)),
-                            "ts": datetime.now(timezone.utc).isoformat(),
+                            "ts": datetime.now(UTC).isoformat(),
                         }
                         await websocket.send_json(tick)
                 except Exception as exc:
@@ -136,7 +135,7 @@ async def ws_ticks(websocket: WebSocket, markets: str = "") -> None:
         while True:
             try:
                 await asyncio.wait_for(websocket.receive_text(), timeout=30)
-            except asyncio.TimeoutError:
+            except TimeoutError:
                 # keepalive ping
                 await websocket.send_json({"type": "ping"})
     except (WebSocketDisconnect, Exception):

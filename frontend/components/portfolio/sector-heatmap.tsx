@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useLocale } from "@/lib/i18n/locale-provider";
+import { translateSectorName } from "@/lib/i18n/map";
 
 export interface SectorHeatmapTile {
   sector: string;
@@ -46,6 +47,7 @@ interface TooltipState {
 
 export function SectorHeatmap({ tiles }: SectorHeatmapProps) {
   const { t } = useLocale();
+  const translateSector = (name: string) => translateSectorName(name, t);
   const [tooltip, setTooltip] = useState<TooltipState | null>(null);
 
   if (tiles.length === 0) {
@@ -91,9 +93,9 @@ export function SectorHeatmap({ tiles }: SectorHeatmapProps) {
               style={{ backgroundColor: bg }}
               onMouseEnter={(e) => handleMouseEnter(e, tile)}
               onMouseLeave={handleMouseLeave}
-              aria-label={`${tile.sector} 섹터 수익률 ${pnlNum > 0 ? "+" : ""}${pnlNum.toFixed(2)}%`}
+              aria-label={`${translateSector(tile.sector)} 섹터 수익률 ${pnlNum > 0 ? "+" : ""}${pnlNum.toFixed(2)}%`}
             >
-              <p className="truncate text-[10px] font-semibold">{tile.sector}</p>
+              <p className="truncate text-[10px] font-semibold">{translateSector(tile.sector)}</p>
               <p className="mt-0.5 text-xs font-bold tabular-nums">
                 {pnlNum > 0 ? "+" : ""}
                 {pnlNum.toFixed(2)}%
@@ -109,7 +111,7 @@ export function SectorHeatmap({ tiles }: SectorHeatmapProps) {
           style={{ left: tooltip.x, top: tooltip.y - 8 }}
           role="tooltip"
         >
-          <p className="font-semibold">{tooltip.tile.sector}</p>
+          <p className="font-semibold">{translateSector(tooltip.tile.sector)}</p>
           <p className="text-muted-foreground">{t("portfolio.sector.tooltip.weight")}: {Number(tooltip.tile.weight_pct).toFixed(1)}%</p>
           <p>
             {t("portfolio.sector.tooltip.return")}:{" "}

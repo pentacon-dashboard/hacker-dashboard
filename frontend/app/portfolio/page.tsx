@@ -14,6 +14,7 @@ import { SectorHeatmap } from "@/components/portfolio/sector-heatmap";
 import { MonthlyReturnCalendar } from "@/components/portfolio/monthly-return-calendar";
 import { AiInsightCard } from "@/components/portfolio/ai-insight-card";
 import { useLocale } from "@/lib/i18n/locale-provider";
+import { useDataSettings } from "@/lib/hooks/use-data-settings";
 import {
   getPortfolioSummary,
   getSectorHeatmap,
@@ -31,16 +32,20 @@ export const dynamic = "force-dynamic";
 
 export default function PortfolioPage() {
   const { t } = useLocale();
+  const { refreshIntervalMs, autoRefresh } = useDataSettings();
+
   const summaryQuery = useQuery({
     queryKey: ["portfolio", "summary"],
     queryFn: () => getPortfolioSummary(),
     staleTime: 30_000,
+    refetchInterval: autoRefresh ? refreshIntervalMs : false,
   });
 
   const heatmapQuery = useQuery({
     queryKey: ["portfolio", "sectors", "heatmap"],
     queryFn: getSectorHeatmap,
     staleTime: 60_000,
+    refetchInterval: autoRefresh ? refreshIntervalMs : false,
   });
 
   const calendarQuery = useQuery({

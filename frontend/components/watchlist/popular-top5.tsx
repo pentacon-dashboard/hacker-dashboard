@@ -2,6 +2,7 @@
 
 import { TrendingUp, TrendingDown } from "lucide-react";
 import { useLocale } from "@/lib/i18n/locale-provider";
+import { translateSymbolName } from "@/lib/i18n/map";
 
 export interface TopListItem {
   rank: number;
@@ -17,6 +18,8 @@ interface PopularTop5Props {
 
 export function PopularTop5({ items, title }: PopularTop5Props) {
   const { t } = useLocale();
+  const translateName = (code: string, name: string) =>
+    translateSymbolName(code, name, t);
   const resolvedTitle = title ?? t("watchlist.popularTop5");
   if (items.length === 0) {
     return (
@@ -48,7 +51,7 @@ export function PopularTop5({ items, title }: PopularTop5Props) {
                 </span>
                 <div className="min-w-0">
                   <p className="truncate text-xs font-medium">{item.ticker}</p>
-                  <p className="truncate text-[10px] text-muted-foreground">{item.name}</p>
+                  <p className="truncate text-[10px] text-muted-foreground">{translateName(item.ticker, item.name)}</p>
                 </div>
               </div>
               <span
