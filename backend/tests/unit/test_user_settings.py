@@ -1,22 +1,19 @@
-"""Unit tests — user_settings 서비스 (sprint-08 B-6)."""
+"""Unit tests — user_settings 서비스 (migration 006: DB 기반).
+
+SQLite in-memory DB 를 사용해 실 Postgres 없이 테스트한다.
+db_session fixture 는 conftest.py 에서 제공한다.
+"""
 from __future__ import annotations
 
 import pytest
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.schemas.user import DataSettings, NotificationSettings, ThemeSettings, UserSettingsPatch
 from app.services import user_settings as svc
 
 
-@pytest.fixture(autouse=True)
-def reset():
-    """각 테스트 전후 in-memory store 초기화."""
-    svc.reset_store()
-    yield
-    svc.reset_store()
-
-
 class TestDefaultFactory:
-    def test_default_has_expected_fields(self):
+    def test_default_has_expected_fields(self) -> None:
         s = svc.default_settings("u1")
         assert s.user_id == "u1"
         assert s.name == "Demo User"
@@ -30,7 +27,7 @@ class TestDefaultFactory:
         assert len(s.connected_accounts) >= 1
         assert s.updated_at  # ISO 문자열 존재
 
-    def test_default_idempotent_different_users(self):
+    def test_default_idempotent_different_users(self) -> None:
         s1 = svc.default_settings("u1")
         s2 = svc.default_settings("u2")
         assert s1.user_id == "u1"
@@ -38,72 +35,89 @@ class TestDefaultFactory:
 
 
 class TestGetSettings:
-    def test_get_creates_default_on_first_call(self):
-        s = svc.get_settings("new-user")
+    @pytest.mark.asyncio
+    async def test_get_creates_default_on_first_call(self, db_session: AsyncSession) -> None:
+        s = await svc.get_settings(db_session, "new-user")
         assert s.user_id == "new-user"
 
-    def test_get_returns_same_instance_on_second_call(self):
-        s1 = svc.get_settings("u1")
-        s2 = svc.get_settings("u1")
+    @pytest.mark.asyncio
+    async def test_get_returns_same_instance_on_second_call(self, db_session: AsyncSession) -> None:
+        s1 = await svc.get_settings(db_session, "u1")
+        s2 = await svc.get_settings(db_session, "u1")
+        # 두 번째 호출은 SELECT only — updated_at 동일
         assert s1.updated_at == s2.updated_at
 
-    def test_get_independent_per_user(self):
-        s1 = svc.get_settings("u1")
-        s2 = svc.get_settings("u2")
+    @pytest.mark.asyncio
+    async def test_get_independent_per_user(self, db_session: AsyncSession) -> None:
+        s1 = await svc.get_settings(db_session, "u1")
+        s2 = await svc.get_settings(db_session, "u2")
         assert s1.user_id != s2.user_id
 
 
 class TestPatchSettings:
-    def test_empty_patch_does_not_change_values(self):
-        original = svc.get_settings("u1")
-        patched = svc.patch_settings("u1", UserSettingsPatch())
+    @pytest.mark.asyncio
+    async def test_empty_patch_does_not_change_values(self, db_session: AsyncSession) -> None:
+        original = await svc.get_settings(db_session, "u1")
+        patched = await svc.patch_settings(db_session, "u1", UserSettingsPatch())
         assert patched.name == original.name
         assert patched.language == original.language
         assert patched.timezone == original.timezone
 
-    def test_empty_patch_updates_updated_at(self):
-        svc.get_settings("u1")
-        patched = svc.patch_settings("u1", UserSettingsPatch())
-        # updated_at 은 갱신되어야 한다 (동일할 수도 있으나 필드가 존재해야 함)
+    @pytest.mark.asyncio
+    async def test_empty_patch_updates_updated_at(self, db_session: AsyncSession) -> None:
+        await svc.get_settings(db_session, "u1")
+        patched = await svc.patch_settings(db_session, "u1", UserSettingsPatch())
+        # updated_at 은 ISO 문자열이 존재해야 한다
         assert patched.updated_at
 
-    def test_patch_name_only(self):
-        svc.get_settings("u1")
-        patched = svc.patch_settings("u1", UserSettingsPatch(name="Alice"))
+    @pytest.mark.asyncio
+    async def test_patch_name_only(self, db_session: AsyncSession) -> None:
+        await svc.get_settings(db_session, "u1")
+        patched = await svc.patch_settings(db_session, "u1", UserSettingsPatch(name="Alice"))
         assert patched.name == "Alice"
         assert patched.language == "ko"  # 변경 안 됨
 
-    def test_patch_language(self):
-        svc.get_settings("u1")
-        patched = svc.patch_settings("u1", UserSettingsPatch(language="en"))
+    @pytest.mark.asyncio
+    async def test_patch_language(self, db_session: AsyncSession) -> None:
+        await svc.get_settings(db_session, "u1")
+        patched = await svc.patch_settings(db_session, "u1", UserSettingsPatch(language="en"))
         assert patched.language == "en"
 
-    def test_patch_timezone(self):
-        svc.get_settings("u1")
-        patched = svc.patch_settings("u1", UserSettingsPatch(timezone="America/New_York"))
+    @pytest.mark.asyncio
+    async def test_patch_timezone(self, db_session: AsyncSession) -> None:
+        await svc.get_settings(db_session, "u1")
+        patched = await svc.patch_settings(
+            db_session, "u1", UserSettingsPatch(timezone="America/New_York")
+        )
         assert patched.timezone == "America/New_York"
 
-    def test_nested_theme_patch(self):
-        svc.get_settings("u1")
-        patched = svc.patch_settings(
+    @pytest.mark.asyncio
+    async def test_nested_theme_patch(self, db_session: AsyncSession) -> None:
+        await svc.get_settings(db_session, "u1")
+        patched = await svc.patch_settings(
+            db_session,
             "u1",
             UserSettingsPatch(theme=ThemeSettings(mode="dark", accent="cyan")),
         )
         assert patched.theme.mode == "dark"
         assert patched.theme.accent == "cyan"
 
-    def test_nested_notifications_patch(self):
-        svc.get_settings("u1")
-        patched = svc.patch_settings(
+    @pytest.mark.asyncio
+    async def test_nested_notifications_patch(self, db_session: AsyncSession) -> None:
+        await svc.get_settings(db_session, "u1")
+        patched = await svc.patch_settings(
+            db_session,
             "u1",
             UserSettingsPatch(notifications=NotificationSettings(email_alerts=False)),
         )
         assert patched.notifications.email_alerts is False
         assert patched.notifications.push_alerts is False  # 기본값 유지
 
-    def test_full_patch(self):
-        svc.get_settings("u1")
-        patched = svc.patch_settings(
+    @pytest.mark.asyncio
+    async def test_full_patch(self, db_session: AsyncSession) -> None:
+        await svc.get_settings(db_session, "u1")
+        patched = await svc.patch_settings(
+            db_session,
             "u1",
             UserSettingsPatch(
                 name="Bob",

@@ -164,3 +164,57 @@ class WatchlistAlert(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )
+
+
+# ---------------------------------------------------------------------------
+# migration 006: UserSettings DB 영속화
+# ---------------------------------------------------------------------------
+
+
+class UserSettings(Base):
+    """사용자 설정 — uvicorn 재시작 후에도 유지되어야 하는 모든 설정 값.
+
+    user_id: 데모 환경에서는 'demo-user' 고정. 실 운영 시 OAuth sub 값.
+    JSONB 컬럼(theme/notifications/data/connected_accounts)은 deep merge 패턴으로 PATCH 처리.
+    """
+
+    __tablename__ = "user_settings"
+
+    user_id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    name: Mapped[str] = mapped_column(String(128), nullable=False, default="Demo User")
+    email: Mapped[str] = mapped_column(String(256), nullable=False, default="demo@demo.com")
+    language: Mapped[str] = mapped_column(String(8), nullable=False, default="ko")
+    timezone: Mapped[str] = mapped_column(String(64), nullable=False, default="Asia/Seoul")
+    # JSONB 컬럼 — dict 타입으로 매핑
+    theme: Mapped[dict] = mapped_column(
+        JSONB,
+        nullable=False,
+        default=lambda: {"mode": "system", "accent": "violet"},
+    )
+    notifications: Mapped[dict] = mapped_column(
+        JSONB,
+        nullable=False,
+        default=lambda: {
+            "email_alerts": True,
+            "push_alerts": False,
+            "price_threshold_pct": 5.0,
+            "daily_digest": True,
+        },
+    )
+    data: Mapped[dict] = mapped_column(
+        JSONB,
+        nullable=False,
+        default=lambda: {
+            "refresh_interval_sec": 60,
+            "auto_refresh": True,
+            "auto_backup": False,
+            "cache_size_mb": 256,
+        },
+    )
+    connected_accounts: Mapped[list] = mapped_column(JSONB, nullable=False, default=list)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        server_default=func.now(),
+        onupdate=func.now(),
+    )

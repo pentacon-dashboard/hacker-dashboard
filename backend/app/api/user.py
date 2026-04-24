@@ -1,15 +1,18 @@
-"""User API 라우터 — sprint-08 B-6.
+"""User API 라우터 — migration 006: DB 영속화.
 
 GET  /users/me             → UserMe
-GET  /users/me/settings    → UserSettings
-PATCH /users/me/settings   → UserSettings
+GET  /users/me/settings    → UserSettings  (DB 조회, 없으면 default INSERT)
+PATCH /users/me/settings   → UserSettings  (DB UPDATE, deep merge)
 
 인증 없음: X-User-Id 헤더 기반 fake auth. 헤더 없으면 "demo-user" default.
+변경 이유: in-memory store 대신 Postgres session 을 Depends 로 주입해 영속화.
 """
 from __future__ import annotations
 
-from fastapi import APIRouter, Header
+from fastapi import APIRouter, Depends, Header
+from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.db.session import get_db
 from app.schemas.user import UserMe, UserSettings, UserSettingsPatch
 from app.services import user_settings as svc
 
@@ -49,13 +52,14 @@ async def get_me(
     "/me/settings",
     response_model=UserSettings,
     summary="사용자 설정 조회",
-    description="현재 사용자의 설정을 반환한다. 없으면 기본값을 생성 후 반환.",
+    description="현재 사용자의 설정을 DB 에서 반환한다. 없으면 기본값 행을 INSERT 후 반환.",
 )
 async def get_settings(
     x_user_id: str | None = Header(default=None, alias="X-User-Id"),
+    db: AsyncSession = Depends(get_db),
 ) -> UserSettings:
     user_id = _resolve_user_id(x_user_id)
-    return svc.get_settings(user_id)
+    return await svc.get_settings(db, user_id)
 
 
 @router.patch(
@@ -67,6 +71,7 @@ async def get_settings(
 async def patch_settings(
     body: UserSettingsPatch,
     x_user_id: str | None = Header(default=None, alias="X-User-Id"),
+    db: AsyncSession = Depends(get_db),
 ) -> UserSettings:
     user_id = _resolve_user_id(x_user_id)
-    return svc.patch_settings(user_id, body)
+    return await svc.patch_settings(db, user_id, body)

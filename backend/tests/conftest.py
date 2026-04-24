@@ -285,6 +285,21 @@ def _create_tables_sqlite(conn: Any) -> None:
         UniqueConstraint("user_id", "snapshot_date", name="uq_snapshot_user_date"),
     )
 
+    Table(
+        "user_settings",
+        metadata,
+        Column("user_id", String(64), primary_key=True),
+        Column("name", String(128), nullable=False),
+        Column("email", String(256), nullable=False),
+        Column("language", String(8), nullable=False),
+        Column("timezone", String(64), nullable=False),
+        Column("theme", JSON, nullable=False),
+        Column("notifications", JSON, nullable=False),
+        Column("data", JSON, nullable=False),
+        Column("connected_accounts", JSON, nullable=False),
+        Column("updated_at", DateTime(timezone=True), nullable=False),
+    )
+
     metadata.create_all(conn)
 
 
