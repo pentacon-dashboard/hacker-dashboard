@@ -36,7 +36,8 @@ describe("KpiCard", () => {
       { accent: "blue", expectSubstring: "blue" },
       { accent: "amber", expectSubstring: "amber" },
       { accent: "rose", expectSubstring: "rose" },
-      { accent: "violet", expectSubstring: "violet" },
+      // violet accent 는 테마 accent 를 따라가도록 bg-primary 토큰 매핑됨 (accent 팔레트 반영)
+      { accent: "violet", expectSubstring: "primary" },
       { accent: "slate", expectSubstring: "slate" },
     ];
     for (const { accent, expectSubstring } of cases) {

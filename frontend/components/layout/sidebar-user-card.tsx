@@ -29,7 +29,7 @@ export function SidebarUserCard({ collapsed = false }: SidebarUserCardProps) {
     >
       {/* 아바타 */}
       <div
-        className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-violet-600 text-xs font-bold text-white"
+        className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-bold text-primary-foreground"
         aria-hidden="true"
       >
         {STUB_USER.initial}

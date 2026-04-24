@@ -146,9 +146,9 @@ export function DateRangePicker() {
               row: "flex mt-0.5",
               cell: "w-8 text-center text-sm p-0",
               day: "h-7 w-7 rounded-lg text-xs font-medium hover:bg-muted flex items-center justify-center mx-auto transition-colors",
-              day_selected: "bg-violet-600 text-white hover:bg-violet-700",
-              day_range_middle: "rounded-none bg-violet-600/20 text-violet-400",
-              day_today: "font-bold text-violet-400",
+              day_selected: "bg-primary text-primary-foreground hover:bg-primary/90",
+              day_range_middle: "rounded-none bg-primary/20 text-primary",
+              day_today: "font-bold text-primary",
               day_outside: "text-muted-foreground/40",
               day_disabled: "text-muted-foreground/30 cursor-not-allowed",
             }}

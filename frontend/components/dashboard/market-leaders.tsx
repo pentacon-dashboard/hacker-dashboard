@@ -28,7 +28,7 @@ interface MarketLeadersProps {
 }
 
 const PASTEL_BG: string[] = [
-  "bg-violet-500/10 dark:bg-violet-500/15",
+  "bg-primary/10 dark:bg-primary/15",
   "bg-blue-500/10 dark:bg-blue-500/15",
   "bg-emerald-500/10 dark:bg-emerald-500/15",
   "bg-amber-500/10 dark:bg-amber-500/15",

@@ -23,17 +23,17 @@ export function LogoBadge({ collapsed = false, className }: LogoBadgeProps) {
       aria-label="Hacker Dashboard 로고"
     >
       {collapsed ? (
-        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-violet-600 shadow-sm">
-          <span className="text-xs font-black tracking-wider text-white">
+        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary shadow-sm">
+          <span className="text-xs font-black tracking-wider text-primary-foreground">
             HD
           </span>
         </div>
       ) : (
-        <div className="flex flex-col items-center justify-center rounded-xl bg-violet-600 px-3 py-1.5 shadow-sm">
-          <span className="text-[10px] font-black tracking-[0.2em] text-white/90 leading-none">
+        <div className="flex flex-col items-center justify-center rounded-xl bg-primary px-3 py-1.5 shadow-sm">
+          <span className="text-[10px] font-black tracking-[0.2em] text-primary-foreground/90 leading-none">
             HACKER
           </span>
-          <span className="text-[8px] font-semibold tracking-[0.25em] text-violet-200 leading-none mt-0.5">
+          <span className="text-[8px] font-semibold tracking-[0.25em] text-primary-foreground/70 leading-none mt-0.5">
             DASHBOARD
           </span>
         </div>

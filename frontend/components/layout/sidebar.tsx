@@ -90,7 +90,7 @@ function NavContent({
               "flex items-center gap-3 rounded-xl px-2.5 py-2 text-sm font-medium transition-colors",
               "hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
               isActive
-                ? "bg-violet-600/20 text-violet-400 dark:bg-violet-600/20 dark:text-violet-300"
+                ? "bg-primary/15 text-primary dark:bg-primary/20 dark:text-primary"
                 : "text-muted-foreground hover:text-foreground",
             )}
             aria-current={isActive ? "page" : undefined}
