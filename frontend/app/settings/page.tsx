@@ -8,6 +8,7 @@ import { DataSettings, type DataConfig } from "@/components/settings/data-settin
 import { ConnectedAccounts, type ConnectedAccountsConfig } from "@/components/settings/connected-accounts";
 import { SystemInfo } from "@/components/settings/system-info";
 import { API_BASE } from "@/lib/api/client";
+import { useTheme, type Accent } from "@/hooks/use-theme";
 
 // BE /users/me/settings 실제 스키마 — system 필드 없음
 interface UserSettings {
@@ -35,8 +36,9 @@ function resolveDisplayName(s: UserSettings): string {
   return s.display_name ?? s.name ?? "Demo User";
 }
 
-function resolveAccentColor(s: UserSettings): string {
-  return s.theme.accent ?? "violet";
+function resolveAccentColor(s: UserSettings): Accent {
+  const v = s.theme.accent ?? "violet";
+  return isValidAccent(v) ? v : "violet";
 }
 
 function resolveThemeMode(s: UserSettings): string {
@@ -82,20 +84,32 @@ const DEFAULT_SETTINGS: UserSettings = {
   },
 };
 
+function isValidAccent(v: string): v is Accent {
+  return ["violet", "cyan", "blue", "orange", "rose"].includes(v);
+}
+
 export default function SettingsPage() {
   const [settings, setSettings] = useState<UserSettings>(DEFAULT_SETTINGS);
   const [loading, setLoading] = useState(true);
+  const { setAccent } = useTheme();
 
   useEffect(() => {
     // TODO: BE γ-sprint 완료 후 실 엔드포인트로 swap (현재 MSW stub 사용)
     fetch(`${API_BASE}/users/me/settings`)
       .then((res) => res.ok ? res.json() : Promise.reject(res.status))
-      .then((data: UserSettings) => setSettings(data))
+      .then((data: UserSettings) => {
+        setSettings(data);
+        // BE 에 저장된 accent 를 전역 ThemeContext 와 동기화 (CSS 변수 즉시 반영)
+        const beAccent = data.theme?.accent;
+        if (beAccent && isValidAccent(beAccent)) {
+          setAccent(beAccent);
+        }
+      })
       .catch(() => {
         // MSW 없는 환경에서는 default 사용
       })
       .finally(() => setLoading(false));
-  }, []);
+  }, [setAccent]);
 
   const patchSettings = useCallback(
     async (patch: Partial<UserSettings>) => {

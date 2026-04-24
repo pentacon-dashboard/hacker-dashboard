@@ -11,3 +11,21 @@ if (typeof window.ResizeObserver === "undefined") {
     disconnect() {}
   };
 }
+
+// jsdom 에서 matchMedia 미구현 — ThemeProvider 의 system 테마 감지용 mock
+if (typeof window.matchMedia !== "function") {
+  Object.defineProperty(window, "matchMedia", {
+    writable: true,
+    configurable: true,
+    value: (query: string) => ({
+      matches: false,
+      media: query,
+      onchange: null,
+      addListener: () => {},
+      removeListener: () => {},
+      addEventListener: () => {},
+      removeEventListener: () => {},
+      dispatchEvent: () => false,
+    }),
+  });
+}

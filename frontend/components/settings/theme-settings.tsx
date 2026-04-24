@@ -1,6 +1,7 @@
 "use client";
 
-import { useTheme } from "next-themes";
+import { useTheme } from "@/hooks/use-theme";
+import type { Accent } from "@/hooks/use-theme";
 import { Palette, Sun, Moon, Monitor } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
@@ -12,20 +13,22 @@ const THEMES = [
 ] as const;
 
 const ACCENT_COLORS = [
-  { value: "violet", label: "보라", bg: "bg-violet-500" },
-  { value: "cyan", label: "청록", bg: "bg-cyan-500" },
-  { value: "blue", label: "파랑", bg: "bg-blue-500" },
-  { value: "orange", label: "주황", bg: "bg-orange-500" },
-  { value: "rose", label: "분홍", bg: "bg-rose-500" },
-] as const;
+  { value: "violet" as const, label: "보라", bg: "bg-violet-500" },
+  { value: "cyan" as const, label: "청록", bg: "bg-cyan-500" },
+  { value: "blue" as const, label: "파랑", bg: "bg-blue-500" },
+  { value: "orange" as const, label: "주황", bg: "bg-orange-500" },
+  { value: "rose" as const, label: "분홍", bg: "bg-rose-500" },
+];
 
 interface ThemeSettingsProps {
-  accentColor?: string;
-  onAccentChange?: (color: string) => void;
+  // parent 가 BE 동기화를 원할 때 사용 — 내부 CSS 반영은 hook 이 자체 처리
+  accentColor?: Accent;
+  onAccentChange?: (color: Accent) => void;
 }
 
-export function ThemeSettings({ accentColor = "violet", onAccentChange }: ThemeSettingsProps) {
-  const { theme, setTheme } = useTheme();
+export function ThemeSettings({ accentColor, onAccentChange }: ThemeSettingsProps) {
+  const { theme, setTheme, accent: ctxAccent, setAccent } = useTheme();
+  const activeAccent = accentColor ?? ctxAccent;
 
   return (
     <Card data-testid="theme-settings">
@@ -65,16 +68,21 @@ export function ThemeSettings({ accentColor = "violet", onAccentChange }: ThemeS
             {ACCENT_COLORS.map((color) => (
               <button
                 key={color.value}
-                onClick={() => onAccentChange?.(color.value)}
+                onClick={() => {
+                  // 로컬 CSS 변수 즉시 반영
+                  setAccent(color.value);
+                  // 부모(설정 페이지)가 BE PATCH 를 담당
+                  onAccentChange?.(color.value);
+                }}
                 className={cn(
                   "h-7 w-7 rounded-full transition-all focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-1",
                   color.bg,
-                  accentColor === color.value
+                  activeAccent === color.value
                     ? "ring-2 ring-white ring-offset-2 dark:ring-offset-background scale-110"
                     : "opacity-60 hover:opacity-100",
                 )}
                 aria-label={`${color.label} 색상`}
-                aria-pressed={accentColor === color.value}
+                aria-pressed={activeAccent === color.value}
                 data-testid={`accent-${color.value}`}
               />
             ))}

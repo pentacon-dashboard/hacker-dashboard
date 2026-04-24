@@ -272,6 +272,7 @@ describe("C-6: AnalyzerConfigCard", () => {
 
 import { GeneralSettings } from "@/components/settings/general-settings";
 import { ThemeSettings } from "@/components/settings/theme-settings";
+import { ThemeProvider } from "@/components/common/theme-provider";
 import { NotificationSettings, type NotificationConfig } from "@/components/settings/notification-settings";
 import { SystemInfo } from "@/components/settings/system-info";
 import { ConnectedAccounts, type ConnectedAccountsConfig } from "@/components/settings/connected-accounts";
@@ -312,8 +313,11 @@ describe("C-7: GeneralSettings", () => {
 });
 
 describe("C-7: ThemeSettings", () => {
+  // ThemeSettings 는 ThemeProvider 컨텍스트(useTheme)에 의존
+  const withProvider = (ui: React.ReactElement) => <ThemeProvider>{ui}</ThemeProvider>;
+
   it("3개 테마 버튼을 렌더한다", () => {
-    render(<ThemeSettings />);
+    render(withProvider(<ThemeSettings />));
     expect(screen.getByTestId("theme-settings")).toBeInTheDocument();
     expect(screen.getByTestId("theme-btn-dark")).toBeInTheDocument();
     expect(screen.getByTestId("theme-btn-light")).toBeInTheDocument();
@@ -321,7 +325,7 @@ describe("C-7: ThemeSettings", () => {
   });
 
   it("5개 색상 팔레트 버튼을 렌더한다", () => {
-    render(<ThemeSettings accentColor="violet" />);
+    render(withProvider(<ThemeSettings accentColor="violet" />));
     expect(screen.getByTestId("accent-violet")).toBeInTheDocument();
     expect(screen.getByTestId("accent-cyan")).toBeInTheDocument();
     expect(screen.getByTestId("accent-blue")).toBeInTheDocument();
@@ -329,7 +333,7 @@ describe("C-7: ThemeSettings", () => {
 
   it("색상 변경 콜백이 호출된다", () => {
     const onChange = vi.fn();
-    render(<ThemeSettings onAccentChange={onChange} />);
+    render(withProvider(<ThemeSettings onAccentChange={onChange} />));
     fireEvent.click(screen.getByTestId("accent-cyan"));
     expect(onChange).toHaveBeenCalledWith("cyan");
   });

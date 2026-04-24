@@ -1,11 +1,11 @@
 "use client";
 
-import { useThemeContext, type ThemeMode } from "@/components/common/theme-provider";
+import { useThemeContext, type ThemeMode, type Accent } from "@/components/common/theme-provider";
 
-export type { ThemeMode };
+export type { ThemeMode, Accent };
 
 export function useTheme() {
-  const { theme, setTheme, resolvedTheme, mounted } = useThemeContext();
+  const { theme, setTheme, resolvedTheme, accent, setAccent, mounted } = useThemeContext();
 
   const isDark = resolvedTheme === "dark";
 
@@ -21,6 +21,8 @@ export function useTheme() {
     resolvedTheme,
     isDark,
     cycleTheme,
+    accent,
+    setAccent,
     mounted,
   };
 }
