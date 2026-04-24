@@ -10,6 +10,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useLocale } from "@/lib/i18n/locale-provider";
 
 interface PreviewTableProps {
   columns?: string[];
@@ -18,10 +19,11 @@ interface PreviewTableProps {
 }
 
 export function PreviewTable({ columns, rows, loading }: PreviewTableProps) {
+  const { t } = useLocale();
   return (
     <Card data-testid="preview-table">
       <CardHeader className="pb-3">
-        <CardTitle className="text-sm font-semibold">3. 데이터 미리보기 (상위 5행)</CardTitle>
+        <CardTitle className="text-sm font-semibold">{t("upload.section.preview")}</CardTitle>
       </CardHeader>
       <CardContent className="p-0">
         {loading && (
@@ -34,7 +36,7 @@ export function PreviewTable({ columns, rows, loading }: PreviewTableProps) {
 
         {!loading && (!columns || columns.length === 0) && (
           <div className="flex min-h-[80px] items-center justify-center text-sm text-muted-foreground px-6 py-4">
-            검증 완료 후 미리보기가 표시됩니다
+            {t("upload.preview.pending")}
           </div>
         )}
 

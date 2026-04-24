@@ -1,5 +1,7 @@
 "use client";
 
+import { useLocale } from "@/lib/i18n/locale-provider";
+
 interface RiskGaugeProps {
   /** 0~100 범위의 리스크 점수 */
   score: number;
@@ -15,15 +17,17 @@ function riskColor(score: number): string {
   return "#10b981"; // emerald-500
 }
 
-function riskBand(score: number): string {
-  if (score >= 66) return "높음";
-  if (score >= 33) return "보통";
-  return "양호";
+function bandKey(score: number): string {
+  if (score >= 66) return "dashboard.risk.high";
+  if (score >= 33) return "dashboard.risk.medium";
+  return "dashboard.risk.low";
 }
 
 export function RiskGauge({ score, valueLabel, caption }: RiskGaugeProps) {
+  const { t } = useLocale();
   const clamped = Math.max(0, Math.min(100, score));
   const stroke = riskColor(clamped);
+  const band = t(bandKey(clamped));
 
   // 반원 게이지: 180도 호. SVG path arc 계산.
   const size = 200;
@@ -40,7 +44,7 @@ export function RiskGauge({ score, valueLabel, caption }: RiskGaugeProps) {
     <div
       className="flex flex-col items-center justify-center"
       role="img"
-      aria-label={`리스크 점수 ${clamped.toFixed(1)}%, ${riskBand(clamped)}`}
+      aria-label={`${t("dashboard.concentrationRisk")} ${clamped.toFixed(1)}%, ${band}`}
       data-testid="risk-gauge"
     >
       <svg
@@ -74,7 +78,7 @@ export function RiskGauge({ score, valueLabel, caption }: RiskGaugeProps) {
           {valueLabel ?? `${clamped.toFixed(1)}%`}
         </div>
         <div className="mt-1 text-xs text-muted-foreground">
-          {caption ?? `집중도 ${riskBand(clamped)}`}
+          {caption ?? `${t("dashboard.risk.label")} ${band}`}
         </div>
       </div>
     </div>

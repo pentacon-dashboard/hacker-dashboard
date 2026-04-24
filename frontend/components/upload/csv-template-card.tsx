@@ -5,32 +5,19 @@ import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { API_BASE } from "@/lib/api/client";
-
-const FAQ_ITEMS = [
-  {
-    q: "어떤 CSV 형식을 지원하나요?",
-    a: "date, symbol, quantity, price, currency 컬럼을 포함한 CSV 파일을 지원합니다. 컬럼 순서는 무관하며, 헤더 행이 반드시 포함되어야 합니다.",
-  },
-  {
-    q: "분석에 얼마나 걸리나요?",
-    a: "보통 5초 이내에 분석이 완료됩니다. Router → 스키마 → 도메인 → AI self-critique 4단계 게이트를 거쳐 대시보드가 자동 생성됩니다.",
-  },
-  {
-    q: "지원하는 자산 유형은?",
-    a: "주식(국내·미국), 암호화폐(업비트·바이낸스), ETF, 환율 포지션을 지원합니다. AI가 CSV를 분석하여 적절한 Analyzer를 자동 선택합니다.",
-  },
-  {
-    q: "오류/경고 행이 있으면 분석이 가능한가요?",
-    a: "오류 행은 분석에서 제외되고, 경고 행은 포함됩니다. 오류율이 50% 초과 시 분석이 차단됩니다.",
-  },
-  {
-    q: "데이터는 안전하게 처리되나요?",
-    a: "업로드된 파일은 분석 완료 후 24시간 내 자동 삭제됩니다. 실거래 API 키나 개인 식별 정보를 포함하지 마세요.",
-  },
-];
+import { useLocale } from "@/lib/i18n/locale-provider";
 
 export function CsvTemplateCard() {
+  const { t } = useLocale();
   const [openIdx, setOpenIdx] = useState<number | null>(null);
+
+  const FAQ_ITEMS = [
+    { q: t("upload.faq.q1"), a: t("upload.faq.a1") },
+    { q: t("upload.faq.q2"), a: t("upload.faq.a2") },
+    { q: t("upload.faq.q3"), a: t("upload.faq.a3") },
+    { q: t("upload.faq.q4"), a: t("upload.faq.a4") },
+    { q: t("upload.faq.q5"), a: t("upload.faq.a5") },
+  ];
 
   function handleDownload() {
     window.open(`${API_BASE}/upload/template`, "_blank");
@@ -43,12 +30,12 @@ export function CsvTemplateCard() {
         <CardHeader className="pb-3">
           <CardTitle className="flex items-center gap-2 text-sm font-semibold">
             <Download className="h-4 w-4 text-primary" aria-hidden="true" />
-            CSV 템플릿 다운로드
+            {t("upload.templateDownload")}
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
           <p className="text-xs text-muted-foreground">
-            올바른 CSV 형식의 샘플 파일을 다운로드하세요. 실제 데이터로 교체 후 업로드하시면 됩니다.
+            {t("upload.template.desc")}
           </p>
           <div className="rounded-lg border border-border bg-muted/30 px-3 py-2 font-mono text-xs text-muted-foreground">
             <p>date,symbol,quantity,price,currency</p>
@@ -64,7 +51,7 @@ export function CsvTemplateCard() {
             data-testid="template-download-btn"
           >
             <Download className="mr-2 h-4 w-4" aria-hidden="true" />
-            portfolio_template.csv 다운로드
+            {t("upload.template.download")}
           </Button>
         </CardContent>
       </Card>
@@ -74,7 +61,7 @@ export function CsvTemplateCard() {
         <CardHeader className="pb-3">
           <CardTitle className="flex items-center gap-2 text-sm font-semibold">
             <HelpCircle className="h-4 w-4 text-primary" aria-hidden="true" />
-            자주 묻는 질문
+            {t("upload.faq")}
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-1">

@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import type { CopilotStreamState, StepState } from "@/hooks/use-copilot-stream";
 import { CardRenderer } from "./cards";
+import { useLocale } from "@/lib/i18n/locale-provider";
 
 interface CopilotDrawerProps {
   open: boolean;
@@ -21,6 +22,7 @@ interface CopilotDrawerProps {
  * Esc 키로 닫힘.
  */
 export function CopilotDrawer({ open, onClose, state }: CopilotDrawerProps) {
+  const { t } = useLocale();
   useEffect(() => {
     if (!open) return;
     function handleKey(e: KeyboardEvent) {
@@ -53,10 +55,10 @@ export function CopilotDrawer({ open, onClose, state }: CopilotDrawerProps) {
       >
         {/* 헤더 */}
         <div className="flex items-center justify-between border-b px-4 py-3">
-          <h2 className="text-sm font-semibold">Copilot 분석</h2>
+          <h2 className="text-sm font-semibold">{t("copilot.analysis")}</h2>
           <button
             onClick={onClose}
-            aria-label="닫기"
+            aria-label={t("copilot.close")}
             className="rounded p-1 text-muted-foreground hover:bg-muted"
           >
             <svg
@@ -93,7 +95,7 @@ export function CopilotDrawer({ open, onClose, state }: CopilotDrawerProps) {
                 <span className="font-mono">{stepId}</span>
                 {stepState.degraded && (
                   <span className="rounded bg-destructive/10 px-1 text-destructive text-[10px]">
-                    품질저하
+                    {t("copilot.degraded")}
                   </span>
                 )}
               </div>
@@ -111,7 +113,7 @@ export function CopilotDrawer({ open, onClose, state }: CopilotDrawerProps) {
 
               {/* 스켈레톤 — 버퍼도 카드도 없으면 */}
               {!stepState.card && !stepState.buffer && (
-                <div className="h-16 rounded border bg-muted animate-pulse" aria-label="로딩 중" />
+                <div className="h-16 rounded border bg-muted animate-pulse" aria-label={t("copilot.loading")} />
               )}
 
               {/* 카드 swap — step.result 수신 후 */}
@@ -124,7 +126,7 @@ export function CopilotDrawer({ open, onClose, state }: CopilotDrawerProps) {
           {/* Final 카드 */}
           {state.finalCard && (
             <div className="space-y-1" data-testid="copilot-card-final">
-              <div className="text-xs font-semibold text-muted-foreground">통합 응답</div>
+              <div className="text-xs font-semibold text-muted-foreground">{t("copilot.finalResponse")}</div>
               {/* Final card 는 step 카드에서 이미 degraded 배너를 표시했으므로 중복 방지 */}
               <CardRenderer card={state.finalCard} suppressDegradedBanner />
             </div>
@@ -133,7 +135,7 @@ export function CopilotDrawer({ open, onClose, state }: CopilotDrawerProps) {
           {/* 에러 */}
           {state.error && (
             <div className="rounded border border-destructive/50 bg-destructive/10 p-3 text-sm text-destructive">
-              오류: {state.error}
+              {t("copilot.error")}: {state.error}
             </div>
           )}
 

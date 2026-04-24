@@ -1,11 +1,11 @@
 import { describe, it, expect } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { renderWithLocale as render, screen } from "@/lib/test-utils";
 import { DimensionBars } from "./dimension-bars";
 
 describe("DimensionBars", () => {
   it("빈 데이터면 empty 메시지를 표시한다", () => {
     render(<DimensionBars data={[]} />);
-    expect(screen.getByText("디멘션 데이터 없음")).toBeInTheDocument();
+    expect(screen.getByText("데이터 없음")).toBeInTheDocument();
   });
 
   it("데이터가 있으면 차트 컨테이너를 렌더한다", () => {

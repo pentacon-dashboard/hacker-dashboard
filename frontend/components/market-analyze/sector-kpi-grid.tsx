@@ -3,6 +3,22 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { TrendingUp, TrendingDown, BarChart3 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useLocale } from "@/lib/i18n/locale-provider";
+
+// BE가 한국어로 내려주는 섹터명 → i18n 키 매핑 테이블
+const SECTOR_KEY_MAP: Record<string, string> = {
+  "정보기술": "market.sector.it",
+  "반도체": "market.sector.semiconductor",
+  "금융": "market.sector.finance",
+  "헬스케어": "market.sector.health",
+  "에너지": "market.sector.energy",
+  "소비재": "market.sector.consumer",
+  "산업재": "market.sector.industrial",
+  "소재": "market.sector.materials",
+  "유틸리티": "market.sector.utilities",
+  "부동산": "market.sector.realEstate",
+  "통신": "market.sector.telecom",
+};
 
 // BE /market/sectors 실제 스키마
 export interface SectorItem {
@@ -18,12 +34,13 @@ interface SectorKpiGridProps {
 }
 
 export function SectorKpiGrid({ sectors, loading }: SectorKpiGridProps) {
+  const { t } = useLocale();
   return (
     <Card data-testid="sector-kpi-grid">
       <CardHeader className="pb-3">
         <CardTitle className="flex items-center gap-2 text-sm font-semibold">
           <BarChart3 className="h-4 w-4 text-primary" aria-hidden="true" />
-          섹터별 등락률
+          {t("market.sectorReturn")}
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-1">
@@ -40,6 +57,8 @@ export function SectorKpiGrid({ sectors, loading }: SectorKpiGridProps) {
             const positive = !sector.change_pct.startsWith("-");
             const numPct = parseFloat(sector.change_pct);
             const barPct = Math.min(Math.abs(isNaN(numPct) ? 0 : numPct) * 25, 100);
+            const sectorKey = SECTOR_KEY_MAP[sector.name];
+            const sectorLabel = sectorKey ? t(sectorKey) : sector.name;
             return (
               <div
                 key={sector.name}
@@ -48,7 +67,7 @@ export function SectorKpiGrid({ sectors, loading }: SectorKpiGridProps) {
               >
                 {/* 섹터명 */}
                 <span className="w-28 shrink-0 truncate text-xs text-muted-foreground">
-                  {sector.name}
+                  {sectorLabel}
                 </span>
 
                 {/* 바 */}

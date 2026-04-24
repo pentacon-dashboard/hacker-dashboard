@@ -9,6 +9,7 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import { formatPct } from "@/lib/utils/format";
+import { useLocale } from "@/lib/i18n/locale-provider";
 
 interface AssetPieChartProps {
   breakdown: Record<string, string>;
@@ -22,18 +23,20 @@ const ASSET_COLORS: Record<string, string> = {
   cash: "#6b7280",
 };
 
-const ASSET_LABELS: Record<string, string> = {
-  stock_kr: "국내주식",
-  stock_us: "해외주식",
-  crypto: "코인",
-  fx: "환율",
-  cash: "현금",
+const ASSET_I18N_KEYS: Record<string, string> = {
+  stock_kr: "asset.label.stock_kr",
+  stock_us: "asset.label.stock_us",
+  crypto: "asset.label.crypto",
+  fx: "asset.label.fx",
+  cash: "asset.label.cash",
 };
 
 export function AssetPieChart({ breakdown }: AssetPieChartProps) {
+  const { t } = useLocale();
+
   const data = Object.entries(breakdown)
     .map(([key, value]) => ({
-      name: ASSET_LABELS[key] ?? key,
+      name: ASSET_I18N_KEYS[key] ? t(ASSET_I18N_KEYS[key]!) : key,
       key,
       value: Math.round(Number(value) * 10000) / 100, // 0.5 → 50.00 (%)
     }))
@@ -42,7 +45,7 @@ export function AssetPieChart({ breakdown }: AssetPieChartProps) {
   if (data.length === 0) {
     return (
       <div className="flex h-48 items-center justify-center text-sm text-muted-foreground">
-        자산 데이터 없음
+        {t("asset.empty")}
       </div>
     );
   }

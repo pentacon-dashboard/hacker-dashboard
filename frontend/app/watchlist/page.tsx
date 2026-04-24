@@ -69,15 +69,15 @@ export default function WatchlistPage() {
         ) : (
           <>
             <KpiCard
-              label="관심종목 수"
+              label={t("watchlist.kpi.count")}
               value={`${summary?.watched_count ?? 0}`}
-              delta="종목"
+              delta={t("table.symbol")}
               icon={<Eye className="h-4 w-4" />}
               accent="blue"
               testId="watchlist-kpi-count"
             />
             <KpiCard
-              label="상승 평균"
+              label={t("watchlist.kpi.upAvg")}
               value={summary ? `+${Number(summary.up_avg_pct).toFixed(2)}%` : "-"}
               deltaValue={summary ? Number(summary.up_avg_pct) : undefined}
               icon={<TrendingUp className="h-4 w-4" />}
@@ -85,7 +85,7 @@ export default function WatchlistPage() {
               testId="watchlist-kpi-up-avg"
             />
             <KpiCard
-              label="하락 평균"
+              label={t("watchlist.kpi.downAvg")}
               value={summary ? `${Number(summary.down_avg_pct).toFixed(2)}%` : "-"}
               deltaValue={summary ? Number(summary.down_avg_pct) : undefined}
               icon={<TrendingDown className="h-4 w-4" />}
@@ -93,7 +93,7 @@ export default function WatchlistPage() {
               testId="watchlist-kpi-down-avg"
             />
             <KpiCard
-              label="최고 수익률"
+              label={t("watchlist.kpi.topGainer")}
               value={summary?.top_gainer ?? "-"}
               icon={<Star className="h-4 w-4" />}
               accent="amber"
@@ -106,7 +106,7 @@ export default function WatchlistPage() {
       {/* 중단: 워치리스트 테이블 + 사이드 패널 */}
       <section className="grid grid-cols-1 gap-4 lg:grid-cols-12">
         <SectionCard
-          title="워치리스트 종목"
+          title={t("watchlist.table.title")}
           className="lg:col-span-8"
           testId="watchlist-section-table"
         >
@@ -115,7 +115,7 @@ export default function WatchlistPage() {
 
         <div className="space-y-4 lg:col-span-4">
           <SectionCard
-            title="인기 TOP 5"
+            title={t("watchlist.popularTop5")}
             testId="watchlist-section-popular"
           >
             {popularQuery.isLoading ? (
@@ -123,13 +123,13 @@ export default function WatchlistPage() {
             ) : (
               <PopularTop5
                 items={popularQuery.data ?? []}
-                title="인기 TOP 5"
+                title={t("watchlist.popularTop5")}
               />
             )}
           </SectionCard>
 
           <SectionCard
-            title="등락 TOP 5"
+            title={t("watchlist.gainersLosers")}
             testId="watchlist-section-gainers-losers"
           >
             {gainersLosersQuery.isLoading ? (
@@ -146,11 +146,11 @@ export default function WatchlistPage() {
 
       {/* 하단: 알림 설정 + 최근 체결 */}
       <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        <SectionCard title="알림 설정" testId="watchlist-section-alerts">
+        <SectionCard title={t("watchlist.alertSettings")} testId="watchlist-section-alerts">
           <AlertSettingsCard />
         </SectionCard>
 
-        <SectionCard title="최근 체결" testId="watchlist-section-trades">
+        <SectionCard title={t("watchlist.recentTrades")} testId="watchlist-section-trades">
           <RecentTradesPanel />
         </SectionCard>
 

@@ -15,6 +15,7 @@ import {
   formatPct,
   signedColorClass,
 } from "@/lib/utils/format";
+import { useLocale } from "@/lib/i18n/locale-provider";
 
 interface TopHoldingsTableProps {
   holdings: HoldingDetail[];
@@ -33,10 +34,11 @@ export function TopHoldingsTable({
   showAvgCost = false,
   showCurrentPrice = false,
 }: TopHoldingsTableProps) {
+  const { t } = useLocale();
   if (holdings.length === 0) {
     return (
       <div className="flex h-48 items-center justify-center text-sm text-muted-foreground">
-        보유 자산 없음
+        {t("dashboard.emptyHoldings")}
       </div>
     );
   }
@@ -55,17 +57,17 @@ export function TopHoldingsTable({
         <TableHeader>
           <TableRow className="hover:bg-transparent">
             <TableHead className="h-7 w-6 px-1 text-[10px]">#</TableHead>
-            <TableHead className="h-7 px-1 text-[10px]">종목</TableHead>
-            <TableHead className="h-7 px-1 text-[10px]">시장</TableHead>
+            <TableHead className="h-7 px-1 text-[10px]">{t("table.symbol")}</TableHead>
+            <TableHead className="h-7 px-1 text-[10px]">{t("table.market")}</TableHead>
             {showAvgCost && (
-              <TableHead className="h-7 px-1 text-right text-[10px]">평균가</TableHead>
+              <TableHead className="h-7 px-1 text-right text-[10px]">{t("table.avgCost")}</TableHead>
             )}
             {showCurrentPrice && (
-              <TableHead className="h-7 px-1 text-right text-[10px]">현재가</TableHead>
+              <TableHead className="h-7 px-1 text-right text-[10px]">{t("table.currentPrice")}</TableHead>
             )}
-            <TableHead className="h-7 px-1 text-right text-[10px]">평가액</TableHead>
-            <TableHead className="h-7 px-1 text-right text-[10px]">수익률</TableHead>
-            <TableHead className="h-7 px-1 text-right text-[10px]">비중</TableHead>
+            <TableHead className="h-7 px-1 text-right text-[10px]">{t("table.value")}</TableHead>
+            <TableHead className="h-7 px-1 text-right text-[10px]">{t("table.return")}</TableHead>
+            <TableHead className="h-7 px-1 text-right text-[10px]">{t("table.weight")}</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>

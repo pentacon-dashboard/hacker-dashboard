@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { renderWithLocale as render, screen } from "@/lib/test-utils";
 import { IndicatorGrid, type IndicatorMetrics } from "./indicator-grid";
 
 const MOCK_METRICS: IndicatorMetrics = {

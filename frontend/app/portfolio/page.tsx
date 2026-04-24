@@ -92,8 +92,8 @@ export default function PortfolioPage() {
           <h1 className="text-2xl font-bold tracking-tight">{t("portfolio.title")}</h1>
         </div>
         <ErrorState
-          title="포트폴리오 로드 실패"
-          description="데이터를 불러오는 중 문제가 생겼습니다."
+          title={t("portfolio.loadError")}
+          description={t("portfolio.loadErrorDesc")}
           onRetry={handleRetry}
         />
       </div>
@@ -113,8 +113,8 @@ export default function PortfolioPage() {
           <AddHoldingDialog />
         </div>
         <EmptyState
-          title="보유자산이 없습니다"
-          description="보유자산을 추가하면 포트폴리오 분석이 시작됩니다."
+          title={t("portfolio.emptyTitle")}
+          description={t("portfolio.emptyDesc")}
           action={<AddHoldingDialog />}
         />
       </div>
@@ -144,19 +144,19 @@ export default function PortfolioPage() {
 
       {/* KPI 5개 */}
       <section
-        aria-label="포트폴리오 핵심 지표"
+        aria-label={t("portfolio.kpiAria")}
         className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5"
       >
         <KpiCard
-          label="총자산"
+          label={t("portfolio.kpi.totalValue")}
           value={formatKRWCompact(summary.total_value_krw)}
-          delta="KRW 환산"
+          delta={t("portfolio.krwEquiv")}
           icon={<Wallet className="h-4 w-4" />}
           accent="blue"
           testId="portfolio-kpi-total"
         />
         <KpiCard
-          label="총 평가손익"
+          label={t("portfolio.kpi.totalPnl")}
           value={formatSignedNumber(summary.total_pnl_krw).replace(/[+-]/, (s) => s === "+" ? "+" : "-") + " KRW"}
           delta={formatPct(summary.total_pnl_pct, { signed: true })}
           deltaValue={Number(summary.total_pnl_pct)}
@@ -165,7 +165,7 @@ export default function PortfolioPage() {
           testId="portfolio-kpi-pnl"
         />
         <KpiCard
-          label="일간 변동"
+          label={t("portfolio.kpi.dailyChange")}
           value={formatPct(summary.daily_change_pct, { signed: true })}
           delta={(() => {
             const krw = Number(summary.daily_change_krw);
@@ -177,17 +177,17 @@ export default function PortfolioPage() {
           testId="portfolio-kpi-daily"
         />
         <KpiCard
-          label="보유 종목"
+          label={t("portfolio.kpi.holdings")}
           value={`${summary.holdings_count}`}
-          delta="종목"
+          delta={t("dashboard.kpi.holdingsUnit")}
           icon={<Layers className="h-4 w-4" />}
           accent="slate"
           testId="portfolio-kpi-holdings-count"
         />
         <KpiCard
-          label="승률"
+          label={t("portfolio.kpi.winRate")}
           value={`${winRatePct.toFixed(1)}%`}
-          delta={winRatePct >= 60 ? "우수" : winRatePct >= 40 ? "보통" : "주의"}
+          delta={winRatePct >= 60 ? t("portfolio.winRate.good") : winRatePct >= 40 ? t("portfolio.winRate.fair") : t("portfolio.winRate.poor")}
           tone={winRatePct >= 60 ? "positive" : winRatePct >= 40 ? "neutral" : "negative"}
           icon={<Target className="h-4 w-4" />}
           accent="amber"
@@ -198,7 +198,7 @@ export default function PortfolioPage() {
       {/* 중단: 자산 구성 (도넛) + 보유 종목 테이블 */}
       <section className="grid grid-cols-1 gap-4 lg:grid-cols-12">
         <SectionCard
-          title="자산 구성"
+          title={t("portfolio.allocation")}
           className="lg:col-span-4"
           testId="portfolio-section-allocation"
         >
@@ -206,7 +206,7 @@ export default function PortfolioPage() {
           {/* 총 손익률 게이지 */}
           <div className="mt-4 space-y-2 border-t pt-4">
             <div className="flex items-center justify-between text-xs">
-              <span className="text-muted-foreground">총 손익률</span>
+              <span className="text-muted-foreground">{t("portfolio.totalReturn")}</span>
               <span className={`font-bold tabular-nums ${totalPnlColorClass}`}>
                 {formatPct(summary.total_pnl_pct, { signed: true })}
               </span>
@@ -222,7 +222,7 @@ export default function PortfolioPage() {
               />
             </div>
             <div className="flex items-center justify-between text-xs">
-              <span className="text-muted-foreground">일간 변동</span>
+              <span className="text-muted-foreground">{t("portfolio.kpi.dailyChange")}</span>
               <span className={`font-semibold tabular-nums ${dailyColorClass}`}>
                 {formatPct(summary.daily_change_pct, { signed: true })}
               </span>
@@ -231,7 +231,7 @@ export default function PortfolioPage() {
         </SectionCard>
 
         <SectionCard
-          title="자산 한눈에"
+          title={t("portfolio.holdingsOverview")}
           className="lg:col-span-8"
           testId="portfolio-section-holdings"
         >
@@ -241,13 +241,13 @@ export default function PortfolioPage() {
 
       {/* 하단: 섹터 히트맵 */}
       <SectionCard
-        title="섹터별 수익률 히트맵"
+        title={t("portfolio.sectorHeatmap")}
         testId="portfolio-section-heatmap"
       >
         {heatmapQuery.isLoading ? (
           <Skeleton className="h-32 w-full" />
         ) : heatmapQuery.isError ? (
-          <p className="text-sm text-muted-foreground">섹터 데이터를 불러올 수 없습니다.</p>
+          <p className="text-sm text-muted-foreground">{t("portfolio.sectorLoadFail")}</p>
         ) : (
           <SectorHeatmap tiles={heatmapQuery.data ?? []} />
         )}
@@ -256,7 +256,7 @@ export default function PortfolioPage() {
       {/* 하단 2열: 월간 수익률 캘린더 + AI 인사이트 */}
       <section className="grid grid-cols-1 gap-4 lg:grid-cols-12">
         <SectionCard
-          title="월간 수익률 달력"
+          title={t("portfolio.monthlyCalendar")}
           className="lg:col-span-8"
           testId="portfolio-section-calendar"
         >
@@ -271,7 +271,7 @@ export default function PortfolioPage() {
         </SectionCard>
 
         <SectionCard
-          title="AI 인사이트"
+          title={t("portfolio.aiInsight")}
           className="lg:col-span-4"
           testId="portfolio-section-insight"
         >

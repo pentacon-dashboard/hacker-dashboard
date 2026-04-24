@@ -2,6 +2,7 @@
 
 import { TrendingUp, TrendingDown } from "lucide-react";
 import type { TopListItem } from "./popular-top5";
+import { useLocale } from "@/lib/i18n/locale-provider";
 
 interface GainersLosersTop5Props {
   gainers: TopListItem[];
@@ -9,6 +10,7 @@ interface GainersLosersTop5Props {
 }
 
 function MiniList({ items, variant }: { items: TopListItem[]; variant: "gainer" | "loser" }) {
+  const { t } = useLocale();
   const isGainer = variant === "gainer";
   return (
     <div>
@@ -20,10 +22,10 @@ function MiniList({ items, variant }: { items: TopListItem[]; variant: "gainer" 
         ) : (
           <TrendingDown className="h-3 w-3" aria-hidden="true" />
         )}
-        {isGainer ? "상승 TOP" : "하락 TOP"}
+        {isGainer ? t("watchlist.gainersTop") : t("watchlist.losersTop")}
       </h4>
       {items.length === 0 ? (
-        <p className="text-xs text-muted-foreground">데이터 없음</p>
+        <p className="text-xs text-muted-foreground">{t("common.empty")}</p>
       ) : (
         <ul className="space-y-1">
           {items.slice(0, 5).map((item) => {

@@ -13,10 +13,12 @@ import {
   type WatchlistAlert,
   type AlertCreate,
 } from "@/lib/api/watchlist";
+import { useLocale } from "@/lib/i18n/locale-provider";
 
 const QUERY_KEY = ["watchlist", "alerts"] as const;
 
 function AlertRow({ alert }: { alert: WatchlistAlert }) {
+  const { t } = useLocale();
   const qc = useQueryClient();
 
   const toggleMutation = useMutation({
@@ -68,7 +70,7 @@ function AlertRow({ alert }: { alert: WatchlistAlert }) {
       <div className="min-w-0 flex-1">
         <p className="text-xs font-medium">{alert.symbol}</p>
         <p className="text-[10px] text-muted-foreground">
-          {alert.direction === "above" ? "초과" : "이하"}{" "}
+          {alert.direction === "above" ? t("watchlist.direction.above") : t("watchlist.direction.below")}{" "}
           {threshold.toLocaleString("ko-KR")}
         </p>
       </div>
@@ -79,7 +81,7 @@ function AlertRow({ alert }: { alert: WatchlistAlert }) {
           type="button"
           onClick={() => toggleMutation.mutate()}
           disabled={toggleMutation.isPending}
-          aria-label={`${alert.symbol} 알림 ${alert.enabled ? "끄기" : "켜기"}`}
+          aria-label={`${alert.symbol} ${t(alert.enabled ? "watchlist.alert.toggleOff" : "watchlist.alert.toggleOn")}`}
           className={`flex h-7 w-7 items-center justify-center rounded-full transition-colors ${
             alert.enabled
               ? "bg-primary/10 text-primary hover:bg-primary/20"
@@ -98,7 +100,7 @@ function AlertRow({ alert }: { alert: WatchlistAlert }) {
           type="button"
           onClick={() => deleteMutation.mutate()}
           disabled={deleteMutation.isPending}
-          aria-label={`${alert.symbol} 알림 삭제`}
+          aria-label={`${alert.symbol} ${t("watchlist.alert.delete")}`}
           className="flex h-7 w-7 items-center justify-center rounded-full text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors"
         >
           <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
@@ -113,6 +115,7 @@ interface AddAlertFormProps {
 }
 
 function AddAlertForm({ onClose }: AddAlertFormProps) {
+  const { t } = useLocale();
   const qc = useQueryClient();
   const [symbol, setSymbol] = useState("");
   const [market, setMarket] = useState("yahoo");
@@ -149,24 +152,24 @@ function AddAlertForm({ onClose }: AddAlertFormProps) {
       <div className="flex gap-2">
         <input
           type="text"
-          placeholder="티커 (예: AAPL)"
+          placeholder={t("watchlist.alert.ticker")}
           value={symbol}
           onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
             setSymbol(e.target.value)
           }
           className="h-7 flex-1 rounded-md border bg-background px-2 text-xs focus:outline-none focus:ring-2 focus:ring-ring"
-          aria-label="종목 티커"
+          aria-label={t("watchlist.alert.ticker")}
           required
         />
         <input
           type="text"
-          placeholder="마켓 (yahoo)"
+          placeholder={t("watchlist.alert.market")}
           value={market}
           onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
             setMarket(e.target.value)
           }
           className="h-7 w-24 rounded-md border bg-background px-2 text-xs focus:outline-none focus:ring-2 focus:ring-ring"
-          aria-label="마켓"
+          aria-label={t("watchlist.alert.market")}
         />
       </div>
 
@@ -177,20 +180,20 @@ function AddAlertForm({ onClose }: AddAlertFormProps) {
             setDirection(e.target.value as "above" | "below")
           }
           className="h-7 flex-1 rounded-md border bg-background px-2 text-xs focus:outline-none focus:ring-2 focus:ring-ring"
-          aria-label="방향"
+          aria-label={t("watchlist.threshold")}
         >
-          <option value="above">초과 (above)</option>
-          <option value="below">이하 (below)</option>
+          <option value="above">{t("watchlist.alert.above")}</option>
+          <option value="below">{t("watchlist.alert.below")}</option>
         </select>
         <input
           type="number"
-          placeholder="기준가"
+          placeholder={t("watchlist.alert.basePrice")}
           value={threshold}
           onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
             setThreshold(e.target.value)
           }
           className="h-7 flex-1 rounded-md border bg-background px-2 text-xs focus:outline-none focus:ring-2 focus:ring-ring"
-          aria-label="기준가"
+          aria-label={t("watchlist.alert.basePrice")}
           min={0}
           step="any"
           required
@@ -199,7 +202,7 @@ function AddAlertForm({ onClose }: AddAlertFormProps) {
 
       {createMutation.isError && (
         <p className="text-[10px] text-destructive" role="alert">
-          알림 추가 실패. 다시 시도해 주세요.
+          {t("watchlist.alertAddFail")}
         </p>
       )}
 
@@ -211,7 +214,7 @@ function AddAlertForm({ onClose }: AddAlertFormProps) {
           className="h-6 text-xs"
           onClick={onClose}
         >
-          취소
+          {t("watchlist.alert.cancel")}
         </Button>
         <Button
           type="submit"
@@ -219,7 +222,7 @@ function AddAlertForm({ onClose }: AddAlertFormProps) {
           className="h-6 text-xs"
           disabled={createMutation.isPending}
         >
-          {createMutation.isPending ? "저장 중..." : "저장"}
+          {createMutation.isPending ? t("watchlist.alert.saving") : t("watchlist.alert.save")}
         </Button>
       </div>
     </form>
@@ -227,6 +230,7 @@ function AddAlertForm({ onClose }: AddAlertFormProps) {
 }
 
 export function AlertSettingsCard() {
+  const { t } = useLocale();
   const [showForm, setShowForm] = useState(false);
 
   const { data, isLoading, isError } = useQuery({
@@ -238,16 +242,16 @@ export function AlertSettingsCard() {
   return (
     <div className="space-y-3" data-testid="alert-settings-card">
       <div className="flex items-center justify-between">
-        <h3 className="text-xs font-semibold">알림 설정</h3>
+        <h3 className="text-xs font-semibold">{t("watchlist.alert.title")}</h3>
         <Button
           variant="ghost"
           size="sm"
           className="h-7 gap-1 text-xs"
-          aria-label="알림 추가"
+          aria-label={t("watchlist.addAlert")}
           onClick={() => setShowForm((v) => !v)}
         >
           <Plus className="h-3 w-3" />
-          추가
+          {t("watchlist.add")}
         </Button>
       </div>
 
@@ -267,14 +271,14 @@ export function AlertSettingsCard() {
           role="alert"
           data-testid="alert-rules-error"
         >
-          알림 목록 로드 실패
+          {t("watchlist.alertsError")}
         </p>
       ) : (data ?? []).length === 0 ? (
         <p
           className="text-xs text-muted-foreground"
           data-testid="alert-rules-empty"
         >
-          설정된 알림 없음
+          {t("watchlist.alertsEmpty")}
         </p>
       ) : (
         <ul className="space-y-2" data-testid="alert-rules-list">

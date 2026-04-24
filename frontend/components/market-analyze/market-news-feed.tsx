@@ -3,6 +3,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Newspaper, TrendingUp, TrendingDown, Minus, ExternalLink } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useLocale } from "@/lib/i18n/locale-provider";
 
 interface NewsItem {
   id: string;
@@ -18,27 +19,29 @@ interface MarketNewsFeedProps {
   loading?: boolean;
 }
 
-function formatTime(iso: string): string {
-  try {
-    const d = new Date(iso);
-    const now = new Date();
-    const diffMs = now.getTime() - d.getTime();
-    const diffH = Math.floor(diffMs / 3600000);
-    if (diffH < 1) return "방금 전";
-    if (diffH < 24) return `${diffH}시간 전`;
-    return `${Math.floor(diffH / 24)}일 전`;
-  } catch {
-    return iso;
-  }
-}
-
 export function MarketNewsFeed({ news, loading }: MarketNewsFeedProps) {
+  const { t } = useLocale();
+
+  function formatTime(iso: string): string {
+    try {
+      const d = new Date(iso);
+      const now = new Date();
+      const diffMs = now.getTime() - d.getTime();
+      const diffH = Math.floor(diffMs / 3600000);
+      if (diffH < 1) return t("market.timeAgo.justNow");
+      if (diffH < 24) return t("market.timeAgo.hoursAgo", { n: diffH });
+      return t("market.timeAgo.daysAgo", { n: Math.floor(diffH / 24) });
+    } catch {
+      return iso;
+    }
+  }
+
   return (
     <Card data-testid="market-news-feed">
       <CardHeader className="pb-3">
         <CardTitle className="flex items-center gap-2 text-sm font-semibold">
           <Newspaper className="h-4 w-4 text-primary" aria-hidden="true" />
-          주요 뉴스
+          {t("market.mainNews")}
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-2">
@@ -51,7 +54,7 @@ export function MarketNewsFeed({ news, loading }: MarketNewsFeedProps) {
         )}
 
         {!loading && news.length === 0 && (
-          <div className="py-6 text-center text-sm text-muted-foreground">뉴스를 불러올 수 없습니다</div>
+          <div className="py-6 text-center text-sm text-muted-foreground">{t("market.noNews")}</div>
         )}
 
         {!loading &&

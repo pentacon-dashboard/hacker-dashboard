@@ -2,6 +2,7 @@
 
 import { CheckCircle2, XCircle, Loader2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { useLocale } from "@/lib/i18n/locale-provider";
 
 export interface AiInsightResponse {
   summary: string;
@@ -48,6 +49,8 @@ function GateBadge({ name, status }: { name: string; status: string | undefined 
 }
 
 export function AiInsightCard({ insight, isLoading = false }: AiInsightCardProps) {
+  const { t, locale } = useLocale();
+
   if (isLoading) {
     return (
       <div
@@ -55,7 +58,7 @@ export function AiInsightCard({ insight, isLoading = false }: AiInsightCardProps
         data-testid="ai-insight-loading"
       >
         <Loader2 className="h-4 w-4 animate-spin" />
-        AI 분석 중...
+        {t("portfolio.aiInsight.generating")}
       </div>
     );
   }
@@ -66,7 +69,7 @@ export function AiInsightCard({ insight, isLoading = false }: AiInsightCardProps
         className="flex h-32 items-center justify-center text-sm text-muted-foreground"
         data-testid="ai-insight-empty"
       >
-        AI 인사이트 데이터 없음
+        {t("portfolio.aiInsight.empty")}
       </div>
     );
   }
@@ -82,7 +85,7 @@ export function AiInsightCard({ insight, isLoading = false }: AiInsightCardProps
             </Badge>
           )}
           <span className="text-[10px] text-muted-foreground">
-            {new Date(insight.generated_at).toLocaleString("ko-KR", {
+            {new Date(insight.generated_at).toLocaleString(locale === "en" ? "en-US" : "ko-KR", {
               month: "short",
               day: "numeric",
               hour: "2-digit",

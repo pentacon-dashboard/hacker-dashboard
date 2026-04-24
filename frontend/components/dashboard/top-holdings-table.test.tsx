@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { render, screen, within } from "@testing-library/react";
+import { renderWithLocale as render, screen, within } from "@/lib/test-utils";
 import { TopHoldingsTable } from "./top-holdings-table";
 import type { HoldingDetail } from "@/lib/api/portfolio";
 

@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { API_BASE } from "@/lib/api/client";
 import type { AnalyzerConfig } from "./analyzer-config-card";
+import { useLocale } from "@/lib/i18n/locale-provider";
 
 type GateStatus = "idle" | "running" | "pass" | "fail";
 
@@ -26,12 +27,7 @@ const INITIAL_GATES: GateState = {
   done: false,
 };
 
-const GATE_LABELS: Record<keyof Omit<GateState, "done">, string> = {
-  router: "Router 선택",
-  schema: "스키마 검증",
-  domain: "도메인 sanity",
-  critique: "AI self-critique",
-};
+// GATE_LABELS는 컴포넌트 내부에서 t() 기반으로 생성
 
 interface GateDetail {
   gate: string;
@@ -53,6 +49,15 @@ export function AnalyzeProgressCard({
   disabled,
   onComplete,
 }: AnalyzeProgressCardProps) {
+  const { t } = useLocale();
+
+  const GATE_LABELS: Record<keyof Omit<GateState, "done">, string> = {
+    router: t("upload.gate.router"),
+    schema: t("upload.gate.schema"),
+    domain: t("upload.gate.domain"),
+    critique: t("upload.gate.critique"),
+  };
+
   const [gates, setGates] = useState<GateState>(INITIAL_GATES);
   const [gateDetails, setGateDetails] = useState<Record<string, GateDetail>>({});
   const [status, setStatus] = useState<"idle" | "running" | "done" | "error">("idle");
@@ -160,7 +165,7 @@ export function AnalyzeProgressCard({
   return (
     <Card data-testid="analyze-progress-card">
       <CardHeader className="pb-3">
-        <CardTitle className="text-sm font-semibold">5. 분석 진행 상태</CardTitle>
+        <CardTitle className="text-sm font-semibold">{t("upload.section.progress")}</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
         {/* Router 선택 배지 */}
@@ -195,13 +200,13 @@ export function AnalyzeProgressCard({
                 data-status={s}
               >
                 {s === "pass" ? (
-                  <CheckCircle className="h-4 w-4 shrink-0 text-green-500" aria-label="통과" />
+                  <CheckCircle className="h-4 w-4 shrink-0 text-green-500" aria-label={t("upload.gate.pass")} />
                 ) : s === "fail" ? (
-                  <AlertCircle className="h-4 w-4 shrink-0 text-destructive" aria-label="실패" />
+                  <AlertCircle className="h-4 w-4 shrink-0 text-destructive" aria-label={t("upload.gate.fail")} />
                 ) : s === "running" ? (
-                  <Loader2 className="h-4 w-4 shrink-0 animate-spin text-primary" aria-label="진행 중" />
+                  <Loader2 className="h-4 w-4 shrink-0 animate-spin text-primary" aria-label={t("upload.gate.running")} />
                 ) : (
-                  <Circle className="h-4 w-4 shrink-0 text-muted-foreground/40" aria-label="대기" />
+                  <Circle className="h-4 w-4 shrink-0 text-muted-foreground/40" aria-label={t("upload.gate.idle")} />
                 )}
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">
@@ -243,7 +248,7 @@ export function AnalyzeProgressCard({
         {status === "done" && (
           <div className="flex items-center gap-2 rounded-lg border border-green-500/30 bg-green-500/10 px-3 py-2 text-xs text-green-600 dark:text-green-400">
             <CheckCircle className="h-4 w-4" aria-hidden="true" />
-            분석 완료! 잠시 후 대시보드로 이동합니다...
+            {t("upload.analyze.complete")}
           </div>
         )}
 
@@ -264,15 +269,15 @@ export function AnalyzeProgressCard({
           {status === "running" ? (
             <>
               <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />
-              분석 중...
+              {t("upload.analyze.running")}
             </>
           ) : status === "done" ? (
             <>
               <CheckCircle className="mr-2 h-4 w-4" aria-hidden="true" />
-              분석 완료
+              {t("upload.analyze.done")}
             </>
           ) : (
-            "분석 시작"
+            t("upload.analyze.start")
           )}
         </Button>
       </CardContent>

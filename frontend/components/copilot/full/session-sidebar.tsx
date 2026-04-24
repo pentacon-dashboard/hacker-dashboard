@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Search, Plus, MessageSquare, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useLocale } from "@/lib/i18n/locale-provider";
 
 export interface CopilotSession {
   session_id: string;
@@ -21,20 +22,7 @@ interface SessionSidebarProps {
   loading?: boolean;
 }
 
-function formatDate(iso: string): string {
-  try {
-    const d = new Date(iso);
-    const now = new Date();
-    const diffMs = now.getTime() - d.getTime();
-    const diffDays = Math.floor(diffMs / 86400000);
-    if (diffDays === 0) return "오늘";
-    if (diffDays === 1) return "어제";
-    if (diffDays < 7) return `${diffDays}일 전`;
-    return d.toLocaleDateString("ko-KR", { month: "short", day: "numeric" });
-  } catch {
-    return iso;
-  }
-}
+// formatDate는 컴포넌트 안으로 이동 (t 함수 접근 필요)
 
 export function SessionSidebar({
   sessions,
@@ -43,7 +31,23 @@ export function SessionSidebar({
   onNewSession,
   loading,
 }: SessionSidebarProps) {
+  const { t, locale } = useLocale();
   const [query, setQuery] = useState("");
+
+  function formatDate(iso: string): string {
+    try {
+      const d = new Date(iso);
+      const now = new Date();
+      const diffMs = now.getTime() - d.getTime();
+      const diffDays = Math.floor(diffMs / 86400000);
+      if (diffDays === 0) return t("copilot.today");
+      if (diffDays === 1) return t("copilot.yesterday");
+      if (diffDays < 7) return t("copilot.daysAgo", { n: diffDays });
+      return d.toLocaleDateString(locale === "en" ? "en-US" : "ko-KR", { month: "short", day: "numeric" });
+    } catch {
+      return iso;
+    }
+  }
 
   const filtered = sessions.filter(
     (s) =>
@@ -60,7 +64,7 @@ export function SessionSidebar({
         data-testid="new-session-btn"
       >
         <Plus className="h-4 w-4" aria-hidden="true" />
-        새 대화 시작
+        {t("copilot.newChat")}
       </button>
 
       {/* 검색 */}
@@ -71,16 +75,16 @@ export function SessionSidebar({
         />
         <input
           type="text"
-          placeholder="대화 검색..."
+          placeholder={t("copilot.searchSessions")}
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           className="w-full rounded-md border border-input bg-background py-1.5 pl-7 pr-3 text-xs focus:outline-none focus:ring-1 focus:ring-ring"
-          aria-label="세션 검색"
+          aria-label={t("copilot.searchSessions")}
         />
       </div>
 
       {/* 세션 목록 */}
-      <div className="flex-1 space-y-1 overflow-y-auto" role="list" aria-label="대화 목록">
+      <div className="flex-1 space-y-1 overflow-y-auto" role="list" aria-label={t("copilot.sessionList")}>
         {loading && (
           <div className="space-y-1.5">
             {[...Array(5)].map((_, i) => (
@@ -91,7 +95,7 @@ export function SessionSidebar({
 
         {!loading && filtered.length === 0 && (
           <div className="py-8 text-center text-xs text-muted-foreground">
-            {query ? "검색 결과가 없습니다" : "대화 기록이 없습니다"}
+            {query ? t("copilot.noSessionsSearch") : t("copilot.noSessions")}
           </div>
         )}
 
@@ -125,7 +129,7 @@ export function SessionSidebar({
                   {formatDate(session.updated_at)}
                 </span>
                 <span className="text-[10px] text-muted-foreground/60">
-                  {session.turn_count}턴
+                  {t("copilot.turns", { n: session.turn_count })}
                 </span>
               </div>
             </button>

@@ -2,6 +2,7 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
+import { useLocale } from "@/lib/i18n/locale-provider";
 
 export type AnalyzerType = "portfolio" | "crypto" | "stock";
 export type PeriodDays = 30 | 90 | 180 | 365;
@@ -20,20 +21,29 @@ interface AnalyzerConfigCardProps {
   disabled?: boolean;
 }
 
-const ANALYZER_OPTIONS: { value: AnalyzerType; label: string; desc: string }[] = [
-  { value: "portfolio", label: "포트폴리오", desc: "다자산 포트폴리오 분석" },
-  { value: "crypto", label: "암호화폐", desc: "코인 특화 분석" },
-  { value: "stock", label: "주식", desc: "개별 종목·시장 분석" },
-];
-
-const PERIOD_OPTIONS: { value: PeriodDays; label: string }[] = [
-  { value: 30, label: "30일" },
-  { value: 90, label: "90일" },
-  { value: 180, label: "180일" },
-  { value: 365, label: "365일" },
+const PERIOD_OPTIONS: { value: PeriodDays }[] = [
+  { value: 30 },
+  { value: 90 },
+  { value: 180 },
+  { value: 365 },
 ];
 
 export function AnalyzerConfigCard({ config, onChange, disabled }: AnalyzerConfigCardProps) {
+  const { t } = useLocale();
+
+  const ANALYZER_OPTIONS: { value: AnalyzerType; label: string; desc: string }[] = [
+    { value: "portfolio", label: t("upload.config.analyzer.portfolio"), desc: t("upload.config.analyzer.portfolio.desc") },
+    { value: "crypto", label: t("upload.config.analyzer.crypto"), desc: t("upload.config.analyzer.crypto.desc") },
+    { value: "stock", label: t("upload.config.analyzer.stock"), desc: t("upload.config.analyzer.stock.desc") },
+  ];
+
+  const PERIOD_LABELS: Record<PeriodDays, string> = {
+    30: t("upload.config.period.30"),
+    90: t("upload.config.period.90"),
+    180: t("upload.config.period.180"),
+    365: t("upload.config.period.365"),
+  };
+
   function update<K extends keyof AnalyzerConfig>(key: K, value: AnalyzerConfig[K]) {
     onChange({ ...config, [key]: value });
   }
@@ -41,12 +51,12 @@ export function AnalyzerConfigCard({ config, onChange, disabled }: AnalyzerConfi
   return (
     <Card data-testid="analyzer-config-card">
       <CardHeader className="pb-3">
-        <CardTitle className="text-sm font-semibold">4. 분석 설정</CardTitle>
+        <CardTitle className="text-sm font-semibold">{t("upload.section.config")}</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
         {/* 분석기 선택 */}
         <div className="space-y-1.5">
-          <p className="text-xs font-medium text-muted-foreground">분석기 선택</p>
+          <p className="text-xs font-medium text-muted-foreground">{t("upload.config.analyzer")}</p>
           <div className="grid grid-cols-3 gap-2">
             {ANALYZER_OPTIONS.map((opt) => (
               <button
@@ -73,7 +83,7 @@ export function AnalyzerConfigCard({ config, onChange, disabled }: AnalyzerConfi
         <div className="grid grid-cols-2 gap-3">
           <div className="space-y-1.5">
             <label htmlFor="period-select" className="text-xs font-medium text-muted-foreground">
-              분석 기간
+              {t("upload.config.period")}
             </label>
             <select
               id="period-select"
@@ -81,11 +91,11 @@ export function AnalyzerConfigCard({ config, onChange, disabled }: AnalyzerConfi
               value={config.period_days}
               onChange={(e) => update("period_days", Number(e.target.value) as PeriodDays)}
               className="w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-ring disabled:opacity-50"
-              aria-label="분석 기간 선택"
+              aria-label={t("upload.config.period")}
             >
               {PERIOD_OPTIONS.map((opt) => (
                 <option key={opt.value} value={opt.value}>
-                  {opt.label}
+                  {PERIOD_LABELS[opt.value]}
                 </option>
               ))}
             </select>
@@ -93,7 +103,7 @@ export function AnalyzerConfigCard({ config, onChange, disabled }: AnalyzerConfi
 
           <div className="space-y-1.5">
             <label htmlFor="currency-select" className="text-xs font-medium text-muted-foreground">
-              통화
+              {t("upload.config.currency")}
             </label>
             <select
               id="currency-select"
@@ -101,10 +111,10 @@ export function AnalyzerConfigCard({ config, onChange, disabled }: AnalyzerConfi
               value={config.currency}
               onChange={(e) => update("currency", e.target.value as CurrencyType)}
               className="w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-ring disabled:opacity-50"
-              aria-label="통화 선택"
+              aria-label={t("upload.config.currency")}
             >
-              <option value="KRW">KRW (한국원)</option>
-              <option value="USD">USD (달러)</option>
+              <option value="KRW">KRW</option>
+              <option value="USD">USD</option>
             </select>
           </div>
         </div>
@@ -112,14 +122,14 @@ export function AnalyzerConfigCard({ config, onChange, disabled }: AnalyzerConfi
         {/* 환율 포함 토글 */}
         <div className="flex items-center justify-between rounded-lg border border-border bg-muted/20 px-3 py-2">
           <div>
-            <p className="text-xs font-medium">환율 변동 포함</p>
-            <p className="text-xs text-muted-foreground">KRW↔USD 환율 영향 분석에 포함</p>
+            <p className="text-xs font-medium">{t("upload.config.includeFx")}</p>
+            <p className="text-xs text-muted-foreground">{t("upload.config.includeFx.desc")}</p>
           </div>
           <Switch
             checked={config.include_fx}
             onCheckedChange={(v) => update("include_fx", v)}
             disabled={disabled}
-            aria-label="환율 변동 포함 토글"
+            aria-label={t("upload.config.includeFx")}
           />
         </div>
       </CardContent>

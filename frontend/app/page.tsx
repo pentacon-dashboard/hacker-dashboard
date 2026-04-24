@@ -40,13 +40,13 @@ import {
   signedColorClass,
 } from "@/lib/utils/format";
 
-const ASSET_CLASS_LABELS: Record<string, string> = {
-  stock_kr: "국내 주식",
-  stock_us: "해외 주식",
-  crypto: "암호화폐",
-  cash: "현금",
-  fx: "외환",
-  other: "기타",
+const ASSET_CLASS_LABEL_KEYS: Record<string, string> = {
+  stock_kr: "dashboard.alloc.stockKr",
+  stock_us: "dashboard.alloc.stockUs",
+  crypto: "dashboard.alloc.crypto",
+  cash: "dashboard.alloc.cash",
+  fx: "dashboard.alloc.fx",
+  other: "dashboard.alloc.other",
 };
 
 const ASSET_CLASS_COLORS: Record<string, string> = {
@@ -115,14 +115,14 @@ export default function DashboardHome() {
         const r = Number(ratio);
         return {
           key,
-          name: ASSET_CLASS_LABELS[key] ?? key,
+          name: ASSET_CLASS_LABEL_KEYS[key] ? t(ASSET_CLASS_LABEL_KEYS[key]!) : key,
           ratio: r,
           value_krw: Number.isFinite(total) ? total * r : 0,
           color: ASSET_CLASS_COLORS[key] ?? "#94a3b8",
         };
       })
       .sort((a, b) => b.ratio - a.ratio);
-  }, [summary]);
+  }, [summary, t]);
 
   // 오늘 손익: daily_change_krw / daily_change_pct 재사용
   const todayPnlKrw = summary ? summary.daily_change_krw : "0";

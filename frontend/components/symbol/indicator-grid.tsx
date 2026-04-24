@@ -1,6 +1,7 @@
 "use client";
 
 import { signedColorClass } from "@/lib/utils/format";
+import { useLocale } from "@/lib/i18n/locale-provider";
 
 export interface IndicatorMetrics {
   change_pct: string;
@@ -16,10 +17,10 @@ interface IndicatorGridProps {
   isLoading?: boolean;
 }
 
-const SIGNAL_LABELS: Record<string, { label: string; cls: string }> = {
-  buy: { label: "매수", cls: "text-emerald-600 dark:text-emerald-400 bg-emerald-100 dark:bg-emerald-900/30" },
-  hold: { label: "보유", cls: "text-amber-600 dark:text-amber-400 bg-amber-100 dark:bg-amber-900/30" },
-  sell: { label: "매도", cls: "text-red-600 dark:text-red-400 bg-red-100 dark:bg-red-900/30" },
+const SIGNAL_CLASSES: Record<string, string> = {
+  buy: "text-emerald-600 dark:text-emerald-400 bg-emerald-100 dark:bg-emerald-900/30",
+  hold: "text-amber-600 dark:text-amber-400 bg-amber-100 dark:bg-amber-900/30",
+  sell: "text-red-600 dark:text-red-400 bg-red-100 dark:bg-red-900/30",
 };
 
 interface MetricCardProps {
@@ -40,6 +41,8 @@ function MetricCard({ label, value, colorClass }: MetricCardProps) {
 }
 
 export function IndicatorGrid({ metrics, isLoading = false }: IndicatorGridProps) {
+  const { t } = useLocale();
+
   if (isLoading) {
     return (
       <div className="grid grid-cols-3 gap-2 sm:grid-cols-6" data-testid="indicator-grid-loading">
@@ -56,13 +59,15 @@ export function IndicatorGrid({ metrics, isLoading = false }: IndicatorGridProps
         className="flex h-16 items-center justify-center text-sm text-muted-foreground"
         data-testid="indicator-grid-empty"
       >
-        지표 데이터 없음
+        {t("symbol.noIndicator")}
       </div>
     );
   }
 
   const changePct = Number(metrics.change_pct);
-  const signalInfo = SIGNAL_LABELS[metrics.signal] ?? SIGNAL_LABELS["hold"]!;
+  const signalKey = metrics.signal as "buy" | "hold" | "sell";
+  const signalLabel = t(`symbol.signal.${signalKey}`);
+  const signalCls = SIGNAL_CLASSES[signalKey] ?? SIGNAL_CLASSES["hold"]!;
 
   return (
     <div
@@ -70,23 +75,23 @@ export function IndicatorGrid({ metrics, isLoading = false }: IndicatorGridProps
       data-testid="indicator-grid"
     >
       <MetricCard
-        label="등락률"
+        label={t("symbol.metric.changePct")}
         value={`${changePct > 0 ? "+" : ""}${changePct.toFixed(2)}%`}
         colorClass={signedColorClass(changePct)}
       />
       <MetricCard
-        label="평단가"
+        label={t("symbol.metric.avgCost")}
         value={metrics.avg_cost ?? "-"}
       />
       <MetricCard label="MA20" value={metrics.ma20 ?? "-"} />
       <MetricCard label="MA60" value={metrics.ma60 ?? "-"} />
-      <MetricCard label="거래량" value={metrics.volume} />
+      <MetricCard label={t("symbol.metric.volume")} value={metrics.volume} />
       <div className="rounded-xl border bg-card p-3 shadow-sm" data-testid="signal-card">
-        <p className="text-[10px] text-muted-foreground">시그널</p>
+        <p className="text-[10px] text-muted-foreground">{t("symbol.metric.signal")}</p>
         <span
-          className={`mt-1 inline-block rounded-full px-2 py-0.5 text-xs font-bold ${signalInfo.cls}`}
+          className={`mt-1 inline-block rounded-full px-2 py-0.5 text-xs font-bold ${signalCls}`}
         >
-          {signalInfo.label}
+          {signalLabel}
         </span>
       </div>
     </div>

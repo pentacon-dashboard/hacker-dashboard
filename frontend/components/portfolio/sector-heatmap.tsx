@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useLocale } from "@/lib/i18n/locale-provider";
 
 export interface SectorHeatmapTile {
   sector: string;
@@ -44,6 +45,7 @@ interface TooltipState {
 }
 
 export function SectorHeatmap({ tiles }: SectorHeatmapProps) {
+  const { t } = useLocale();
   const [tooltip, setTooltip] = useState<TooltipState | null>(null);
 
   if (tiles.length === 0) {
@@ -52,7 +54,7 @@ export function SectorHeatmap({ tiles }: SectorHeatmapProps) {
         className="flex h-40 items-center justify-center text-sm text-muted-foreground"
         data-testid="sector-heatmap-empty"
       >
-        섹터 데이터 없음
+        {t("common.sectorEmpty")}
       </div>
     );
   }
@@ -108,9 +110,9 @@ export function SectorHeatmap({ tiles }: SectorHeatmapProps) {
           role="tooltip"
         >
           <p className="font-semibold">{tooltip.tile.sector}</p>
-          <p className="text-muted-foreground">비중: {Number(tooltip.tile.weight_pct).toFixed(1)}%</p>
+          <p className="text-muted-foreground">{t("portfolio.sector.tooltip.weight")}: {Number(tooltip.tile.weight_pct).toFixed(1)}%</p>
           <p>
-            수익률:{" "}
+            {t("portfolio.sector.tooltip.return")}:{" "}
             <span
               className={
                 Number(tooltip.tile.pnl_pct) >= 0

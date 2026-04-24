@@ -13,6 +13,7 @@ import {
   Bar,
   CartesianGrid,
 } from "recharts";
+import { useLocale } from "@/lib/i18n/locale-provider";
 
 export interface RsiPoint {
   t: string;
@@ -145,6 +146,7 @@ interface MacdSubchartProps {
 }
 
 function MacdSubchart({ data }: MacdSubchartProps) {
+  const { t } = useLocale();
   const latest = data.at(-1);
   const ticks = sampledTicks(data);
 
@@ -201,7 +203,7 @@ function MacdSubchart({ data }: MacdSubchartProps) {
             <Tooltip
               formatter={(value: number, name: string) => [
                 value.toFixed(2),
-                name === "histogram" ? "히스토그램" : name === "macd" ? "MACD" : "Signal",
+                name === "histogram" ? t("symbol.macd.histogram") : name === "macd" ? "MACD" : "Signal",
               ]}
               labelFormatter={formatTick}
               contentStyle={{ fontSize: 11 }}
@@ -276,6 +278,8 @@ export function IndicatorSubcharts({
   macd,
   isLoading = false,
 }: IndicatorSubchartsProps) {
+  const { t } = useLocale();
+
   if (isLoading) {
     return (
       <div className="space-y-3" data-testid="indicator-subcharts-loading">
@@ -291,7 +295,7 @@ export function IndicatorSubcharts({
         className="flex h-24 items-center justify-center rounded-lg border bg-muted/30 text-sm text-muted-foreground"
         data-testid="indicator-subcharts-empty"
       >
-        지표 데이터 없음
+        {t("symbol.noIndicator")}
       </div>
     );
   }

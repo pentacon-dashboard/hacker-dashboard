@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { renderWithLocale as render, screen } from "@/lib/test-utils";
 import { PopularTop5, type TopListItem } from "./popular-top5";
 
 const MOCK_ITEMS: TopListItem[] = [

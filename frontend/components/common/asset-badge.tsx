@@ -1,5 +1,8 @@
+"use client";
+
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { useLocale } from "@/lib/i18n/locale-provider";
 
 export type AssetClass = "stock" | "crypto" | "fx" | "macro" | string;
 
@@ -8,11 +11,11 @@ interface AssetBadgeProps {
   className?: string;
 }
 
-const ASSET_LABEL: Record<string, string> = {
-  stock: "주식",
-  crypto: "CRYPTO",
-  fx: "FX",
-  macro: "매크로",
+const ASSET_LABEL_KEY: Record<string, string> = {
+  stock: "symbol.assetClass.stock",
+  crypto: "symbol.assetClass.crypto",
+  fx: "symbol.assetClass.fx",
+  macro: "common.macro",
 };
 
 const ASSET_STYLE: Record<string, string> = {
@@ -23,14 +26,16 @@ const ASSET_STYLE: Record<string, string> = {
 };
 
 export function AssetBadge({ assetClass, className }: AssetBadgeProps) {
-  const label = ASSET_LABEL[assetClass] ?? assetClass.toUpperCase();
+  const { t } = useLocale();
+  const key = ASSET_LABEL_KEY[assetClass];
+  const label = key ? t(key) : assetClass.toUpperCase();
   const style = ASSET_STYLE[assetClass] ?? ASSET_STYLE["macro"];
 
   return (
     <Badge
       variant="outline"
       className={cn(style, "text-xs font-medium", className)}
-      aria-label={`자산군: ${label}`}
+      aria-label={`${t("common.assetClass")}: ${label}`}
     >
       {label}
     </Badge>

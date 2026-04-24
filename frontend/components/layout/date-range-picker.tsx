@@ -3,14 +3,15 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { DayPicker } from "react-day-picker";
-import { ko } from "react-day-picker/locale";
+import { ko, enUS } from "react-day-picker/locale";
 import type { DateRange } from "react-day-picker";
 import { CalendarIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { useLocale } from "@/lib/i18n/locale-provider";
 
-function formatKoDate(date: Date): string {
-  return new Intl.DateTimeFormat("ko-KR", {
+function formatDate(date: Date, localeTag: string): string {
+  return new Intl.DateTimeFormat(localeTag, {
     month: "short",
     day: "numeric",
   }).format(date);
@@ -36,6 +37,9 @@ export function DateRangePicker() {
   const popoverRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const [open, setOpen] = useState(false);
+  const { locale, t } = useLocale();
+  const dpLocale = locale === "en" ? enUS : ko;
+  const localeTag = locale === "en" ? "en-US" : "ko-KR";
 
   // URL에서 초기값 파싱
   const initialRange = useCallback((): DateRange => {
@@ -95,8 +99,8 @@ export function DateRangePicker() {
 
   const label =
     range.from && range.to
-      ? `${formatKoDate(range.from)} – ${formatKoDate(range.to)}`
-      : "날짜 선택";
+      ? `${formatDate(range.from, localeTag)} – ${formatDate(range.to, localeTag)}`
+      : t("header.dateRangeSelect");
 
   return (
     <div className="relative" data-testid="date-range-picker">
@@ -107,7 +111,7 @@ export function DateRangePicker() {
         onClick={() => setOpen((v) => !v)}
         aria-expanded={open}
         aria-haspopup="dialog"
-        aria-label={`날짜 범위: ${label}`}
+        aria-label={t("header.dateRangeAria", { label })}
         className="h-8 gap-1.5 text-xs px-2.5"
       >
         <CalendarIcon className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
@@ -118,7 +122,7 @@ export function DateRangePicker() {
         <div
           ref={popoverRef}
           role="dialog"
-          aria-label="날짜 범위 선택"
+          aria-label={t("header.dateRangePicker")}
           className={cn(
             "absolute right-0 top-full z-50 mt-1.5 rounded-2xl border border-border bg-popover shadow-lg",
             "animate-in fade-in duration-200",
@@ -126,7 +130,7 @@ export function DateRangePicker() {
         >
           <DayPicker
             mode="range"
-            locale={ko}
+            locale={dpLocale}
             selected={range}
             onSelect={handleSelect}
             numberOfMonths={2}

@@ -3,6 +3,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { TrendingUp, TrendingDown, Layers } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useLocale } from "@/lib/i18n/locale-provider";
 
 // BE /market/commodities 실제 스키마
 export interface CommodityItem {
@@ -20,12 +21,13 @@ interface CommodityPanelProps {
 
 
 export function CommodityPanel({ commodities, loading }: CommodityPanelProps) {
+  const { t } = useLocale();
   return (
     <Card data-testid="commodity-panel">
       <CardHeader className="pb-3">
         <CardTitle className="flex items-center gap-2 text-sm font-semibold">
           <Layers className="h-4 w-4 text-primary" aria-hidden="true" />
-          원자재
+          {t("market.commodities")}
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-2">

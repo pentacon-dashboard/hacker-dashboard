@@ -1,6 +1,7 @@
 "use client";
 
 import { ArrowUpRight, ArrowDownRight } from "lucide-react";
+import { useLocale } from "@/lib/i18n/locale-provider";
 
 interface Trade {
   id: string;
@@ -18,17 +19,19 @@ const STUB_TRADES: Trade[] = [
 ];
 
 export function RecentTradesPanel() {
+  const { t, locale } = useLocale();
   return (
     <div className="space-y-3" data-testid="recent-trades-panel">
-      <h3 className="text-xs font-semibold">최근 체결</h3>
+      <h3 className="text-xs font-semibold">{t("watchlist.recentTrades")}</h3>
       {STUB_TRADES.length === 0 ? (
-        <p className="text-xs text-muted-foreground">최근 체결 내역 없음</p>
+        <p className="text-xs text-muted-foreground">{t("watchlist.noTrades")}</p>
       ) : (
         <ul className="space-y-2" data-testid="recent-trades-list">
           {STUB_TRADES.map((trade) => {
             const isBuy = trade.side === "buy";
-            // SSR/CSR hydration 일관성을 위해 24시간제 고정 (ko-KR 오후/PM 차이 회피)
-            const dateStr = new Date(trade.timestamp).toLocaleDateString("ko-KR", {
+            // SSR/CSR hydration 일관성을 위해 24시간제 고정
+            const dateLocale = locale === "en" ? "en-US" : "ko-KR";
+            const dateStr = new Date(trade.timestamp).toLocaleDateString(dateLocale, {
               month: "short",
               day: "numeric",
               hour: "2-digit",
@@ -71,7 +74,7 @@ export function RecentTradesPanel() {
           })}
         </ul>
       )}
-      <p className="text-[10px] text-muted-foreground">* 데모 고정 샘플</p>
+      <p className="text-[10px] text-muted-foreground">{t("watchlist.demoSample")}</p>
     </div>
   );
 }

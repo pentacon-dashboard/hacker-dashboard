@@ -1,5 +1,7 @@
 "use client";
 
+import { useLocale } from "@/lib/i18n/locale-provider";
+
 export interface IndicatorBundle {
   rsi_14: number | null;
   macd: number | null;
@@ -38,6 +40,8 @@ function IndicatorRow({
 }
 
 export function IndicatorPanel({ bundle, isLoading = false }: IndicatorPanelProps) {
+  const { t } = useLocale();
+
   if (isLoading) {
     return (
       <div className="space-y-2" data-testid="indicator-panel-loading">
@@ -54,7 +58,7 @@ export function IndicatorPanel({ bundle, isLoading = false }: IndicatorPanelProp
         className="flex h-24 items-center justify-center text-sm text-muted-foreground"
         data-testid="indicator-panel-empty"
       >
-        지표 데이터 없음
+        {t("symbol.noIndicator")}
       </div>
     );
   }
@@ -64,9 +68,9 @@ export function IndicatorPanel({ bundle, isLoading = false }: IndicatorPanelProp
       <IndicatorRow label="RSI (14)" value={bundle.rsi_14} />
       <IndicatorRow label="MACD" value={bundle.macd} />
       <IndicatorRow label="MACD Signal" value={bundle.macd_signal} />
-      <IndicatorRow label="볼린저 상단" value={bundle.bollinger_upper} />
-      <IndicatorRow label="볼린저 하단" value={bundle.bollinger_lower} />
-      <IndicatorRow label="스토캐스틱" value={bundle.stochastic} suffix="%" />
+      <IndicatorRow label={t("symbol.indicator.bollingerUpper")} value={bundle.bollinger_upper} />
+      <IndicatorRow label={t("symbol.indicator.bollingerLower")} value={bundle.bollinger_lower} />
+      <IndicatorRow label={t("symbol.indicator.stochastic")} value={bundle.stochastic} suffix="%" />
     </div>
   );
 }

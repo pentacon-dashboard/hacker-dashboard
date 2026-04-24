@@ -5,7 +5,7 @@
  * 이 파일에서 핵심 케이스를 커버한다.
  */
 import React from "react";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render as _render, screen, fireEvent } from "@testing-library/react";
 import { describe, it, expect, vi } from "vitest";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ThemeProvider } from "@/components/common/theme-provider";
@@ -24,7 +24,16 @@ function BaseProviders({ children }: { children: React.ReactNode }) {
 }
 
 function renderUnit(ui: React.ReactElement) {
-  return render(ui, { wrapper: BaseProviders });
+  return _render(ui, { wrapper: BaseProviders });
+}
+
+// 파일 내 모든 render() 를 BaseProviders 로 래핑하는 alias.
+// wrapper 옵션이 전달되면 그것을 우선하고, 없으면 BaseProviders 로 폴백.
+function render(ui: React.ReactElement, options?: Parameters<typeof _render>[1]) {
+  if (options?.wrapper) {
+    return _render(ui, options);
+  }
+  return _render(ui, { wrapper: BaseProviders, ...options });
 }
 
 function makeWrapper() {
@@ -294,7 +303,6 @@ describe("C-6: AnalyzerConfigCard", () => {
 
 import { GeneralSettings } from "@/components/settings/general-settings";
 import { ThemeSettings } from "@/components/settings/theme-settings";
-import { ThemeProvider } from "@/components/common/theme-provider";
 import { NotificationSettings, type NotificationConfig } from "@/components/settings/notification-settings";
 import { SystemInfo } from "@/components/settings/system-info";
 import { ConnectedAccounts, type ConnectedAccountsConfig } from "@/components/settings/connected-accounts";
@@ -530,7 +538,7 @@ describe("C-5: SessionSidebar", () => {
         onNewSession={vi.fn()}
       />,
     );
-    fireEvent.change(screen.getByLabelText("세션 검색"), { target: { value: "NVDA" } });
+    fireEvent.change(screen.getByLabelText("대화 검색..."), { target: { value: "NVDA" } });
     expect(screen.queryByText("포트폴리오 리밸런싱")).not.toBeInTheDocument();
     expect(screen.getByText("NVDA 분석")).toBeInTheDocument();
   });

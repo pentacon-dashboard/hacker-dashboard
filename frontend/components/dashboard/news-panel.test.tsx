@@ -1,6 +1,6 @@
 import React from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, waitFor, fireEvent, act } from "@testing-library/react";
+import { renderWithLocale as render, screen, waitFor, fireEvent, act } from "@/lib/test-utils";
 import { NewsPanel } from "./news-panel";
 import type { Citation } from "@/lib/api/news";
 

@@ -3,6 +3,7 @@
 import { CheckCircle, XCircle, AlertTriangle } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useLocale } from "@/lib/i18n/locale-provider";
 
 export interface ValidationResult {
   upload_id: string;
@@ -24,10 +25,11 @@ interface ValidationCardProps {
 }
 
 export function ValidationCard({ result, loading, error }: ValidationCardProps) {
+  const { t } = useLocale();
   return (
     <Card data-testid="validation-card">
       <CardHeader className="pb-3">
-        <CardTitle className="text-sm font-semibold">2. 데이터 검증 상태</CardTitle>
+        <CardTitle className="text-sm font-semibold">{t("upload.section.validation")}</CardTitle>
       </CardHeader>
       <CardContent>
         {loading && (
@@ -50,7 +52,7 @@ export function ValidationCard({ result, loading, error }: ValidationCardProps) 
 
         {!loading && !error && !result && (
           <div className="flex min-h-[80px] items-center justify-center text-sm text-muted-foreground">
-            파일 업로드 후 검증 결과가 표시됩니다
+            {t("upload.validation.pending")}
           </div>
         )}
 
@@ -58,7 +60,7 @@ export function ValidationCard({ result, loading, error }: ValidationCardProps) 
           <div className="space-y-3">
             {/* 컬럼 감지 */}
             <div className="rounded-lg border border-border bg-muted/30 px-3 py-2">
-              <p className="text-xs font-medium text-muted-foreground mb-1">감지된 컬럼</p>
+              <p className="text-xs font-medium text-muted-foreground mb-1">{t("upload.validation.columns")}</p>
               <div className="flex flex-wrap gap-1">
                 {result.columns_detected.map((col) => (
                   <span
@@ -75,28 +77,28 @@ export function ValidationCard({ result, loading, error }: ValidationCardProps) 
             <div className="grid grid-cols-2 gap-2" data-testid="validation-counts">
               <div className="rounded-lg border border-border bg-card px-3 py-2 text-center">
                 <p className="text-2xl font-bold tabular-nums">{result.total_rows}</p>
-                <p className="mt-0.5 text-xs text-muted-foreground">총 행</p>
+                <p className="mt-0.5 text-xs text-muted-foreground">{t("upload.validation.totalRows")}</p>
               </div>
               <div className="rounded-lg border border-green-500/30 bg-green-500/10 px-3 py-2 text-center">
                 <p className="flex items-center justify-center gap-1 text-2xl font-bold tabular-nums text-green-500">
                   <CheckCircle className="h-4 w-4" aria-hidden="true" />
                   {result.valid_rows}
                 </p>
-                <p className="mt-0.5 text-xs text-muted-foreground">검증 완료</p>
+                <p className="mt-0.5 text-xs text-muted-foreground">{t("upload.validation.validRows")}</p>
               </div>
               <div className="rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-center">
                 <p className="flex items-center justify-center gap-1 text-2xl font-bold tabular-nums text-destructive">
                   <XCircle className="h-4 w-4" aria-hidden="true" />
                   {result.error_rows}
                 </p>
-                <p className="mt-0.5 text-xs text-muted-foreground">오류</p>
+                <p className="mt-0.5 text-xs text-muted-foreground">{t("upload.validation.errorRows")}</p>
               </div>
               <div className="rounded-lg border border-yellow-500/30 bg-yellow-500/10 px-3 py-2 text-center">
                 <p className="flex items-center justify-center gap-1 text-2xl font-bold tabular-nums text-yellow-500">
                   <AlertTriangle className="h-4 w-4" aria-hidden="true" />
                   {result.warning_rows}
                 </p>
-                <p className="mt-0.5 text-xs text-muted-foreground">경고</p>
+                <p className="mt-0.5 text-xs text-muted-foreground">{t("upload.validation.warningRows")}</p>
               </div>
             </div>
 

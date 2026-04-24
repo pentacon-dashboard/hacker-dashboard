@@ -24,6 +24,7 @@ import { SymbolNewsPanel } from "@/components/symbol/symbol-news-panel";
 import { SectionCard } from "@/components/dashboard/section-card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatUSD, formatKRW } from "@/lib/utils/format";
+import { useLocale } from "@/lib/i18n/locale-provider";
 
 const ASSET_CLASS_MAP: Record<string, string> = {
   upbit: "crypto",
@@ -177,6 +178,7 @@ const STUB_ISSUES: KeyIssue[] = [
 ];
 
 export default function SymbolDetailPage() {
+  const { t } = useLocale();
   const params = useParams<{ market: string; code: string }>();
   const decodedMarket = decodeURIComponent(params.market);
   const decodedCode = decodeURIComponent(params.code);
@@ -329,7 +331,7 @@ export default function SymbolDetailPage() {
           ) : quoteQuery.isLoading ? (
             <Skeleton className="h-10 w-48" />
           ) : (
-            <p className="text-sm text-muted-foreground">시세 데이터를 불러올 수 없습니다.</p>
+            <p className="text-sm text-muted-foreground">{t("symbol.noPrice")}</p>
           )}
         </div>
       </div>
@@ -343,7 +345,7 @@ export default function SymbolDetailPage() {
         <div className="space-y-4">
           <div>
             <h2 className="mb-2 text-sm font-semibold text-muted-foreground">
-              {timeframe === "day" ? "일봉" : timeframe === "week" ? "주봉" : timeframe === "month" ? "월봉" : `${timeframe} 차트`} (MA20 / MA60)
+              {timeframe === "day" ? t("symbol.chart.daily") : timeframe === "week" ? t("symbol.chart.weekly") : timeframe === "month" ? t("symbol.chart.monthly") : `${timeframe} ${t("symbol.chart.suffix")}`} (MA20 / MA60)
             </h2>
             {ohlcQuery.isLoading ? (
               <Skeleton className="h-[400px] w-full" />
@@ -358,7 +360,7 @@ export default function SymbolDetailPage() {
                 className="flex h-[400px] items-center justify-center rounded-lg border bg-muted/30 text-sm text-muted-foreground"
                 role="status"
               >
-                차트 데이터를 불러올 수 없습니다.
+                {t("symbol.noChart")}
               </div>
             )}
           </div>
@@ -381,26 +383,26 @@ export default function SymbolDetailPage() {
         <aside className="space-y-4">
           {/* 기본 정보 */}
           <div className="rounded-lg border p-4 space-y-3">
-            <h2 className="text-sm font-semibold">기본 정보</h2>
+            <h2 className="text-sm font-semibold">{t("symbol.basicInfo")}</h2>
             <dl className="space-y-2 text-sm">
               <div className="flex justify-between">
-                <dt className="text-muted-foreground">거래소</dt>
+                <dt className="text-muted-foreground">{t("symbol.info.exchange")}</dt>
                 <dd className="font-medium">{decodedMarket}</dd>
               </div>
               <div className="flex justify-between">
-                <dt className="text-muted-foreground">통화</dt>
+                <dt className="text-muted-foreground">{t("symbol.info.currency")}</dt>
                 <dd className="font-medium">{currency}</dd>
               </div>
               {quoteQuery.data?.volume != null && (
                 <div className="flex justify-between">
-                  <dt className="text-muted-foreground">거래량</dt>
+                  <dt className="text-muted-foreground">{t("symbol.info.volume")}</dt>
                   <dd className="font-medium tabular-nums">
                     {formatVolume(quoteQuery.data.volume, currency)}
                   </dd>
                 </div>
               )}
               <div className="flex justify-between">
-                <dt className="text-muted-foreground">자산군</dt>
+                <dt className="text-muted-foreground">{t("symbol.info.assetClass")}</dt>
                 <dd>
                   <AssetBadge assetClass={assetClass} />
                 </dd>
@@ -409,7 +411,7 @@ export default function SymbolDetailPage() {
           </div>
 
           {/* 기술 지표 리스트 */}
-          <SectionCard title="기술 지표" testId="symbol-indicator-panel">
+          <SectionCard title={t("symbol.technicalIndicators")} testId="symbol-indicator-panel">
             <IndicatorPanel
               bundle={indicatorBundle}
               isLoading={indicatorsQuery.isLoading}
@@ -417,7 +419,7 @@ export default function SymbolDetailPage() {
           </SectionCard>
 
           {/* 주요 이슈 */}
-          <SectionCard title="주요 이슈" testId="symbol-key-issues">
+          <SectionCard title={t("symbol.keyIssues")} testId="symbol-key-issues">
             <KeyIssueList issues={STUB_ISSUES} />
           </SectionCard>
 
@@ -428,7 +430,7 @@ export default function SymbolDetailPage() {
 
       {/* 하단: 뉴스 + AI 분석 */}
       <section className="grid gap-5 lg:grid-cols-2">
-        <SectionCard title="관련 뉴스" testId="symbol-news-section">
+        <SectionCard title={t("symbol.relatedNews")} testId="symbol-news-section">
           <SymbolNewsPanel symbol={decodedCode} limit={5} />
         </SectionCard>
 
@@ -437,7 +439,7 @@ export default function SymbolDetailPage() {
             id="analysis-section-heading"
             className="mb-3 text-sm font-semibold text-muted-foreground"
           >
-            AI 분석
+            {t("symbol.aiAnalysis")}
           </h2>
           <SymbolAnalysisSection market={decodedMarket} code={decodedCode} />
         </section>

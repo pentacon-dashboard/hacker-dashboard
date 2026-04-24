@@ -4,22 +4,12 @@ import { useEffect, useState } from "react";
 import Image from "next/image";
 import { searchNews, type Citation } from "@/lib/api/news";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useLocale } from "@/lib/i18n/locale-provider";
 
 interface NewsPanelProps {
   symbols: string[];
   query?: string;
   limit?: number;
-}
-
-function formatPublished(iso: string | null | undefined): string {
-  if (!iso) return "";
-  try {
-    const d = new Date(iso);
-    if (Number.isNaN(d.getTime())) return "";
-    return d.toLocaleDateString("ko-KR", { month: "short", day: "numeric" });
-  } catch {
-    return "";
-  }
 }
 
 function hostname(url: string): string {
@@ -31,9 +21,21 @@ function hostname(url: string): string {
 }
 
 export function NewsPanel({ symbols, query, limit = 5 }: NewsPanelProps) {
+  const { t, locale } = useLocale();
   const [items, setItems] = useState<Citation[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [brokenIds, setBrokenIds] = useState<Set<string>>(new Set());
+
+  function formatPublished(iso: string | null | undefined): string {
+    if (!iso) return "";
+    try {
+      const d = new Date(iso);
+      if (Number.isNaN(d.getTime())) return "";
+      return d.toLocaleDateString(locale === "en" ? "en-US" : "ko-KR", { month: "short", day: "numeric" });
+    } catch {
+      return "";
+    }
+  }
 
   useEffect(() => {
     let cancelled = false;
@@ -52,7 +54,7 @@ export function NewsPanel({ symbols, query, limit = 5 }: NewsPanelProps) {
       })
       .catch((err) => {
         if (!cancelled) {
-          setError(err instanceof Error ? err.message : "뉴스 불러오기 실패");
+          setError(err instanceof Error ? err.message : t("news.loadFail"));
           setItems([]);
         }
       });
@@ -84,7 +86,7 @@ export function NewsPanel({ symbols, query, limit = 5 }: NewsPanelProps) {
         className="flex h-48 items-center justify-center text-sm text-muted-foreground"
         data-testid="news-panel-empty"
       >
-        {error ?? "관련 뉴스 없음"}
+        {error ?? t("news.noRelated")}
       </div>
     );
   }

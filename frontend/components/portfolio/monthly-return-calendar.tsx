@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useLocale } from "@/lib/i18n/locale-provider";
 
 export interface MonthlyReturnCell {
   date: string; // "YYYY-MM-DD"
@@ -48,6 +49,7 @@ interface CellMap {
 }
 
 export function MonthlyReturnCalendar({ cells, year }: MonthlyReturnCalendarProps) {
+  const { t } = useLocale();
   const [hovered, setHovered] = useState<MonthlyReturnCell | null>(null);
 
   if (cells.length === 0) {
@@ -56,7 +58,7 @@ export function MonthlyReturnCalendar({ cells, year }: MonthlyReturnCalendarProp
         className="flex h-32 items-center justify-center text-sm text-muted-foreground"
         data-testid="monthly-return-calendar-empty"
       >
-        수익률 데이터 없음
+        {t("common.returnEmpty")}
       </div>
     );
   }
@@ -160,14 +162,14 @@ export function MonthlyReturnCalendar({ cells, year }: MonthlyReturnCalendarProp
 
         {/* 범례 */}
         <div className="mt-2 flex items-center gap-1 text-[10px] text-muted-foreground">
-          <span>낮음</span>
+          <span>{t("portfolio.calendar.low")}</span>
           {[1, 2, 3, 4].map((lvl) => (
             <div
               key={lvl}
               className={`h-[10px] w-[10px] rounded-[2px] ${levelToColor(lvl, 1)}`}
             />
           ))}
-          <span>높음</span>
+          <span>{t("portfolio.calendar.high")}</span>
         </div>
       </div>
 

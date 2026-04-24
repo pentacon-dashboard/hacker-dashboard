@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { renderWithLocale as render, screen } from "@/lib/test-utils";
 import { MonthlyReturnCalendar, type MonthlyReturnCell } from "./monthly-return-calendar";
 
 function buildCells(count: number): MonthlyReturnCell[] {

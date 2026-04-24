@@ -2,6 +2,7 @@
 
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from "recharts";
 import { formatKRWCompact } from "@/lib/utils/format";
+import { useLocale } from "@/lib/i18n/locale-provider";
 
 export interface AllocationSlice {
   key: string;
@@ -16,10 +17,11 @@ interface AllocationBreakdownProps {
 }
 
 export function AllocationBreakdown({ data }: AllocationBreakdownProps) {
+  const { t } = useLocale();
   if (data.length === 0) {
     return (
       <div className="flex h-48 items-center justify-center text-sm text-muted-foreground">
-        보유 자산 없음
+        {t("dashboard.emptyHoldings")}
       </div>
     );
   }

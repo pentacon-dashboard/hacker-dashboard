@@ -5,6 +5,7 @@ import { Send, Loader2, Bot, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { CardRenderer } from "@/components/copilot/cards";
 import type { CopilotStreamState, StepState } from "@/hooks/use-copilot-stream";
+import { useLocale } from "@/lib/i18n/locale-provider";
 
 interface ThreadMessage {
   role: "user" | "assistant";
@@ -29,6 +30,7 @@ export function ThreadView({
   onSendMessage,
   disabled,
 }: ThreadViewProps) {
+  const { t } = useLocale();
   const inputRef = useRef<HTMLInputElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
 
@@ -52,9 +54,9 @@ export function ThreadView({
         {!sessionId && messages.length === 0 && streamState.status === "idle" && (
           <div className="flex flex-col items-center justify-center py-16 text-center">
             <Bot className="mb-3 h-10 w-10 text-muted-foreground/40" aria-hidden="true" />
-            <p className="text-sm font-medium text-muted-foreground">새 대화를 시작하세요</p>
+            <p className="text-sm font-medium text-muted-foreground">{t("copilot.emptyTitle")}</p>
             <p className="mt-1 text-xs text-muted-foreground/60">
-              포트폴리오 분석, 종목 질문, 리밸런싱 전략 등을 물어보세요
+              {t("copilot.emptyDesc")}
             </p>
           </div>
         )}
@@ -117,7 +119,7 @@ export function ThreadView({
                   <span className="font-mono">{stepId}</span>
                   {stepState.degraded && (
                     <span className="rounded bg-destructive/10 px-1 py-0.5 text-[10px] text-destructive">
-                      품질저하
+                      {t("copilot.degraded")}
                     </span>
                   )}
                 </div>
@@ -133,7 +135,7 @@ export function ThreadView({
                 )}
 
                 {!stepState.card && !stepState.buffer && (
-                  <div className="h-14 animate-pulse rounded border border-border bg-muted" aria-label="로딩 중" />
+                  <div className="h-14 animate-pulse rounded border border-border bg-muted" aria-label={t("copilot.loading")} />
                 )}
 
                 {stepState.card && (
@@ -147,7 +149,7 @@ export function ThreadView({
         {/* Final 카드 */}
         {streamState.finalCard && (
           <div className="space-y-1" data-testid="final-card">
-            <div className="text-xs font-semibold text-muted-foreground">통합 응답</div>
+            <div className="text-xs font-semibold text-muted-foreground">{t("copilot.finalResponse")}</div>
             <CardRenderer card={streamState.finalCard} suppressDegradedBanner />
           </div>
         )}
@@ -155,7 +157,7 @@ export function ThreadView({
         {/* 에러 */}
         {streamState.error && (
           <div className="rounded border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">
-            오류: {streamState.error}
+            {t("copilot.error")}: {streamState.error}
           </div>
         )}
 
@@ -167,17 +169,17 @@ export function ThreadView({
         <input
           ref={inputRef}
           type="text"
-          placeholder="포트폴리오에 대해 질문하세요..."
+          placeholder={t("copilot.inputPlaceholder")}
           disabled={disabled || isStreaming}
           className="flex-1 rounded-lg border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring disabled:opacity-50"
-          aria-label="질문 입력"
+          aria-label={t("copilot.inputAria")}
           data-testid="thread-input"
         />
         <Button
           type="submit"
           size="icon"
           disabled={disabled || isStreaming}
-          aria-label="전송"
+          aria-label={t("copilot.send")}
           data-testid="thread-send-btn"
         >
           {isStreaming ? (

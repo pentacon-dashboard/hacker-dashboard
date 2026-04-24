@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { renderWithLocale as render, screen, fireEvent } from "@/lib/test-utils";
 import { DateRangePicker } from "./date-range-picker";
 
 // next/navigation mock

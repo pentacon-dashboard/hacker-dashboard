@@ -3,6 +3,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { Globe } from "lucide-react";
+import { useLocale } from "@/lib/i18n/locale-provider";
 
 // BE /market/world-heatmap 실제 스키마 (나라별)
 export interface CountryHeatmapItem {
@@ -29,13 +30,14 @@ function getHeatColor(pctStr: string): string {
 }
 
 export function WorldHeatmap({ data, loading }: WorldHeatmapProps) {
+  const { t } = useLocale();
   return (
     <Card data-testid="world-heatmap">
       <CardHeader className="pb-3">
         <CardTitle className="flex items-center gap-2 text-sm font-semibold">
           <Globe className="h-4 w-4 text-primary" aria-hidden="true" />
-          글로벌 시장 동향
-          <span className="ml-auto text-xs font-normal text-muted-foreground">지역별 등락률</span>
+          {t("market.globalTrend")}
+          <span className="ml-auto text-xs font-normal text-muted-foreground">{t("market.regionalReturn")}</span>
         </CardTitle>
       </CardHeader>
       <CardContent>
@@ -77,13 +79,13 @@ export function WorldHeatmap({ data, loading }: WorldHeatmapProps) {
 
             {/* 범례 */}
             <div className="mt-3 flex items-center justify-end gap-1">
-              <span className="text-[10px] text-muted-foreground">하락</span>
+              <span className="text-[10px] text-muted-foreground">{t("market.legend.down")}</span>
               {["bg-red-600/70", "bg-red-500/50", "bg-red-400/30", "bg-green-400/30", "bg-green-500/50", "bg-green-600/70"].map(
                 (cls, i) => (
                   <div key={i} className={cn("h-2.5 w-4 rounded-sm", cls)} aria-hidden="true" />
                 ),
               )}
-              <span className="text-[10px] text-muted-foreground">상승</span>
+              <span className="text-[10px] text-muted-foreground">{t("market.legend.up")}</span>
             </div>
 
             {/* TODO: 옵션 F-2 — react-simple-maps 세계지도 구현 예정 */}

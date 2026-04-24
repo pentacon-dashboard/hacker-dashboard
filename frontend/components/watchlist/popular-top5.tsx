@@ -1,6 +1,7 @@
 "use client";
 
 import { TrendingUp, TrendingDown } from "lucide-react";
+import { useLocale } from "@/lib/i18n/locale-provider";
 
 export interface TopListItem {
   rank: number;
@@ -14,21 +15,23 @@ interface PopularTop5Props {
   title?: string;
 }
 
-export function PopularTop5({ items, title = "인기 TOP 5" }: PopularTop5Props) {
+export function PopularTop5({ items, title }: PopularTop5Props) {
+  const { t } = useLocale();
+  const resolvedTitle = title ?? t("watchlist.popularTop5");
   if (items.length === 0) {
     return (
       <div
         className="flex h-24 items-center justify-center text-sm text-muted-foreground"
         data-testid="popular-top5-empty"
       >
-        데이터 없음
+        {t("common.empty")}
       </div>
     );
   }
 
   return (
     <div data-testid="popular-top5">
-      <h3 className="mb-2 text-xs font-semibold text-muted-foreground">{title}</h3>
+      <h3 className="mb-2 text-xs font-semibold text-muted-foreground">{resolvedTitle}</h3>
       <ul className="space-y-1.5">
         {items.slice(0, 5).map((item) => {
           const change = Number(item.change_pct);

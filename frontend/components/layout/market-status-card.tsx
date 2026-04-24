@@ -2,9 +2,9 @@
 
 import { useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
+import { useLocale } from "@/lib/i18n/locale-provider";
 
-// TODO: GET /market/status 연동 후 실제 서버 세션 상태로 교체
-type MarketSession = "장중" | "장후" | "휴장";
+type MarketSession = "open" | "afterHours" | "closed";
 
 function getMarketSession(now: Date): MarketSession {
   const hour = now.getHours();
@@ -12,22 +12,22 @@ function getMarketSession(now: Date): MarketSession {
   const totalMinutes = hour * 60 + minute;
   const day = now.getDay(); // 0=일, 6=토
 
-  // 주말은 휴장
-  if (day === 0 || day === 6) return "휴장";
-
-  // 09:00 ~ 15:30 = 장중
-  if (totalMinutes >= 9 * 60 && totalMinutes < 15 * 60 + 30) return "장중";
-
-  // 15:30 이후 ~ 18:00 = 장후 (시간외 거래)
-  if (totalMinutes >= 15 * 60 + 30 && totalMinutes < 18 * 60) return "장후";
-
-  return "휴장";
+  if (day === 0 || day === 6) return "closed";
+  if (totalMinutes >= 9 * 60 && totalMinutes < 15 * 60 + 30) return "open";
+  if (totalMinutes >= 15 * 60 + 30 && totalMinutes < 18 * 60) return "afterHours";
+  return "closed";
 }
 
 const SESSION_STYLE: Record<MarketSession, string> = {
-  장중: "bg-emerald-500/20 text-emerald-400",
-  장후: "bg-amber-500/20 text-amber-400",
-  휴장: "bg-muted text-muted-foreground",
+  open: "bg-emerald-500/20 text-emerald-400",
+  afterHours: "bg-amber-500/20 text-amber-400",
+  closed: "bg-muted text-muted-foreground",
+};
+
+const SESSION_KEY: Record<MarketSession, string> = {
+  open: "sidebar.marketSession.open",
+  afterHours: "sidebar.marketSession.afterHours",
+  closed: "sidebar.marketSession.closed",
 };
 
 interface MarketStatusCardProps {
@@ -36,11 +36,9 @@ interface MarketStatusCardProps {
 
 /**
  * 사이드바 최하단 시장 상태 카드.
- * - 세션 배지(장중/장후/휴장), 현재 시각, 거래량 배지
- * - BE 연동 없이 클라이언트 시각 + 하드코드 세션 로직으로 우선 구현
  */
 export function MarketStatusCard({ collapsed = false }: MarketStatusCardProps) {
-  // SSR 하이드레이션 미스매치 방지: 서버 초기 렌더는 placeholder, 클라이언트 mount 후 실시각으로 채움
+  const { locale, t } = useLocale();
   const [now, setNow] = useState<Date | null>(null);
 
   useEffect(() => {
@@ -49,24 +47,27 @@ export function MarketStatusCard({ collapsed = false }: MarketStatusCardProps) {
     return () => clearInterval(id);
   }, []);
 
-  const session: MarketSession = now ? getMarketSession(now) : "휴장";
+  const session: MarketSession = now ? getMarketSession(now) : "closed";
+  const sessionLabel = t(SESSION_KEY[session]);
+  const fmtLocale = locale === "en" ? "en-US" : "ko-KR";
   const timeStr = now
-    ? new Intl.DateTimeFormat("ko-KR", { hour: "numeric", minute: "numeric" }).format(now)
+    ? new Intl.DateTimeFormat(fmtLocale, { hour: "numeric", minute: "numeric", hour12: locale === "en" })
+        .format(now)
     : "--:--";
 
   if (collapsed) {
     return (
       <div
         className="flex items-center justify-center rounded-xl border border-border/50 bg-card/50 p-1.5"
-        aria-label={`시장 상태: ${session}`}
-        title={`시장 상태: ${session} | ${timeStr}`}
+        aria-label={`${t("sidebar.marketStatus")}: ${sessionLabel}`}
+        title={`${t("sidebar.marketStatus")}: ${sessionLabel} | ${timeStr}`}
       >
         <span
           className={cn(
             "inline-block h-2 w-2 rounded-full",
-            session === "장중"
+            session === "open"
               ? "bg-emerald-400 animate-pulse"
-              : session === "장후"
+              : session === "afterHours"
                 ? "bg-amber-400"
                 : "bg-muted-foreground",
           )}
@@ -79,20 +80,20 @@ export function MarketStatusCard({ collapsed = false }: MarketStatusCardProps) {
   return (
     <div
       className="rounded-xl border border-border/50 bg-card/50 px-2.5 py-2"
-      aria-label="시장 상태"
+      aria-label={t("sidebar.marketStatus")}
     >
       <div className="mb-1.5 flex items-center justify-between">
         <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
-          시장 상태
+          {t("sidebar.marketStatus")}
         </span>
         <span
           className={cn(
             "rounded px-1.5 py-0.5 text-[9px] font-bold",
             SESSION_STYLE[session],
           )}
-          aria-label={`세션: ${session}`}
+          aria-label={`${t("sidebar.session")}: ${sessionLabel}`}
         >
-          {session}
+          {sessionLabel}
         </span>
       </div>
 
@@ -100,10 +101,9 @@ export function MarketStatusCard({ collapsed = false }: MarketStatusCardProps) {
         {timeStr}
       </p>
 
-      {/* 거래량 — stub "거래량 좋음" */}
       <div className="mt-1 flex items-center gap-1">
         <span className="inline-block h-1.5 w-1.5 rounded-full bg-emerald-400" aria-hidden="true" />
-        <span className="text-[10px] text-muted-foreground">거래량 좋음</span>
+        <span className="text-[10px] text-muted-foreground">{t("sidebar.volumeGood")}</span>
       </div>
     </div>
   );

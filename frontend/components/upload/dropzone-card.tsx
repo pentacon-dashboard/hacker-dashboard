@@ -6,6 +6,7 @@ import { Upload, File, X, CheckCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { useLocale } from "@/lib/i18n/locale-provider";
 
 export interface DropzoneCardProps {
   onFileAccepted: (file: File) => void;
@@ -22,6 +23,7 @@ export function DropzoneCard({
   uploadedFile,
   onClear,
 }: DropzoneCardProps) {
+  const { t } = useLocale();
   const [dragActive, setDragActive] = useState(false);
 
   const onDrop = useCallback(
@@ -44,9 +46,9 @@ export function DropzoneCard({
   return (
     <Card data-testid="dropzone-card">
       <CardHeader className="pb-3">
-        <CardTitle className="text-sm font-semibold">1. 파일 업로드</CardTitle>
+        <CardTitle className="text-sm font-semibold">{t("upload.section.dropzone")}</CardTitle>
         <p className="text-xs text-muted-foreground">
-          CSV 파일을 드래그하거나 클릭하여 업로드하세요. 업로드된 파일을 분석하여 대시보드를 자동 생성합니다.
+          {t("upload.dropzone.desc")}
         </p>
       </CardHeader>
       <CardContent>
@@ -62,7 +64,7 @@ export function DropzoneCard({
             {onClear && (
               <button
                 onClick={onClear}
-                aria-label="파일 제거"
+                aria-label={t("upload.dropzone.remove")}
                 className="rounded p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
               >
                 <X className="h-4 w-4" />
@@ -73,7 +75,7 @@ export function DropzoneCard({
           <div className="space-y-2 rounded-lg border border-border bg-muted/30 px-4 py-4">
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
               <File className="h-4 w-4" />
-              <span className="truncate">{uploadedFile?.name ?? "업로드 중..."}</span>
+              <span className="truncate">{uploadedFile?.name ?? t("upload.uploading")}</span>
               <span className="ml-auto text-xs">{uploadProgress}%</span>
             </div>
             <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
@@ -96,7 +98,7 @@ export function DropzoneCard({
                 ? "border-primary bg-primary/5"
                 : "border-border hover:border-primary/50 hover:bg-muted/30",
             )}
-            aria-label="CSV 파일 업로드 영역"
+            aria-label={t("upload.dropzone.area")}
           >
             <input {...getInputProps()} data-testid="file-input" />
             <Upload
@@ -108,14 +110,14 @@ export function DropzoneCard({
             />
             <div className="text-center">
               <p className="text-sm font-medium">
-                {isDragActive ? "파일을 놓으세요" : "CSV 파일을 드래그하거나 클릭"}
+                {isDragActive ? t("upload.dropzone.drag") : t("upload.dropzone.click")}
               </p>
               <p className="mt-1 text-xs text-muted-foreground">
-                .csv 형식 지원 · 최대 10MB
+                {t("upload.dropzone.hint")}
               </p>
             </div>
             <Button variant="outline" size="sm" tabIndex={-1} aria-hidden="true">
-              파일 선택
+              {t("upload.dropzone.select")}
             </Button>
           </div>
         )}

@@ -2,6 +2,7 @@ import React from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, waitFor, fireEvent } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { LocaleProvider } from "@/lib/i18n/locale-provider";
 import { AlertSettingsCard } from "./alert-settings-card";
 import type { WatchlistAlert } from "@/lib/api/watchlist";
 
@@ -47,7 +48,11 @@ function makeWrapper() {
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
   return function Wrapper({ children }: { children: React.ReactNode }) {
-    return <QueryClientProvider client={qc}>{children}</QueryClientProvider>;
+    return (
+      <QueryClientProvider client={qc}>
+        <LocaleProvider>{children}</LocaleProvider>
+      </QueryClientProvider>
+    );
   };
 }
 
@@ -99,7 +104,7 @@ describe("AlertSettingsCard", () => {
       expect(screen.getByTestId("alert-rules-list")).toBeInTheDocument(),
     );
 
-    fireEvent.click(screen.getByLabelText("알림 추가"));
+    fireEvent.click(screen.getByLabelText("+ 추가"));
     expect(screen.getByTestId("add-alert-form")).toBeInTheDocument();
   });
 
@@ -122,12 +127,12 @@ describe("AlertSettingsCard", () => {
       expect(screen.getByTestId("alert-rules-list")).toBeInTheDocument(),
     );
 
-    fireEvent.click(screen.getByLabelText("알림 추가"));
+    fireEvent.click(screen.getByLabelText("+ 추가"));
     await waitFor(() =>
       expect(screen.getByTestId("add-alert-form")).toBeInTheDocument(),
     );
 
-    fireEvent.change(screen.getByLabelText("종목 티커"), {
+    fireEvent.change(screen.getByLabelText("티커 (예: AAPL)"), {
       target: { value: "AAPL" },
     });
     fireEvent.change(screen.getByLabelText("기준가"), {
@@ -158,7 +163,7 @@ describe("AlertSettingsCard", () => {
       expect(screen.getByTestId("alert-rule-1")).toBeInTheDocument(),
     );
 
-    fireEvent.click(screen.getByLabelText("NVDA 알림 끄기"));
+    fireEvent.click(screen.getByLabelText("NVDA 끄기"));
     await waitFor(() => {
       expect(updateAlert).toHaveBeenCalledWith(1, { enabled: false });
     });

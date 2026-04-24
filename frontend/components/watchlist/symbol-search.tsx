@@ -3,12 +3,14 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { searchSymbols, type SymbolInfo } from "@/lib/api/symbols";
 import { AssetBadge } from "@/components/common/asset-badge";
+import { useLocale } from "@/lib/i18n/locale-provider";
 
 interface SymbolSearchProps {
   onSelect: (symbol: SymbolInfo) => void;
 }
 
 export function SymbolSearch({ onSelect }: SymbolSearchProps) {
+  const { t } = useLocale();
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<SymbolInfo[]>([]);
   const [loading, setLoading] = useState(false);
@@ -72,9 +74,9 @@ export function SymbolSearch({ onSelect }: SymbolSearchProps) {
         data-testid="symbol-search"
         value={query}
         onChange={(e) => setQuery(e.target.value)}
-        placeholder="종목 검색 (예: BTC, AAPL)"
+        placeholder={t("watchlist.search.placeholder")}
         className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
-        aria-label="종목 검색"
+        aria-label={t("watchlist.search.ariaLabel")}
         aria-autocomplete="list"
         aria-expanded={open}
         aria-controls="symbol-search-listbox"
@@ -92,7 +94,7 @@ export function SymbolSearch({ onSelect }: SymbolSearchProps) {
         <ul
           id="symbol-search-listbox"
           role="listbox"
-          aria-label="검색 결과"
+          aria-label={t("watchlist.search.results")}
           className="absolute z-50 mt-1 max-h-64 w-full overflow-auto rounded-md border bg-popover shadow-md"
         >
           {results.map((item) => (
@@ -118,7 +120,7 @@ export function SymbolSearch({ onSelect }: SymbolSearchProps) {
       )}
       {open && !loading && results.length === 0 && query.trim().length > 0 && (
         <div className="absolute z-50 mt-1 w-full rounded-md border bg-popover px-3 py-4 text-center text-sm text-muted-foreground shadow-md">
-          결과 없음
+          {t("watchlist.search.noResult")}
         </div>
       )}
     </div>
