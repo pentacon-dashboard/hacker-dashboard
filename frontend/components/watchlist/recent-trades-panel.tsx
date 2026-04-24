@@ -27,11 +27,14 @@ export function RecentTradesPanel() {
         <ul className="space-y-2" data-testid="recent-trades-list">
           {STUB_TRADES.map((trade) => {
             const isBuy = trade.side === "buy";
+            // SSR/CSR hydration 일관성을 위해 24시간제 고정 (ko-KR 오후/PM 차이 회피)
             const dateStr = new Date(trade.timestamp).toLocaleDateString("ko-KR", {
               month: "short",
               day: "numeric",
               hour: "2-digit",
               minute: "2-digit",
+              hour12: false,
+              timeZone: "Asia/Seoul",
             });
             return (
               <li
