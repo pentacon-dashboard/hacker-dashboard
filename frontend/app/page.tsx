@@ -180,7 +180,7 @@ export default function DashboardHome() {
         ) : summary ? (
           <>
             <KpiCard
-              label="총자산"
+              label={t("dashboard.kpi.totalAssets")}
               value={formatKRWCompact(summary.total_value_krw)}
               delta={formatPct(summary.total_pnl_pct, { signed: true })}
               deltaValue={Number(summary.total_pnl_pct)}
@@ -189,7 +189,7 @@ export default function DashboardHome() {
               testId="kpi-total-value"
             />
             <KpiCard
-              label="일간 변동"
+              label={t("dashboard.kpi.dailyChange")}
               value={formatPct(summary.daily_change_pct, { signed: true })}
               delta={(() => {
                 const krw = Number(summary.daily_change_krw);
@@ -202,7 +202,7 @@ export default function DashboardHome() {
               testId="kpi-daily-change"
             />
             <KpiCard
-              label={`${summary.period_days}일 변동`}
+              label={t("dashboard.kpi.monthlyChange")}
               value={formatPct(summary.period_change_pct, { signed: true })}
               deltaValue={Number(summary.period_change_pct)}
               icon={<LineChartIcon className="h-4 w-4" />}
@@ -210,16 +210,16 @@ export default function DashboardHome() {
               testId="kpi-period-change"
             />
             <KpiCard
-              label="보유 종목"
+              label={t("dashboard.kpi.holdings")}
               value={`${summary.holdings_count}`}
-              delta="종목"
+              delta={t("dashboard.kpi.holdingsUnit")}
               icon={<Layers className="h-4 w-4" />}
               accent="slate"
               testId="kpi-holdings-count"
             />
             {/* KPI 5번째: 오늘 손익 (목업 교체) */}
             <KpiCard
-              label="오늘 손익"
+              label={t("dashboard.kpi.todayPnl")}
               value={formatKRWCompact(todayPnlKrw)}
               delta={formatPct(todayPnlPct, { signed: true })}
               deltaValue={Number(todayPnlPct)}
@@ -228,14 +228,14 @@ export default function DashboardHome() {
               testId="kpi-today-pnl"
             />
             <KpiCard
-              label="집중도 리스크"
+              label={t("dashboard.kpi.concentration")}
               value={formatPct(summary.risk_score_pct)}
               delta={
                 Number(summary.risk_score_pct) >= 66
-                  ? "높음"
+                  ? t("dashboard.risk.high")
                   : Number(summary.risk_score_pct) >= 33
-                    ? "보통"
-                    : "양호"
+                    ? t("dashboard.risk.medium")
+                    : t("dashboard.risk.low")
               }
               tone={
                 Number(summary.risk_score_pct) >= 66
@@ -258,12 +258,12 @@ export default function DashboardHome() {
           우측 = 집중도 게이지 */}
       <section className="grid grid-cols-1 gap-4 lg:grid-cols-12">
         <SectionCard
-          title="자산 가치 추이"
+          title={t("dashboard.assetTrend")}
           className="lg:col-span-5"
           testId="section-networth"
           action={
             <span className="text-xs text-muted-foreground">
-              최근 {PERIOD_DAYS[period]}일
+              {t("dashboard.last30Days").replace("30", String(PERIOD_DAYS[period]))}
             </span>
           }
         >
@@ -275,7 +275,7 @@ export default function DashboardHome() {
         </SectionCard>
 
         <SectionCard
-          title="자산 배분"
+          title={t("dashboard.allocation")}
           className="lg:col-span-4"
           testId="section-allocation"
           action={
@@ -294,7 +294,7 @@ export default function DashboardHome() {
         </SectionCard>
 
         <SectionCard
-          title="집중도 리스크"
+          title={t("dashboard.concentrationRisk")}
           className="lg:col-span-3"
           testId="section-risk"
         >
@@ -311,7 +311,7 @@ export default function DashboardHome() {
       {/* 하단 그리드: 보유 자산 TOP 5 (7컬럼) / 디멘션 분석(섹터) / 시장 주도주 */}
       <section className="grid grid-cols-1 gap-4 lg:grid-cols-12">
         <SectionCard
-          title="보유 자산 TOP 5"
+          title={t("dashboard.top5Holdings")}
           className="lg:col-span-4"
           testId="section-top-holdings"
         >
@@ -333,7 +333,7 @@ export default function DashboardHome() {
         </SectionCard>
 
         <SectionCard
-          title="디멘션 분석 (섹터별 수익률)"
+          title={t("dashboard.dimensionAnalysis")}
           className="lg:col-span-5"
           testId="section-dimension"
         >
@@ -345,7 +345,7 @@ export default function DashboardHome() {
         </SectionCard>
 
         <SectionCard
-          title="시장 주도주"
+          title={t("dashboard.marketLeaders")}
           className="lg:col-span-3"
           testId="section-market-leaders"
         >
@@ -356,7 +356,7 @@ export default function DashboardHome() {
       {/* 최신 뉴스 섹션 */}
       <section data-testid="section-news">
         <SectionCard
-          title="최신 뉴스"
+          title={t("dashboard.latestNews")}
           testId="section-news-card"
           action={
             <span className="text-xs text-muted-foreground">보유 종목 연관 기사</span>
