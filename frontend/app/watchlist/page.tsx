@@ -9,6 +9,7 @@ import { PopularTop5 } from "@/components/watchlist/popular-top5";
 import { GainersLosersTop5 } from "@/components/watchlist/gainers-losers-top5";
 import { AlertSettingsCard } from "@/components/watchlist/alert-settings-card";
 import { RecentTradesPanel } from "@/components/watchlist/recent-trades-panel";
+import { CustomAlertCard } from "@/components/watchlist/custom-alert-card";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   getWatchlistSummary,
@@ -153,10 +154,8 @@ export default function WatchlistPage() {
           <RecentTradesPanel />
         </SectionCard>
 
-        <SectionCard title="맞춤 알림 설정" testId="watchlist-section-custom-alerts">
-          <div className="flex h-32 items-center justify-center text-sm text-muted-foreground">
-            Phase B-γ 연동 후 활성화
-          </div>
+        <SectionCard title={t("watchlist.customAlert")} testId="watchlist-section-custom-alerts">
+          <CustomAlertCard />
         </SectionCard>
       </section>
     </div>

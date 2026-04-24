@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { screen } from "@testing-library/react";
+import { renderWithProviders } from "@/tests/helpers/render-with-providers";
 import { Sidebar } from "./sidebar";
 
 // next/navigation mock
@@ -23,8 +24,8 @@ vi.mock("@/stores/ui", () => ({
 }));
 
 describe("Sidebar", () => {
-  it("8개 nav 항목이 모두 렌더된다", () => {
-    render(<Sidebar />);
+  it("8개 nav 항목이 모두 렌더된다 (ko 기본)", () => {
+    renderWithProviders(<Sidebar />);
     const navLabels = [
       "대시보드",
       "포트폴리오",
@@ -41,22 +42,22 @@ describe("Sidebar", () => {
   });
 
   it("LogoBadge HACKER 텍스트가 렌더된다", () => {
-    render(<Sidebar />);
+    renderWithProviders(<Sidebar />);
     expect(screen.getByText("HACKER")).toBeInTheDocument();
   });
 
   it("SidebarUserCard Demo User 텍스트가 렌더된다", () => {
-    render(<Sidebar />);
+    renderWithProviders(<Sidebar />);
     expect(screen.getByText("Demo User")).toBeInTheDocument();
   });
 
   it("MarketStatusCard '시장 상태' 텍스트가 렌더된다", () => {
-    render(<Sidebar />);
+    renderWithProviders(<Sidebar />);
     expect(screen.getByText("시장 상태")).toBeInTheDocument();
   });
 
   it("대시보드 링크에 aria-current='page'가 적용된다 (pathname='/')", () => {
-    render(<Sidebar />);
+    renderWithProviders(<Sidebar />);
     const dashLink = screen.getAllByRole("link", { name: "대시보드" })[0];
     expect(dashLink).toHaveAttribute("aria-current", "page");
   });

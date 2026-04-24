@@ -8,11 +8,33 @@ import React from "react";
 import { render, screen, fireEvent } from "@testing-library/react";
 import { describe, it, expect, vi } from "vitest";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { ThemeProvider } from "@/components/common/theme-provider";
+import { LocaleProvider } from "@/lib/i18n/locale-provider";
+
+/**
+ * 모든 유닛 테스트에 Theme + Locale Provider 를 주입하는 기본 wrapper.
+ * ThemeProvider 가 없으면 useTheme() 실패, LocaleProvider 가 없으면 useLocale() 실패.
+ */
+function BaseProviders({ children }: { children: React.ReactNode }) {
+  return (
+    <ThemeProvider>
+      <LocaleProvider>{children}</LocaleProvider>
+    </ThemeProvider>
+  );
+}
+
+function renderUnit(ui: React.ReactElement) {
+  return render(ui, { wrapper: BaseProviders });
+}
 
 function makeWrapper() {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return function Wrapper({ children }: { children: React.ReactNode }) {
-    return <QueryClientProvider client={qc}>{children}</QueryClientProvider>;
+    return (
+      <QueryClientProvider client={qc}>
+        <BaseProviders>{children}</BaseProviders>
+      </QueryClientProvider>
+    );
   };
 }
 
@@ -285,13 +307,13 @@ vi.mock("next-themes", () => ({
 
 describe("C-7: GeneralSettings", () => {
   it("기본 정보를 렌더한다", () => {
-    render(<GeneralSettings />);
+    renderUnit(<GeneralSettings />);
     expect(screen.getByTestId("general-settings")).toBeInTheDocument();
     expect(screen.getByDisplayValue("Demo User")).toBeInTheDocument();
   });
 
   it("이메일 필드는 비활성화, 이름은 편집 가능하다", () => {
-    render(<GeneralSettings />);
+    renderUnit(<GeneralSettings />);
     const nameInput = screen.getByDisplayValue("Demo User");
     const emailInput = screen.getByDisplayValue("demo@example.com");
     expect(nameInput).not.toBeDisabled();
@@ -300,24 +322,21 @@ describe("C-7: GeneralSettings", () => {
 
   it("이름 변경 시 onChange 콜백을 호출한다", () => {
     const onChange = vi.fn();
-    render(<GeneralSettings onChange={onChange} />);
+    renderUnit(<GeneralSettings onChange={onChange} />);
     const nameInput = screen.getByDisplayValue("Demo User");
     fireEvent.change(nameInput, { target: { value: "New Name" } });
     expect(onChange).toHaveBeenCalledWith({ displayName: "New Name" });
   });
 
   it("커스텀 이름을 표시한다", () => {
-    render(<GeneralSettings displayName="테스트 유저" />);
+    renderUnit(<GeneralSettings displayName="테스트 유저" />);
     expect(screen.getByDisplayValue("테스트 유저")).toBeInTheDocument();
   });
 });
 
 describe("C-7: ThemeSettings", () => {
-  // ThemeSettings 는 ThemeProvider 컨텍스트(useTheme)에 의존
-  const withProvider = (ui: React.ReactElement) => <ThemeProvider>{ui}</ThemeProvider>;
-
   it("3개 테마 버튼을 렌더한다", () => {
-    render(withProvider(<ThemeSettings />));
+    renderUnit(<ThemeSettings />);
     expect(screen.getByTestId("theme-settings")).toBeInTheDocument();
     expect(screen.getByTestId("theme-btn-dark")).toBeInTheDocument();
     expect(screen.getByTestId("theme-btn-light")).toBeInTheDocument();
@@ -325,7 +344,7 @@ describe("C-7: ThemeSettings", () => {
   });
 
   it("5개 색상 팔레트 버튼을 렌더한다", () => {
-    render(withProvider(<ThemeSettings accentColor="violet" />));
+    renderUnit(<ThemeSettings accentColor="violet" />);
     expect(screen.getByTestId("accent-violet")).toBeInTheDocument();
     expect(screen.getByTestId("accent-cyan")).toBeInTheDocument();
     expect(screen.getByTestId("accent-blue")).toBeInTheDocument();
@@ -333,7 +352,7 @@ describe("C-7: ThemeSettings", () => {
 
   it("색상 변경 콜백이 호출된다", () => {
     const onChange = vi.fn();
-    render(withProvider(<ThemeSettings onAccentChange={onChange} />));
+    renderUnit(<ThemeSettings onAccentChange={onChange} />);
     fireEvent.click(screen.getByTestId("accent-cyan"));
     expect(onChange).toHaveBeenCalledWith("cyan");
   });
@@ -348,21 +367,22 @@ describe("C-7: NotificationSettings", () => {
   };
 
   it("알림 토글을 렌더한다", () => {
-    render(<NotificationSettings config={defaultConfig} onChange={vi.fn()} />);
+    renderUnit(<NotificationSettings config={defaultConfig} onChange={vi.fn()} />);
     expect(screen.getByTestId("notification-settings")).toBeInTheDocument();
     expect(screen.getByLabelText("이메일 알림")).toBeInTheDocument();
   });
 
   it("3개 토글 항목을 표시한다", () => {
-    render(<NotificationSettings config={defaultConfig} onChange={vi.fn()} />);
+    renderUnit(<NotificationSettings config={defaultConfig} onChange={vi.fn()} />);
     expect(screen.getByText("이메일 알림")).toBeInTheDocument();
     expect(screen.getByText("푸시 알림")).toBeInTheDocument();
     expect(screen.getByText("일일 다이제스트")).toBeInTheDocument();
   });
 
   it("가격 임계값 입력을 표시한다", () => {
-    render(<NotificationSettings config={defaultConfig} onChange={vi.fn()} />);
-    expect(screen.getByLabelText("가격 알림 임계값")).toBeInTheDocument();
+    renderUnit(<NotificationSettings config={defaultConfig} onChange={vi.fn()} />);
+    // aria-label 은 사전 i18n 키 "가격 알림 임계값 (%)" 기준
+    expect(screen.getByLabelText(/가격 알림 임계값/)).toBeInTheDocument();
   });
 });
 
@@ -395,21 +415,24 @@ describe("C-7: ConnectedAccounts", () => {
   };
 
   it("4개 계정 항목을 렌더한다", () => {
-    render(<ConnectedAccounts config={config} />);
+    renderUnit(<ConnectedAccounts config={config} />);
     expect(screen.getByTestId("connected-accounts")).toBeInTheDocument();
     expect(screen.getByText("Google")).toBeInTheDocument();
     expect(screen.getByText("GitHub")).toBeInTheDocument();
   });
 
   it("GitHub 연결 상태를 표시한다", () => {
-    render(<ConnectedAccounts config={config} />);
+    renderUnit(<ConnectedAccounts config={config} />);
     expect(screen.getByText("연결됨")).toBeInTheDocument();
   });
 
-  it("연결 버튼이 비활성화 상태다 (데모 모드)", () => {
-    render(<ConnectedAccounts config={config} />);
-    const buttons = screen.getAllByRole("button");
-    buttons.forEach((btn) => expect(btn).toBeDisabled());
+  it("onToggle 콜백이 호출된다", () => {
+    const onToggle = vi.fn();
+    renderUnit(<ConnectedAccounts config={config} onToggle={onToggle} />);
+    const connectBtns = screen.getAllByRole("button");
+    // 최소 하나는 클릭 가능 (이전엔 disabled 여서 click 무시됨)
+    fireEvent.click(connectBtns[0]!);
+    expect(onToggle).toHaveBeenCalled();
   });
 });
 
@@ -422,18 +445,18 @@ describe("C-7: DataSettings", () => {
   };
 
   it("데이터 설정을 렌더한다", () => {
-    render(<DataSettings config={defaultConfig} onChange={vi.fn()} />);
+    renderUnit(<DataSettings config={defaultConfig} onChange={vi.fn()} />);
     expect(screen.getByTestId("data-settings")).toBeInTheDocument();
   });
 
   it("자동 새로고침 토글을 표시한다", () => {
-    render(<DataSettings config={defaultConfig} onChange={vi.fn()} />);
-    expect(screen.getByLabelText("자동 새로고침 토글")).toBeInTheDocument();
+    renderUnit(<DataSettings config={defaultConfig} onChange={vi.fn()} />);
+    expect(screen.getByLabelText(/자동 새로고침/)).toBeInTheDocument();
   });
 
   it("캐시 크기 슬라이더를 표시한다", () => {
-    render(<DataSettings config={defaultConfig} onChange={vi.fn()} />);
-    expect(screen.getByLabelText("캐시 크기 슬라이더")).toBeInTheDocument();
+    renderUnit(<DataSettings config={defaultConfig} onChange={vi.fn()} />);
+    expect(screen.getByLabelText(/캐시 크기/)).toBeInTheDocument();
   });
 });
 
