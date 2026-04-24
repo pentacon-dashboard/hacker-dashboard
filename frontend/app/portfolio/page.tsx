@@ -13,6 +13,7 @@ import { HoldingsTable } from "@/components/portfolio/holdings-table";
 import { SectorHeatmap } from "@/components/portfolio/sector-heatmap";
 import { MonthlyReturnCalendar } from "@/components/portfolio/monthly-return-calendar";
 import { AiInsightCard } from "@/components/portfolio/ai-insight-card";
+import { useLocale } from "@/lib/i18n/locale-provider";
 import {
   getPortfolioSummary,
   getSectorHeatmap,
@@ -29,6 +30,7 @@ import {
 export const dynamic = "force-dynamic";
 
 export default function PortfolioPage() {
+  const { t } = useLocale();
   const summaryQuery = useQuery({
     queryKey: ["portfolio", "summary"],
     queryFn: () => getPortfolioSummary(),
@@ -67,8 +69,8 @@ export default function PortfolioPage() {
     return (
       <div className="space-y-6">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">포트폴리오</h1>
-          <p className="text-sm text-muted-foreground">자산군별 보유 현황 및 분석</p>
+          <h1 className="text-2xl font-bold tracking-tight">{t("portfolio.title")}</h1>
+          <p className="text-sm text-muted-foreground">{t("portfolio.subtitle")}</p>
         </div>
         <div className="grid gap-4 sm:grid-cols-5">
           {[...Array(5)].map((_, i) => (
@@ -87,7 +89,7 @@ export default function PortfolioPage() {
     return (
       <div className="space-y-6">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">포트폴리오</h1>
+          <h1 className="text-2xl font-bold tracking-tight">{t("portfolio.title")}</h1>
         </div>
         <ErrorState
           title="포트폴리오 로드 실패"
@@ -105,8 +107,8 @@ export default function PortfolioPage() {
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold tracking-tight">포트폴리오</h1>
-            <p className="text-sm text-muted-foreground">자산군별 보유 현황 및 분석</p>
+            <h1 className="text-2xl font-bold tracking-tight">{t("portfolio.title")}</h1>
+            <p className="text-sm text-muted-foreground">{t("portfolio.subtitle")}</p>
           </div>
           <AddHoldingDialog />
         </div>
@@ -134,8 +136,8 @@ export default function PortfolioPage() {
       {/* 헤더 */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">포트폴리오</h1>
-          <p className="text-sm text-muted-foreground">자산군별 보유 현황 및 분석</p>
+          <h1 className="text-2xl font-bold tracking-tight">{t("portfolio.title")}</h1>
+          <p className="text-sm text-muted-foreground">{t("portfolio.subtitle")}</p>
         </div>
         <AddHoldingDialog />
       </div>

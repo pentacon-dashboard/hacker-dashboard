@@ -15,6 +15,7 @@ import {
   getWatchlistPopular,
   getWatchlistGainersLosers,
 } from "@/lib/api/watchlist";
+import { useLocale } from "@/lib/i18n/locale-provider";
 
 export const dynamic = "force-dynamic";
 
@@ -28,6 +29,7 @@ function KpiSkeleton() {
 }
 
 export default function WatchlistPage() {
+  const { t } = useLocale();
   const summaryQuery = useQuery({
     queryKey: ["watchlist", "summary"],
     queryFn: getWatchlistSummary,
@@ -52,10 +54,8 @@ export default function WatchlistPage() {
     <div className="space-y-5">
       {/* 헤더 */}
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">워치리스트</h1>
-        <p className="mt-0.5 text-sm text-muted-foreground">
-          관심 종목을 추가하고 실시간 시세를 확인하세요.
-        </p>
+        <h1 className="text-2xl font-bold tracking-tight">{t("watchlist.title")}</h1>
+        <p className="mt-0.5 text-sm text-muted-foreground">{t("watchlist.subtitle")}</p>
       </div>
 
       {/* KPI 4개 */}

@@ -9,6 +9,7 @@ import { DateRangePicker } from "@/components/layout/date-range-picker";
 import { NotificationBell } from "@/components/layout/notification-bell";
 import { CsvUploadButton } from "@/components/layout/csv-upload-button";
 import { Suspense } from "react";
+import { useLocale } from "@/lib/i18n/locale-provider";
 
 type HealthStatus = "ok" | "error" | "pending";
 
@@ -44,6 +45,7 @@ export function Header() {
   const { theme, setTheme, isDark, mounted } = useTheme();
   const healthStatus = useHealthPolling(10000);
   const toggleMobileMenu = useUiStore((s) => s.toggleMobileMenu);
+  const { t } = useLocale();
 
   function handleToggle() {
     setTheme(isDark ? "light" : "dark");
@@ -91,8 +93,8 @@ export function Header() {
         {/* API Health dot */}
         <div
           className="flex items-center gap-1.5"
-          aria-label={`API 상태: ${healthStatus === "ok" ? "정상" : healthStatus === "error" ? "오류" : "확인 중"}`}
-          title={`API ${healthStatus === "ok" ? "정상" : healthStatus === "error" ? "오류" : "확인 중"}`}
+          aria-label={`${t("header.apiOk")}: ${healthStatus === "ok" ? t("settings.system.healthy") : healthStatus === "error" ? t("settings.system.error") : t("common.loading")}`}
+          title={`${t("header.apiOk")} ${healthStatus === "ok" ? t("settings.system.healthy") : healthStatus === "error" ? t("settings.system.error") : t("common.loading")}`}
         >
           <span
             className={`inline-block h-2 w-2 rounded-full ${
@@ -105,7 +107,7 @@ export function Header() {
             aria-hidden="true"
           />
           <span className="hidden text-xs text-muted-foreground sm:inline">
-            {healthStatus === "ok" ? "API 정상" : healthStatus === "error" ? "API 오류" : "확인 중"}
+            {healthStatus === "ok" ? t("header.apiOk") : healthStatus === "error" ? `${t("header.apiOk")} ${t("common.error")}` : t("common.loading")}
           </span>
         </div>
 
@@ -126,7 +128,7 @@ export function Header() {
           variant="ghost"
           size="icon"
           onClick={handleToggle}
-          aria-label={isDark ? "라이트 모드로 전환" : "다크 모드로 전환"}
+          aria-label={isDark ? t("header.lightMode") : t("header.darkMode")}
           data-testid="theme-toggle"
           suppressHydrationWarning
           className="h-8 w-8"

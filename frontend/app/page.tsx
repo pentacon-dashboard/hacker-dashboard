@@ -27,6 +27,7 @@ import { MarketLeaders } from "@/components/dashboard/market-leaders";
 import { NetworthChart } from "@/components/portfolio/networth-chart";
 import { NewsPanel } from "@/components/dashboard/news-panel";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useLocale } from "@/lib/i18n/locale-provider";
 import {
   getPortfolioSummary,
   getSnapshots,
@@ -69,6 +70,7 @@ export default function DashboardHome() {
   const [snapshots, setSnapshots] = useState<SnapshotResponse[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [period, setPeriod] = useState<PeriodKey>("1M");
+  const { t } = useLocale();
 
   useEffect(() => {
     let cancelled = false;
@@ -141,9 +143,9 @@ export default function DashboardHome() {
       {/* 상단 타이틀 + 기간 탭 + 날짜 범위 */}
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">대시보드</h1>
+          <h1 className="text-2xl font-bold tracking-tight">{t("dashboard.title")}</h1>
           <p className="mt-0.5 text-sm text-muted-foreground">
-            포트폴리오 전반을 한눈에 보세요.
+            {t("dashboard.subtitle")}
           </p>
         </div>
         <div className="flex items-center gap-2">

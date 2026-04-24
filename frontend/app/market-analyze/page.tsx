@@ -7,6 +7,7 @@ import { SectorKpiGrid, type SectorItem } from "@/components/market-analyze/sect
 import { CommodityPanel, type CommodityItem } from "@/components/market-analyze/commodity-panel";
 import { MarketNewsFeed } from "@/components/market-analyze/market-news-feed";
 import { API_BASE } from "@/lib/api/client";
+import { useLocale } from "@/lib/i18n/locale-provider";
 
 // BE 실 스키마 기반 NewsItem (search/news 응답 구조)
 interface NewsItem {
@@ -50,6 +51,7 @@ async function safeFetch<T>(url: string, fallback: T): Promise<T> {
 }
 
 export default function MarketAnalyzePage() {
+  const { t } = useLocale();
   const [indices, setIndices] = useState<IndexSnapshot[]>([]);
   const [sectors, setSectors] = useState<SectorItem[]>([]);
   const [commodities, setCommodities] = useState<CommodityItem[]>([]);
@@ -79,9 +81,9 @@ export default function MarketAnalyzePage() {
     <div className="flex flex-col gap-4">
       {/* 헤더 */}
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">시장 분석</h1>
+        <h1 className="text-2xl font-bold tracking-tight">{t("market.title")}</h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          글로벌 지수, 섹터, 원자재 및 세계 히트맵을 한눈에 확인합니다.
+          {t("market.subtitle")}
         </p>
       </div>
 

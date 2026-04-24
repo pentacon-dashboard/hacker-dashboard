@@ -9,6 +9,7 @@ import { AnalyzerConfigCard, type AnalyzerConfig } from "@/components/upload/ana
 import { AnalyzeProgressCard } from "@/components/upload/analyze-progress-card";
 import { CsvTemplateCard } from "@/components/upload/csv-template-card";
 import { API_BASE } from "@/lib/api/client";
+import { useLocale } from "@/lib/i18n/locale-provider";
 
 const DEFAULT_CONFIG: AnalyzerConfig = {
   analyzer: "portfolio",
@@ -19,6 +20,7 @@ const DEFAULT_CONFIG: AnalyzerConfig = {
 
 export default function UploadPage() {
   const router = useRouter();
+  const { t } = useLocale();
 
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
@@ -94,10 +96,8 @@ export default function UploadPage() {
     <div className="flex flex-col gap-6">
       {/* 헤더 */}
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">업로드 &amp; 분석</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          CSV 파일을 업로드하면 AI가 자동으로 분석 뷰를 생성합니다. 5초 내 대시보드 자동 진입.
-        </p>
+        <h1 className="text-2xl font-bold tracking-tight">{t("upload.title")}</h1>
+        <p className="mt-1 text-sm text-muted-foreground">{t("upload.subtitle")}</p>
       </div>
 
       {/* 메인 그리드 — 2×3 */}

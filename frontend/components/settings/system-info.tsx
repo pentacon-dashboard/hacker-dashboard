@@ -5,6 +5,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { Info, Trash2, CheckCircle, AlertCircle } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { useLocale } from "@/lib/i18n/locale-provider";
 
 interface SystemInfoProps {
   version?: string;
@@ -21,17 +22,17 @@ export function SystemInfo({
 }: SystemInfoProps) {
   const [cacheCleared, setCacheCleared] = useState(false);
   const queryClient = useQueryClient();
+  const { locale, t } = useLocale();
 
+  const fmtLocale = locale === "en" ? "en-US" : "ko-KR";
   const formattedBuild = buildTime
-    ? new Date(buildTime).toLocaleString("ko-KR")
-    : new Date().toLocaleString("ko-KR");
+    ? new Date(buildTime).toLocaleString(fmtLocale)
+    : new Date().toLocaleString(fmtLocale);
 
   function handleClearCache() {
-    // TanStack Query 캐시 전체 제거
     queryClient.clear();
-    // localStorage 에서 대시보드 데이터 캐시 제거 (next-themes 'theme' 키는 유지)
     if (typeof window !== "undefined") {
-      const keysToKeep = ["theme"];
+      const keysToKeep = ["theme", "hd-theme", "hd-locale", "hd-accent"];
       Object.keys(localStorage).forEach((k) => {
         if (!keysToKeep.includes(k)) localStorage.removeItem(k);
       });
@@ -45,15 +46,14 @@ export function SystemInfo({
       <CardHeader className="pb-3">
         <CardTitle className="flex items-center gap-2 text-sm font-semibold">
           <Info className="h-4 w-4 text-primary" aria-hidden="true" />
-          시스템 정보
+          {t("settings.system.title")}
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-3">
-        {/* 정보 항목들 */}
         {[
-          { label: "버전", value: version },
-          { label: "빌드 시간", value: formattedBuild },
-          { label: "캐시 크기", value: `${cacheSizeMb} MB` },
+          { label: t("settings.system.version"), value: version },
+          { label: t("settings.system.buildTime"), value: formattedBuild },
+          { label: t("settings.system.cacheSize"), value: `${cacheSizeMb} MB` },
         ].map((item) => (
           <div key={item.label} className="flex items-center justify-between">
             <span className="text-xs text-muted-foreground">{item.label}</span>
@@ -61,27 +61,25 @@ export function SystemInfo({
           </div>
         ))}
 
-        {/* API 상태 */}
         <div className="flex items-center justify-between">
-          <span className="text-xs text-muted-foreground">API 상태</span>
+          <span className="text-xs text-muted-foreground">{t("settings.system.apiStatus")}</span>
           <div className="flex items-center gap-1.5">
             {apiStatus === "healthy" ? (
               <>
                 <CheckCircle className="h-3.5 w-3.5 text-green-500" aria-hidden="true" />
-                <span className="text-xs font-medium text-green-500">정상</span>
+                <span className="text-xs font-medium text-green-500">{t("settings.system.healthy")}</span>
               </>
             ) : (
               <>
                 <AlertCircle className="h-3.5 w-3.5 text-destructive" aria-hidden="true" />
                 <span className="text-xs font-medium text-destructive">
-                  {apiStatus === "degraded" ? "성능 저하" : "오류"}
+                  {apiStatus === "degraded" ? t("settings.system.degraded") : t("settings.system.error")}
                 </span>
               </>
             )}
           </div>
         </div>
 
-        {/* 캐시 비우기 */}
         <Button
           variant="outline"
           size="sm"
@@ -92,12 +90,12 @@ export function SystemInfo({
           {cacheCleared ? (
             <>
               <CheckCircle className="mr-2 h-3.5 w-3.5 text-green-500" aria-hidden="true" />
-              캐시 삭제 완료
+              {t("settings.system.cacheCleared")}
             </>
           ) : (
             <>
               <Trash2 className="mr-2 h-3.5 w-3.5" aria-hidden="true" />
-              캐시 비우기
+              {t("settings.system.clearCache")}
             </>
           )}
         </Button>

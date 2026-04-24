@@ -6,6 +6,7 @@ import { ThreadView } from "@/components/copilot/full/thread-view";
 import { ReferencePanel } from "@/components/copilot/full/reference-panel";
 import { useCopilotStream } from "@/hooks/use-copilot-stream";
 import { API_BASE } from "@/lib/api/client";
+import { useLocale } from "@/lib/i18n/locale-provider";
 
 // TODO: BE γ-sprint 완료 후 실 엔드포인트로 swap (현재 MSW stub 사용)
 async function fetchSessions(): Promise<CopilotSession[]> {
@@ -27,6 +28,7 @@ interface HistoryMessage {
 }
 
 export default function CopilotPage() {
+  const { t } = useLocale();
   const [sessions, setSessions] = useState<CopilotSession[]>([]);
   const [sessionsLoading, setSessionsLoading] = useState(true);
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
@@ -107,14 +109,12 @@ export default function CopilotPage() {
       {/* 헤더 */}
       <div>
         <h1 className="flex items-center gap-2 text-2xl font-bold tracking-tight">
-          코파일럿
+          {t("copilot.title")}
           <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-semibold text-primary">
             Beta
           </span>
         </h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          포트폴리오 분석·질의응답을 AI 코파일럿에 맡기세요. 세션을 저장하고 이어서 대화할 수 있습니다.
-        </p>
+        <p className="mt-1 text-sm text-muted-foreground">{t("copilot.subtitle")}</p>
       </div>
 
       {/* 3 컬럼 레이아웃 */}

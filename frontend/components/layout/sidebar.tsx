@@ -8,6 +8,7 @@ import { Sheet } from "@/components/ui/sheet";
 import { LogoBadge } from "@/components/layout/logo-badge";
 import { SidebarUserCard } from "@/components/layout/sidebar-user-card";
 import { MarketStatusCard } from "@/components/layout/market-status-card";
+import { useLocale } from "@/lib/i18n/locale-provider";
 
 import {
   LayoutDashboard,
@@ -23,46 +24,14 @@ import {
 const ICON_CLASS = "h-[18px] w-[18px] shrink-0";
 
 const navItems = [
-  {
-    href: "/",
-    label: "대시보드",
-    icon: <LayoutDashboard className={ICON_CLASS} aria-hidden="true" />,
-  },
-  {
-    href: "/portfolio",
-    label: "포트폴리오",
-    icon: <Briefcase className={ICON_CLASS} aria-hidden="true" />,
-  },
-  {
-    href: "/watchlist",
-    label: "워치리스트",
-    icon: <Eye className={ICON_CLASS} aria-hidden="true" />,
-  },
-  {
-    href: "/symbol",
-    label: "종목 분석",
-    icon: <LineChart className={ICON_CLASS} aria-hidden="true" />,
-  },
-  {
-    href: "/market-analyze",
-    label: "시장 분석",
-    icon: <Globe className={ICON_CLASS} aria-hidden="true" />,
-  },
-  {
-    href: "/copilot",
-    label: "코파일럿",
-    icon: <Sparkles className={ICON_CLASS} aria-hidden="true" />,
-  },
-  {
-    href: "/upload",
-    label: "업로드 & 분석",
-    icon: <Upload className={ICON_CLASS} aria-hidden="true" />,
-  },
-  {
-    href: "/settings",
-    label: "설정",
-    icon: <Settings className={ICON_CLASS} aria-hidden="true" />,
-  },
+  { href: "/", labelKey: "sidebar.dashboard", icon: <LayoutDashboard className={ICON_CLASS} aria-hidden="true" /> },
+  { href: "/portfolio", labelKey: "sidebar.portfolio", icon: <Briefcase className={ICON_CLASS} aria-hidden="true" /> },
+  { href: "/watchlist", labelKey: "sidebar.watchlist", icon: <Eye className={ICON_CLASS} aria-hidden="true" /> },
+  { href: "/symbol", labelKey: "sidebar.symbol", icon: <LineChart className={ICON_CLASS} aria-hidden="true" /> },
+  { href: "/market-analyze", labelKey: "sidebar.market", icon: <Globe className={ICON_CLASS} aria-hidden="true" /> },
+  { href: "/copilot", labelKey: "sidebar.copilot", icon: <Sparkles className={ICON_CLASS} aria-hidden="true" /> },
+  { href: "/upload", labelKey: "sidebar.upload", icon: <Upload className={ICON_CLASS} aria-hidden="true" /> },
+  { href: "/settings", labelKey: "sidebar.settings", icon: <Settings className={ICON_CLASS} aria-hidden="true" /> },
 ];
 
 function NavContent({
@@ -73,9 +42,10 @@ function NavContent({
   onLinkClick?: () => void;
 }) {
   const pathname = usePathname();
+  const { t } = useLocale();
 
   return (
-    <nav className="flex-1 space-y-0.5 px-2 py-2" aria-label="메인 내비게이션">
+    <nav className="flex-1 space-y-0.5 px-2 py-2" aria-label={t("sidebar.dashboard")}>
       {navItems.map((item) => {
         const isActive =
           item.href === "/"
@@ -96,7 +66,7 @@ function NavContent({
             aria-current={isActive ? "page" : undefined}
           >
             {item.icon}
-            {!collapsed && <span className="truncate">{item.label}</span>}
+            {!collapsed && <span className="truncate">{t(item.labelKey)}</span>}
           </Link>
         );
       })}
@@ -107,6 +77,7 @@ function NavContent({
 export function Sidebar() {
   const { sidebarCollapsed, toggleSidebar, mobileMenuOpen, setMobileMenuOpen } =
     useUiStore();
+  const { t } = useLocale();
 
   return (
     <>
@@ -170,7 +141,7 @@ export function Sidebar() {
               "rounded-lg p-1 hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
               sidebarCollapsed && "hidden",
             )}
-            aria-label={sidebarCollapsed ? "사이드바 펼치기" : "사이드바 접기"}
+            aria-label={sidebarCollapsed ? t("sidebar.expand") : t("sidebar.collapse")}
             type="button"
           >
             <svg

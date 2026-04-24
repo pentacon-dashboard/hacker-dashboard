@@ -5,19 +5,20 @@ import type { Accent } from "@/hooks/use-theme";
 import { Palette, Sun, Moon, Monitor } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
+import { useLocale } from "@/lib/i18n/locale-provider";
 
 const THEMES = [
-  { value: "light", label: "라이트", icon: Sun },
-  { value: "dark", label: "다크", icon: Moon },
-  { value: "system", label: "시스템", icon: Monitor },
+  { value: "light", labelKey: "settings.theme.light", icon: Sun },
+  { value: "dark", labelKey: "settings.theme.dark", icon: Moon },
+  { value: "system", labelKey: "settings.theme.system", icon: Monitor },
 ] as const;
 
 const ACCENT_COLORS = [
-  { value: "violet" as const, label: "보라", bg: "bg-violet-500" },
-  { value: "cyan" as const, label: "청록", bg: "bg-cyan-500" },
-  { value: "blue" as const, label: "파랑", bg: "bg-blue-500" },
-  { value: "orange" as const, label: "주황", bg: "bg-orange-500" },
-  { value: "rose" as const, label: "분홍", bg: "bg-rose-500" },
+  { value: "violet" as const, labelKey: "settings.theme.violet", bg: "bg-violet-500" },
+  { value: "cyan" as const, labelKey: "settings.theme.cyan", bg: "bg-cyan-500" },
+  { value: "blue" as const, labelKey: "settings.theme.blue", bg: "bg-blue-500" },
+  { value: "orange" as const, labelKey: "settings.theme.orange", bg: "bg-orange-500" },
+  { value: "rose" as const, labelKey: "settings.theme.rose", bg: "bg-rose-500" },
 ];
 
 interface ThemeSettingsProps {
@@ -28,6 +29,7 @@ interface ThemeSettingsProps {
 
 export function ThemeSettings({ accentColor, onAccentChange }: ThemeSettingsProps) {
   const { theme, setTheme, accent: ctxAccent, setAccent } = useTheme();
+  const { t } = useLocale();
   const activeAccent = accentColor ?? ctxAccent;
 
   return (
@@ -35,14 +37,14 @@ export function ThemeSettings({ accentColor, onAccentChange }: ThemeSettingsProp
       <CardHeader className="pb-3">
         <CardTitle className="flex items-center gap-2 text-sm font-semibold">
           <Palette className="h-4 w-4 text-primary" aria-hidden="true" />
-          테마 설정
+          {t("settings.theme.title")}
         </CardTitle>
-        <p className="text-xs text-muted-foreground">다크/라이트 모드 및 색상 팔레트</p>
+        <p className="text-xs text-muted-foreground">{t("settings.theme.desc")}</p>
       </CardHeader>
       <CardContent className="space-y-4">
         {/* 테마 3 카드 */}
         <div className="grid grid-cols-3 gap-2">
-          {THEMES.map(({ value, label, icon: Icon }) => (
+          {THEMES.map(({ value, labelKey, icon: Icon }) => (
             <button
               key={value}
               onClick={() => setTheme(value)}
@@ -56,22 +58,20 @@ export function ThemeSettings({ accentColor, onAccentChange }: ThemeSettingsProp
               data-testid={`theme-btn-${value}`}
             >
               <Icon className="h-5 w-5" aria-hidden="true" />
-              <span className="text-xs font-medium">{label}</span>
+              <span className="text-xs font-medium">{t(labelKey)}</span>
             </button>
           ))}
         </div>
 
         {/* 색상 팔레트 */}
         <div className="space-y-2">
-          <p className="text-xs font-medium text-muted-foreground">색상 테마</p>
+          <p className="text-xs font-medium text-muted-foreground">{t("settings.theme.colorTheme")}</p>
           <div className="flex items-center gap-2">
             {ACCENT_COLORS.map((color) => (
               <button
                 key={color.value}
                 onClick={() => {
-                  // 로컬 CSS 변수 즉시 반영
                   setAccent(color.value);
-                  // 부모(설정 페이지)가 BE PATCH 를 담당
                   onAccentChange?.(color.value);
                 }}
                 className={cn(
@@ -81,7 +81,7 @@ export function ThemeSettings({ accentColor, onAccentChange }: ThemeSettingsProp
                     ? "ring-2 ring-white ring-offset-2 dark:ring-offset-background scale-110"
                     : "opacity-60 hover:opacity-100",
                 )}
-                aria-label={`${color.label} 색상`}
+                aria-label={t(color.labelKey)}
                 aria-pressed={activeAccent === color.value}
                 data-testid={`accent-${color.value}`}
               />

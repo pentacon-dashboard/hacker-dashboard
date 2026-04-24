@@ -5,6 +5,7 @@ import { useState } from "react";
 import { ThemeProvider } from "@/components/common/theme-provider";
 import { ToastProvider } from "@/components/common/toast-provider";
 import { MswProvider } from "@/components/providers/msw-provider";
+import { LocaleProvider } from "@/lib/i18n/locale-provider";
 
 interface ProvidersProps {
   children: React.ReactNode;
@@ -27,10 +28,12 @@ export function Providers({ children }: ProvidersProps) {
   return (
     <MswProvider>
       <ThemeProvider>
-        <QueryClientProvider client={queryClient}>
-          {children}
-          <ToastProvider />
-        </QueryClientProvider>
+        <LocaleProvider>
+          <QueryClientProvider client={queryClient}>
+            {children}
+            <ToastProvider />
+          </QueryClientProvider>
+        </LocaleProvider>
       </ThemeProvider>
     </MswProvider>
   );

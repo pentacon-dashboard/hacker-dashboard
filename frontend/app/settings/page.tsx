@@ -9,6 +9,7 @@ import { ConnectedAccounts, type ConnectedAccountsConfig } from "@/components/se
 import { SystemInfo } from "@/components/settings/system-info";
 import { API_BASE } from "@/lib/api/client";
 import { useTheme, type Accent } from "@/hooks/use-theme";
+import { useLocale, type Locale } from "@/lib/i18n/locale-provider";
 
 // BE /users/me/settings 실제 스키마 — system 필드 없음
 interface UserSettings {
@@ -88,10 +89,15 @@ function isValidAccent(v: string): v is Accent {
   return ["violet", "cyan", "blue", "orange", "rose"].includes(v);
 }
 
+function isValidLocale(v: string): v is Locale {
+  return v === "ko" || v === "en";
+}
+
 export default function SettingsPage() {
   const [settings, setSettings] = useState<UserSettings>(DEFAULT_SETTINGS);
   const [loading, setLoading] = useState(true);
   const { setAccent } = useTheme();
+  const { setLocale, t } = useLocale();
 
   useEffect(() => {
     // TODO: BE γ-sprint 완료 후 실 엔드포인트로 swap (현재 MSW stub 사용)
@@ -104,12 +110,16 @@ export default function SettingsPage() {
         if (beAccent && isValidAccent(beAccent)) {
           setAccent(beAccent);
         }
+        // 언어도 LocaleProvider 와 동기화
+        if (data.language && isValidLocale(data.language)) {
+          setLocale(data.language);
+        }
       })
       .catch(() => {
         // MSW 없는 환경에서는 default 사용
       })
       .finally(() => setLoading(false));
-  }, [setAccent]);
+  }, [setAccent, setLocale]);
 
   const patchSettings = useCallback(
     async (patch: Partial<UserSettings>) => {
@@ -140,10 +150,8 @@ export default function SettingsPage() {
     return (
       <div className="flex flex-col gap-6">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">설정</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            개인 설정을 관리합니다. 테마, 알림, 데이터 옵션을 변경할 수 있습니다.
-          </p>
+          <h1 className="text-2xl font-bold tracking-tight">{t("settings.title")}</h1>
+          <p className="mt-1 text-sm text-muted-foreground">{t("settings.subtitle")}</p>
         </div>
         <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
           {[...Array(6)].map((_, i) => (
@@ -158,10 +166,8 @@ export default function SettingsPage() {
     <div className="flex flex-col gap-6">
       {/* 헤더 */}
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">설정</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          개인 설정을 관리합니다. 테마, 알림, 데이터 옵션을 변경할 수 있습니다.
-        </p>
+        <h1 className="text-2xl font-bold tracking-tight">{t("settings.title")}</h1>
+        <p className="mt-1 text-sm text-muted-foreground">{t("settings.subtitle")}</p>
       </div>
 
       {/* 6 섹션 2×3 그리드 */}
@@ -179,7 +185,11 @@ export default function SettingsPage() {
               apiPatch.name = patch.displayName;
               apiPatch.display_name = patch.displayName;
             }
-            if (patch.language !== undefined) apiPatch.language = patch.language;
+            if (patch.language !== undefined) {
+              apiPatch.language = patch.language;
+              // LocaleProvider 와 즉시 동기화 — UI 전역 번역 반영
+              if (isValidLocale(patch.language)) setLocale(patch.language);
+            }
             if (patch.timezone !== undefined) apiPatch.timezone = patch.timezone;
             void patchSettings(apiPatch);
           }}
@@ -206,7 +216,22 @@ export default function SettingsPage() {
         />
 
         {/* 중하: 연결된 계정 */}
-        <ConnectedAccounts config={resolveConnectedAccounts(settings)} />
+        <ConnectedAccounts
+          config={resolveConnectedAccounts(settings)}
+          onToggle={(provider) => {
+            const current = resolveConnectedAccounts(settings);
+            const next = { ...current, [provider]: !current[provider] };
+            // BE 는 array of {provider, email, connected_at} 형태 수신
+            const connected_accounts = (Object.keys(next) as Array<keyof typeof next>)
+              .filter((k) => next[k])
+              .map((provider) => ({
+                provider: provider as string,
+                email: settings.email,
+                connected_at: new Date().toISOString(),
+              }));
+            void patchSettings({ connected_accounts });
+          }}
+        />
 
         {/* 우하: 시스템 정보 — BE 미보유 필드, 클라이언트 상수 */}
         <SystemInfo
