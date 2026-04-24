@@ -19,15 +19,17 @@ from openai import AsyncOpenAI
 
 from app.core.config import settings
 
-# 모델 고정값
+# 모델 고정값 — 가성비(cost-efficient) 전략으로 기본·고난도 모두 gpt-4o-mini 사용.
+# 고난도 구간을 분리하고 싶으면 MODEL_HIGH 를 "gpt-4o" 로 변경.
 MODEL_DEFAULT = "gpt-4o-mini"
-MODEL_HIGH = "gpt-4o"
+MODEL_HIGH = "gpt-4o-mini"
 
 # deprecated aliases — 기존 import 경로 호환 유지
 MODEL_SONNET = MODEL_DEFAULT
 MODEL_OPUS = MODEL_HIGH
 
-# 입력 행수가 이 값을 넘으면 복잡 입력으로 판단해 고난도 모델로 승급
+# 입력 행수가 이 값을 넘으면 복잡 입력으로 판단해 고난도 모델로 승급.
+# 현재 MODEL_DEFAULT == MODEL_HIGH 라 승급 효과 없음 (비용 고정).
 COMPLEX_ROW_THRESHOLD = 300
 
 _PROMPT_DIR = Path(__file__).parent / "prompts"

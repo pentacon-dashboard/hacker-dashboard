@@ -185,15 +185,38 @@ def _run_step_sync(step: CopilotStep, user_query: str = "") -> dict[str, Any]:
     }
 
 
-async def _run_portfolio_llm(step: CopilotStep, user_query: str) -> dict[str, Any]:
-    """실 OpenAI LLM 으로 포트폴리오 분석 카드 생성.
+# agent → system prompt name 매핑
+_AGENT_PROMPT_MAP: dict[str, str] = {
+    "portfolio": "portfolio_system",
+    "stock": "stock_system",
+    "crypto": "crypto_system",
+    "fx": "fx_system",
+    "macro": "macro_system",
+    "rebalance": "rebalance_system",
+    "comparison": "comparison_system",
+    "simulator": "simulator_system",
+    "news-rag": "news_rag_system",
+    "mixed": "mixed_system",
+}
 
-    holdings 를 BE 에서 즉시 조회 → portfolio_system.md 프롬프트에 주입 → 응답을 text 카드로.
-    LLM 실패 시 stub 폴백.
-    """
+
+def _strip_code_fence(text: str) -> str:
+    """LLM 응답에서 ```json ... ``` 코드펜스 제거. 본문이 JSON이면 그대로 반환."""
+    t = text.strip()
+    if t.startswith("```"):
+        first_nl = t.find("\n")
+        if first_nl != -1:
+            t = t[first_nl + 1:]
+        close = t.rfind("```")
+        if close != -1:
+            t = t[:close]
+    return t.strip()
+
+
+async def _fetch_portfolio_context() -> dict[str, Any]:
+    """포트폴리오 요약을 LLM context 로 변환 — analyzer 공통 사용."""
     from sqlalchemy import select
 
-    from app.agents.llm import LLMUnavailableError, call_llm
     from app.db.models import Holding
     from app.db.session import AsyncSessionLocal
     from app.services.portfolio import (
@@ -202,62 +225,89 @@ async def _run_portfolio_llm(step: CopilotStep, user_query: str) -> dict[str, An
         get_prev_snapshot,
     )
 
-    # 포트폴리오 요약 조회 (demo user)
-    try:
-        async with AsyncSessionLocal() as db:
-            result = await db.execute(
-                select(Holding).where(Holding.user_id == "demo")
-            )
-            holdings_rows = list(result.scalars().all())
-            prev_snap = await get_prev_snapshot(db, user_id="demo")
-            period_snap = await get_period_snapshot(db, user_id="demo", period_days=30)
-            summary = await compute_summary(
-                holdings_rows,
-                prev_snapshot=prev_snap,
-                period_snapshot=period_snap,
-                period_days=30,
-            )
-        context = {
-            "total_value_krw": str(summary.total_value_krw),
-            "total_pnl_pct": str(summary.total_pnl_pct),
-            "daily_change_pct": str(summary.daily_change_pct),
-            "period_change_pct": str(summary.period_change_pct),
-            "holdings_count": summary.holdings_count,
-            "asset_class_breakdown": {k: str(v) for k, v in summary.asset_class_breakdown.items()},
-            "holdings": [
-                {
-                    "market": h.market,
-                    "code": h.code,
-                    "quantity": str(h.quantity),
-                    "avg_cost": str(h.avg_cost),
-                    "value_krw": str(h.value_krw),
-                    "pnl_pct": str(h.pnl_pct),
-                }
-                for h in summary.holdings
-            ],
-        }
-        user_content = (
-            f"사용자 질문: {user_query}\n\n"
-            f"현재 포트폴리오 데이터:\n{json.dumps(context, ensure_ascii=False, indent=2)}"
+    async with AsyncSessionLocal() as db:
+        result = await db.execute(
+            select(Holding).where(Holding.user_id == "demo")
         )
+        holdings_rows = list(result.scalars().all())
+        prev_snap = await get_prev_snapshot(db, user_id="demo")
+        period_snap = await get_period_snapshot(db, user_id="demo", period_days=30)
+        summary = await compute_summary(
+            holdings_rows,
+            prev_snapshot=prev_snap,
+            period_snapshot=period_snap,
+            period_days=30,
+        )
+    return {
+        "total_value_krw": str(summary.total_value_krw),
+        "total_pnl_pct": str(summary.total_pnl_pct),
+        "daily_change_pct": str(summary.daily_change_pct),
+        "period_change_pct": str(summary.period_change_pct),
+        "holdings_count": summary.holdings_count,
+        "asset_class_breakdown": {k: str(v) for k, v in summary.asset_class_breakdown.items()},
+        "holdings": [
+            {
+                "market": h.market,
+                "code": h.code,
+                "quantity": str(h.quantity),
+                "avg_cost": str(h.avg_cost),
+                "value_krw": str(h.value_krw),
+                "pnl_pct": str(h.pnl_pct),
+            }
+            for h in summary.holdings
+        ],
+    }
+
+
+async def _run_agent_llm(step: CopilotStep, user_query: str) -> dict[str, Any]:
+    """모든 analyzer agent 를 OpenAI 로 실행하는 공통 경로.
+
+    - agent → system prompt 자동 매핑
+    - portfolio/rebalance 는 holdings context 주입, 나머지는 inputs + user_query 만
+    - LLM 응답에서 ```json fence 제거 후 text 카드로 반환
+    - LLM 불가 시 기존 sync analyzer stub 폴백
+    """
+    from app.agents.llm import LLMUnavailableError, call_llm
+
+    agent = step.agent
+    prompt_name = _AGENT_PROMPT_MAP.get(agent)
+
+    # 알려지지 않은 agent → sync fallback
+    if prompt_name is None:
+        return _run_step_sync(step, user_query)
+
+    try:
+        # portfolio/rebalance 는 DB 에서 holdings context 취득, 나머지는 step.inputs 사용
+        if agent in {"portfolio", "rebalance"}:
+            ctx = await _fetch_portfolio_context()
+            user_content = (
+                f"사용자 질문: {user_query}\n\n"
+                f"포트폴리오 데이터:\n{json.dumps(ctx, ensure_ascii=False, indent=2)}"
+            )
+        else:
+            step_inputs = dict(step.inputs)
+            user_content = (
+                f"사용자 질문: {user_query}\n"
+                f"Step 파라미터:\n{json.dumps(step_inputs, ensure_ascii=False, indent=2)}"
+            )
 
         answer = await call_llm(
-            system_prompt_name="portfolio_system",
+            system_prompt_name=prompt_name,
             user_content=user_content,
             temperature=0.3,
             max_tokens=2048,
         )
+        cleaned = _strip_code_fence(answer) or f"{agent} 분석을 완료할 수 없습니다."
 
         return {
             "card": {
                 "type": "text",
-                "content": answer.strip() or "포트폴리오 분석을 완료할 수 없습니다.",
+                "content": cleaned,
                 "degraded": False,
             },
             "gate_results": {"schema": "pass", "domain": "pass", "critique": "pass"},
         }
     except LLMUnavailableError:
-        # 키 미설정 → stub
         return {
             "card": {
                 "type": "text",
@@ -270,7 +320,7 @@ async def _run_portfolio_llm(step: CopilotStep, user_query: str) -> dict[str, An
         return {
             "card": {
                 "type": "text",
-                "content": f"포트폴리오 분석 오류: {exc}",
+                "content": f"{agent} 분석 오류: {exc}",
                 "degraded": True,
             },
             "gate_results": {"schema": "fail", "domain": "skip", "critique": "skip"},
@@ -297,9 +347,10 @@ async def _execute_step(
     # step token (fake 1건)
     await queue.put(_sse({"type": "step.token", "step_id": step.step_id, "text": f"{step.agent} 분석 중..."}))
 
-    # 실행 — portfolio 는 실 LLM async 경로, 나머지는 sync fallback
-    if step.agent == "portfolio":
-        outcome = await _run_portfolio_llm(step, user_query)
+    # 실행 — 모든 analyzer agent 를 실 OpenAI LLM 경로로 라우팅.
+    # 매핑 테이블에 없는 agent 는 sync fallback (error/unknown 등).
+    if step.agent in _AGENT_PROMPT_MAP:
+        outcome = await _run_agent_llm(step, user_query)
     else:
         loop = asyncio.get_event_loop()
         outcome = await loop.run_in_executor(None, _run_step_sync, step, user_query)
