@@ -129,7 +129,7 @@ async def _critique_gate(card: dict[str, Any], step: CopilotStep, *, is_final: b
 # ── Step 실행기 ────────────────────────────────────────────────────────────────
 
 
-def _run_step_sync(step: CopilotStep) -> dict[str, Any]:
+def _run_step_sync(step: CopilotStep, user_query: str = "") -> dict[str, Any]:
     """동기적으로 analyzer stub 을 실행해 카드를 생성한다."""
     force_fail = os.environ.get("COPILOT_FORCE_FAIL_STEP", "")
 
@@ -157,11 +157,13 @@ def _run_step_sync(step: CopilotStep) -> dict[str, Any]:
         return run_news_rag(step)
 
     if agent == "portfolio":
-        # portfolio analyzer stub
+        # 실 LLM 경로: _run_portfolio_llm 이 async 이므로 sync context 에서는
+        # stub 을 반환하고, 상위 async 경로에서 _run_portfolio_llm 을 별도 호출한다.
+        # 이 sync 경로는 run_in_executor 폴백 시에만 사용된다.
         return {
             "card": {
                 "type": "text",
-                "content": f"포트폴리오 분석 결과 (stub): {step.inputs}",
+                "content": f"포트폴리오 분석 결과 (sync fallback): {user_query or step.inputs}",
                 "degraded": False,
             },
             "gate_results": {"schema": "pass", "domain": "pass", "critique": "pass"},
@@ -171,7 +173,7 @@ def _run_step_sync(step: CopilotStep) -> dict[str, Any]:
         return {
             "card": {
                 "type": "text",
-                "content": f"{agent} 분석 결과 (stub): {step.inputs}",
+                "content": f"{agent} 분석 결과 (sync fallback): {user_query or step.inputs}",
                 "degraded": False,
             },
             "gate_results": {"schema": "pass", "domain": "pass", "critique": "pass"},
@@ -183,10 +185,103 @@ def _run_step_sync(step: CopilotStep) -> dict[str, Any]:
     }
 
 
+async def _run_portfolio_llm(step: CopilotStep, user_query: str) -> dict[str, Any]:
+    """실 OpenAI LLM 으로 포트폴리오 분석 카드 생성.
+
+    holdings 를 BE 에서 즉시 조회 → portfolio_system.md 프롬프트에 주입 → 응답을 text 카드로.
+    LLM 실패 시 stub 폴백.
+    """
+    from sqlalchemy import select
+
+    from app.agents.llm import LLMUnavailableError, call_llm
+    from app.db.models import Holding
+    from app.db.session import AsyncSessionLocal
+    from app.services.portfolio import (
+        compute_summary,
+        get_period_snapshot,
+        get_prev_snapshot,
+    )
+
+    # 포트폴리오 요약 조회 (demo user)
+    try:
+        async with AsyncSessionLocal() as db:
+            result = await db.execute(
+                select(Holding).where(Holding.user_id == "demo")
+            )
+            holdings_rows = list(result.scalars().all())
+            prev_snap = await get_prev_snapshot(db, user_id="demo")
+            period_snap = await get_period_snapshot(db, user_id="demo", period_days=30)
+            summary = await compute_summary(
+                holdings_rows,
+                prev_snapshot=prev_snap,
+                period_snapshot=period_snap,
+                period_days=30,
+            )
+        context = {
+            "total_value_krw": str(summary.total_value_krw),
+            "total_pnl_pct": str(summary.total_pnl_pct),
+            "daily_change_pct": str(summary.daily_change_pct),
+            "period_change_pct": str(summary.period_change_pct),
+            "holdings_count": summary.holdings_count,
+            "asset_class_breakdown": {k: str(v) for k, v in summary.asset_class_breakdown.items()},
+            "holdings": [
+                {
+                    "market": h.market,
+                    "code": h.code,
+                    "quantity": str(h.quantity),
+                    "avg_cost": str(h.avg_cost),
+                    "value_krw": str(h.value_krw),
+                    "pnl_pct": str(h.pnl_pct),
+                }
+                for h in summary.holdings
+            ],
+        }
+        user_content = (
+            f"사용자 질문: {user_query}\n\n"
+            f"현재 포트폴리오 데이터:\n{json.dumps(context, ensure_ascii=False, indent=2)}"
+        )
+
+        answer = await call_llm(
+            system_prompt_name="portfolio_system",
+            user_content=user_content,
+            temperature=0.3,
+            max_tokens=2048,
+        )
+
+        return {
+            "card": {
+                "type": "text",
+                "content": answer.strip() or "포트폴리오 분석을 완료할 수 없습니다.",
+                "degraded": False,
+            },
+            "gate_results": {"schema": "pass", "domain": "pass", "critique": "pass"},
+        }
+    except LLMUnavailableError:
+        # 키 미설정 → stub
+        return {
+            "card": {
+                "type": "text",
+                "content": "LLM 미설정 — OPENAI_API_KEY 를 설정해 주세요.",
+                "degraded": True,
+            },
+            "gate_results": {"schema": "pass", "domain": "pass", "critique": "skip"},
+        }
+    except Exception as exc:  # noqa: BLE001
+        return {
+            "card": {
+                "type": "text",
+                "content": f"포트폴리오 분석 오류: {exc}",
+                "degraded": True,
+            },
+            "gate_results": {"schema": "fail", "domain": "skip", "critique": "skip"},
+        }
+
+
 async def _execute_step(
     step: CopilotStep,
     delay_ms: int,
     queue: asyncio.Queue[bytes],
+    user_query: str = "",
 ) -> dict[str, Any]:
     """단일 step 을 실행하고 이벤트를 queue 에 넣는다.
 
@@ -202,9 +297,12 @@ async def _execute_step(
     # step token (fake 1건)
     await queue.put(_sse({"type": "step.token", "step_id": step.step_id, "text": f"{step.agent} 분석 중..."}))
 
-    # 실행
-    loop = asyncio.get_event_loop()
-    outcome = await loop.run_in_executor(None, _run_step_sync, step)
+    # 실행 — portfolio 는 실 LLM async 경로, 나머지는 sync fallback
+    if step.agent == "portfolio":
+        outcome = await _run_portfolio_llm(step, user_query)
+    else:
+        loop = asyncio.get_event_loop()
+        outcome = await loop.run_in_executor(None, _run_step_sync, step, user_query)
     card = outcome["card"]
     gate_results = outcome.get("gate_results", {})
     forced_fail = outcome.get("forced_fail", False)
@@ -349,7 +447,7 @@ async def _run_final_gate(
     final_step = CopilotStep.model_construct(
         step_id="final",
         agent="portfolio",  # 더미 값 (최종 게이트에서만 사용)
-        gate_policy=GatePolicy(schema_check=True, domain=True, critique=True),  # type: ignore[call-arg]
+        gate_policy=GatePolicy(schema_check=True, domain=True, critique=True),
         inputs={},
         depends_on=[],
     )
@@ -452,7 +550,7 @@ async def stream_copilot_query(
     for level in levels:
         # 같은 레벨의 step 은 asyncio.gather 로 병렬 실행
         tasks = [
-            asyncio.create_task(_execute_step(step, harness_step_delay_ms, queue))
+            asyncio.create_task(_execute_step(step, harness_step_delay_ms, queue, query))
             for step in level
         ]
 
