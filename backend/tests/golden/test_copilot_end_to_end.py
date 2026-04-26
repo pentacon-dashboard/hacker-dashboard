@@ -58,6 +58,17 @@ def _baseline_path(sample_id: str) -> Path:
 
 _REGEN_BASELINE = os.environ.get("REGEN_BASELINE", "").lower() in ("1", "true", "yes")
 
+# ── REGEN_BASELINE CI 안전장치 ─────────────────────────────────────────────
+# CI=1 환경에서 REGEN_BASELINE=1 을 동시에 설정하면 골든 baseline 이 조용히 덮어씌워져
+# 회귀 감지가 무력화된다. 이를 방지하기 위해 모듈 임포트 시점에 RuntimeError 를 발생시킨다.
+if _REGEN_BASELINE and os.environ.get("CI", "").lower() in ("1", "true", "yes"):
+    raise RuntimeError(
+        "REGEN_BASELINE=1 은 CI 환경에서 사용 금지입니다. "
+        "baseline 재생성은 반드시 로컬에서만 실행하세요. "
+        "(CI=1 이 설정된 상태에서 REGEN_BASELINE=1 을 사용하면 "
+        "골든 회귀 감지가 무력화됩니다 — 환경변수를 제거하고 재실행하세요)"
+    )
+
 
 def _load_or_create_baseline(sample_id: str, actual: list[dict[str, Any]]) -> list[dict[str, Any]]:
     """baseline 파일이 없으면 생성(초기화), 있으면 그대로 반환.
