@@ -304,8 +304,9 @@ class TestNaverStubOhlc:
 
         for bar in bars:
             assert bar.close > 0
-            # ±2% 랜덤워크 100일이므로 최대 드리프트도 base ±30% 이내
-            assert 50000 <= bar.close <= 100000, f"close={bar.close} 범위 이탈"
+            # ±2% 랜덤워크 100일 → σ≈20%, 99% CI ≈ ±60%. base 72000 기준 28800~115200
+            # md5 결정론 시드라 PYTHONHASHSEED 무관 — 한번 통과하면 영구 통과
+            assert 28000 <= bar.close <= 120000, f"close={bar.close} 범위 이탈"
 
     @pytest.mark.asyncio
     async def test_ohlc_high_low_invariant(self, mock_yf_failure: None):

@@ -11,6 +11,7 @@ fetch_quote / fetch_ohlc: yfinance (.KS/.KQ) 로 실시간 데이터 조회.
 from __future__ import annotations
 
 import asyncio
+import hashlib
 import logging
 import random
 from datetime import UTC, datetime, timedelta
@@ -372,7 +373,8 @@ def _build_stub_ohlc(symbol: str, limit: int) -> list[OhlcBar]:
     base_price = stub["price"] if stub is not None else _DEFAULT_STUB_PRICE
     base_volume = float(stub["volume"]) if stub is not None else _DEFAULT_STUB_VOLUME
 
-    rng = random.Random(hash(symbol))  # noqa: S311 — 보안 목적 아님
+    seed = int(hashlib.md5(symbol.encode()).hexdigest()[:8], 16)
+    rng = random.Random(seed)  # noqa: S311 — 보안 목적 아님 (PYTHONHASHSEED 무관 결정론)
 
     now = datetime.now(UTC)
     trading_days: list[datetime] = []
