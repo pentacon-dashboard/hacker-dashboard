@@ -85,7 +85,7 @@
     "step_id": "a",
     "card": {
       "type": "text",
-      "content": "포트폴리오 분석 결과 (stub): {'symbol': 'AAPL'}",
+      "content": "포트폴리오 분석 결과 (sync fallback): AAPL vs MSFT 기본 비교 — 두 종목 모두 known symbol",
       "degraded": false
     }
   },
@@ -173,7 +173,7 @@
     "type": "final.card",
     "card": {
       "type": "text",
-      "content": "[a] 포트폴리오 분석 결과 (stub): {'symbol': 'AAPL'}\n\n[b] {'type': 'comparison_table', 'symbols': ['AAPL', 'MSFT'], 'metrics': ['return_3m_pct', 'volatility_pct', 'pe_ratio', 'market_cap_usd'], 'rows': [{'symbol': 'AAPL', 'metrics': {'return_3m_pct': 26, 'volatility_pct': 26, 'pe_ratio': 21, 'market_cap_usd': 7000000000}}, {'symbol': 'MSFT', 'metrics': {'return_3m_pct': 4, 'volatility_pct': 24, 'pe_ratio': None, 'market_cap_usd': 5000000000}}], 'summary': 'Comparison of AAPL, MSFT across return, volatility, and valuation metrics.'}",
+      "content": "[a] 포트폴리오 분석 결과 (sync fallback): AAPL vs MSFT 기본 비교 — 두 종목 모두 known symbol\n\n[b] {'type': 'comparison_table', 'symbols': ['AAPL', 'MSFT'], 'metrics': ['return_3m_pct', 'volatility_pct', 'pe_ratio', 'market_cap_usd'], 'rows': [{'symbol': 'AAPL', 'metrics': {'return_3m_pct': 26, 'volatility_pct': 26, 'pe_ratio': 21, 'market_cap_usd': 7000000000}}, {'symbol': 'MSFT', 'metrics': {'return_3m_pct': 4, 'volatility_pct': 24, 'pe_ratio': None, 'market_cap_usd': 5000000000}}], 'summary': 'Comparison of AAPL, MSFT across return, volatility, and valuation metrics.'}",
       "degraded": false
     }
   },

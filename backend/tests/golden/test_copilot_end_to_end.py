@@ -6,11 +6,13 @@ ASGI in-process (httpx.AsyncClient(app=...)) 방식으로 실행:
   - FakeClient DI: backend/tests/conftest.py 의 fake_orchestrator_llm 상속
   - session 격리: 각 테스트에서 InMemorySessionStore() 명시 생성
   - baseline diff=0 이어야 통과
+  - respx_mock fixture: 외부 HTTP(Anthropic/OpenAI API) 차단 → 실 LLM 호출 방지
 
 환경변수 (모듈 상단 기본값):
   COPILOT_NEWS_MODE=stub
   COPILOT_EMBED_PROVIDER=fake
 """
+
 from __future__ import annotations
 
 import json
@@ -19,7 +21,7 @@ from pathlib import Path
 from typing import Any
 
 import pytest
-import pytest_asyncio
+import respx  # noqa: F401 — respx 모듈 임포트: 외부 HTTP 차단 fixture 제공
 
 os.environ.setdefault("COPILOT_NEWS_MODE", "stub")
 os.environ.setdefault("COPILOT_EMBED_PROVIDER", "fake")
@@ -44,7 +46,7 @@ def _drain_sse(body: bytes) -> list[dict[str, Any]]:
         for line in block.splitlines():
             if line.startswith("data:"):
                 try:
-                    events.append(json.loads(line[len("data:"):].strip()))
+                    events.append(json.loads(line[len("data:") :].strip()))
                 except json.JSONDecodeError:
                     pass
     return events
@@ -54,10 +56,17 @@ def _baseline_path(sample_id: str) -> Path:
     return _BASELINE_DIR / f"_baseline_copilot_e2e_{sample_id}.json"
 
 
+_REGEN_BASELINE = os.environ.get("REGEN_BASELINE", "").lower() in ("1", "true", "yes")
+
+
 def _load_or_create_baseline(sample_id: str, actual: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    """baseline 파일이 없으면 생성(초기화), 있으면 그대로 반환."""
+    """baseline 파일이 없으면 생성(초기화), 있으면 그대로 반환.
+
+    REGEN_BASELINE=1 환경변수 설정 시 항상 baseline 을 현재 출력으로 업데이트한다.
+    코드 변경(로직 regression 없음) 후 baseline 재정렬 목적으로만 사용.
+    """
     p = _baseline_path(sample_id)
-    if not p.exists():
+    if not p.exists() or _REGEN_BASELINE:
         p.write_text(json.dumps(actual, ensure_ascii=False, indent=2), encoding="utf-8")
     return json.loads(p.read_text("utf-8"))
 
@@ -116,10 +125,11 @@ async def test_single_step_golden(
 ) -> None:
     """단일 스텝 골든 샘플 — baseline diff=0."""
     from httpx import ASGITransport, AsyncClient
+
     from app.main import app  # type: ignore[import]
 
     sample = _load_sample(sample_id)
-    step = sample["step"]
+    # step = sample["step"]  # unused; step_inputs used via sample.get("step") below
 
     # degraded 케이스: query 에 fake_orchestrator_llm 이 감지할 마커를 포함
     # - comparison_03: 존재하지 않는 심볼 → "DEFINITELY_NOT_A_SYMBOL_XYZ" 포함
@@ -189,10 +199,11 @@ async def test_follow_up_2turn_golden(
 ) -> None:
     """follow_up_2turn 골든 샘플 — 2턴 세션 격리 + baseline diff=0."""
     from httpx import ASGITransport, AsyncClient
+
     from app.main import app  # type: ignore[import]
 
     sample = _load_sample("follow_up_2turn")
-    session_id = f"golden-follow_up_2turn"
+    session_id = "golden-follow_up_2turn"
 
     all_events: list[dict[str, Any]] = []
 

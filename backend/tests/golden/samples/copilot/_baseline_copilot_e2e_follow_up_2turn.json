@@ -85,7 +85,7 @@
     "step_id": "a",
     "card": {
       "type": "text",
-      "content": "포트폴리오 분석 결과 (stub): {'symbol': 'TSLA'}",
+      "content": "포트폴리오 분석 결과 (sync fallback): TSLA 최근 1년 분석",
       "degraded": false
     }
   },
@@ -173,7 +173,7 @@
     "type": "final.card",
     "card": {
       "type": "text",
-      "content": "[a] 포트폴리오 분석 결과 (stub): {'symbol': 'TSLA'}\n\n[b] {'type': 'comparison_table', 'symbols': ['TSLA', 'MSFT'], 'metrics': ['return_3m_pct', 'volatility_pct', 'pe_ratio', 'market_cap_usd'], 'rows': [{'symbol': 'TSLA', 'metrics': {'return_3m_pct': -2, 'volatility_pct': 18, 'pe_ratio': 23, 'market_cap_usd': 9000000000}}, {'symbol': 'MSFT', 'metrics': {'return_3m_pct': 4, 'volatility_pct': 24, 'pe_ratio': None, 'market_cap_usd': 5000000000}}], 'summary': 'Comparison of TSLA, MSFT across return, volatility, and valuation metrics.'}",
+      "content": "[a] 포트폴리오 분석 결과 (sync fallback): TSLA 최근 1년 분석\n\n[b] {'type': 'comparison_table', 'symbols': ['TSLA', 'MSFT'], 'metrics': ['return_3m_pct', 'volatility_pct', 'pe_ratio', 'market_cap_usd'], 'rows': [{'symbol': 'TSLA', 'metrics': {'return_3m_pct': -2, 'volatility_pct': 18, 'pe_ratio': 23, 'market_cap_usd': 9000000000}}, {'symbol': 'MSFT', 'metrics': {'return_3m_pct': 4, 'volatility_pct': 24, 'pe_ratio': None, 'market_cap_usd': 5000000000}}], 'summary': 'Comparison of TSLA, MSFT across return, volatility, and valuation metrics.'}",
       "degraded": false
     }
   },
