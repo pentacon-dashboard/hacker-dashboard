@@ -1,24 +1,22 @@
 // frontend/tests/harness/sprint-integration.test.ts
 import { describe, expect, it } from 'vitest'
-import { existsSync, readFileSync } from 'node:fs'
-import { resolve } from 'node:path'
+import { existsSync, readFileSync, readdirSync } from 'node:fs'
+import { resolve, join } from 'node:path'
 
 const FRONTEND_DIR = resolve(__dirname, '..', '..')
-const REPO_ROOT = resolve(FRONTEND_DIR, '..')
+const _REPO_ROOT = resolve(FRONTEND_DIR, '..')
 
 describe('sprint-integration FE-side acceptance', () => {
   it('all BE-bound fetch helpers cast to shared/types', () => {
     const apiDir = resolve(FRONTEND_DIR, 'lib', 'api')
     expect(existsSync(apiDir), 'lib/api/ 누락').toBe(true)
-    const fs = require('node:fs') as typeof import('node:fs')
-    const path = require('node:path') as typeof import('node:path')
     let importsTypes = false
     function walk(dir: string) {
-      for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
-        const p = path.join(dir, entry.name)
+      for (const entry of readdirSync(dir, { withFileTypes: true })) {
+        const p = join(dir, entry.name)
         if (entry.isDirectory()) walk(p)
         else if (entry.isFile() && /\.(ts|tsx)$/.test(entry.name)) {
-          const src = fs.readFileSync(p, 'utf-8')
+          const src = readFileSync(p, 'utf-8')
           if (/from ['"][^'"]*shared\/types/.test(src)) importsTypes = true
         }
       }
