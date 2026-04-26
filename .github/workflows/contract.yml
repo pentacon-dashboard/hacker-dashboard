@@ -56,6 +56,13 @@ jobs:
         working-directory: backend
         run: uv sync --all-extras
 
+      - name: Alembic upgrade head (테이블 생성)
+        working-directory: backend
+        env:
+          DATABASE_URL: postgresql+asyncpg://hacker:hacker@localhost:5432/hacker_dashboard_test
+          REDIS_URL: redis://localhost:6379/0
+        run: uv run alembic upgrade head
+
       - name: Start backend & wait for /health
         working-directory: backend
         env:

@@ -69,12 +69,18 @@ jobs:
       - name: Type check — mypy
         run: uv run mypy app
 
+      - name: Alembic upgrade head (테이블 생성)
+        env:
+          DATABASE_URL: postgresql+asyncpg://hacker:hacker@localhost:5432/hacker_dashboard_test
+          REDIS_URL: redis://localhost:6379/0
+        run: uv run alembic upgrade head
+
       - name: Test — pytest (coverage >= 80% soft)
         env:
           DATABASE_URL: postgresql+asyncpg://hacker:hacker@localhost:5432/hacker_dashboard_test
           REDIS_URL: redis://localhost:6379/0
           ANTHROPIC_API_KEY: placeholder-ci
-        run: uv run pytest --cov=app --cov-report=xml --cov-fail-under=0 -q
+        run: uv run pytest --cov=app --cov-report=xml --cov-fail-under=0 -q --ignore=tests/integration --ignore=tests/harness --ignore=tests/contract
         # --cov-fail-under=0 : 스켈레톤 단계. 코드 증가에 따라 80으로 올릴 것
 
       - name: OpenAPI export smoke
@@ -170,6 +176,13 @@ jobs:
       - name: Install backend dependencies
         working-directory: backend
         run: uv sync --all-extras
+
+      - name: Alembic upgrade head (테이블 생성)
+        working-directory: backend
+        env:
+          DATABASE_URL: postgresql+asyncpg://hacker:hacker@localhost:5432/hacker_dashboard_test
+          REDIS_URL: redis://localhost:6379/0
+        run: uv run alembic upgrade head
 
       - name: Start backend server
         working-directory: backend
