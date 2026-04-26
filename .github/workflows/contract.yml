@@ -77,15 +77,14 @@ jobs:
           ANTHROPIC_API_KEY: placeholder-ci
         run: uv run python -m app.export_openapi > ../shared/openapi.json
 
-      - name: Schemathesis — all checks
+      - name: Schemathesis — all checks (v4 CLI)
         working-directory: backend
         run: |
           uv run schemathesis run ../shared/openapi.json \
-            --base-url http://localhost:8000 \
+            --url http://localhost:8000 \
             --checks all \
-            --hypothesis-deadline=none \
-            --show-errors-tracebacks \
-            --junit-xml=../contract-results.xml
+            --report junit \
+            --report-junit-path ../contract-results.xml
 
       - name: Upload contract results
         uses: actions/upload-artifact@v4
