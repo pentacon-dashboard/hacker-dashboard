@@ -476,7 +476,7 @@
           "market"
         ],
         "summary": "Get Market Indices",
-        "description": "KOSPI/KOSDAQ/S&P/NASDAQ/DOW/VIX/USD-KRW 7종 스냅샷 (stub).",
+        "description": "KOSPI/KOSDAQ/S&P/NASDAQ/DOW/VIX/USD-KRW 7종 스냅샷.\n\nyfinance 실시간 조회 (캐시 TTL 60s). 실패 시 stub 폴백.\nsparkline_7d 는 항상 7포인트 보장.",
         "operationId": "get_market_indices_market_indices_get",
         "responses": {
           "200": {
@@ -502,7 +502,7 @@
           "market"
         ],
         "summary": "Get Market Sectors",
-        "description": "11 GICS 섹터 KPI (stub).",
+        "description": "11 GICS 섹터 KPI.\n\nSPDR ETF yfinance 실시간 조회 (캐시 TTL 60s). 실패 시 stub 폴백.",
         "operationId": "get_market_sectors_market_sectors_get",
         "responses": {
           "200": {
@@ -528,7 +528,7 @@
           "market"
         ],
         "summary": "Get Market Commodities",
-        "description": "원유/금/은/구리/천연가스 5종 (stub).",
+        "description": "원자재 5종 (금/은/WTI/브렌트유/천연가스).\n\nyfinance 실시간 조회 (캐시 TTL 60s). 실패 시 stub 폴백.",
         "operationId": "get_market_commodities_market_commodities_get",
         "responses": {
           "200": {
@@ -3572,6 +3572,40 @@
         ],
         "title": "MacdPoint"
       },
+      "MarkAllReadResponse": {
+        "properties": {
+          "marked_count": {
+            "type": "integer",
+            "title": "Marked Count",
+            "description": "읽음 처리된 알림 수"
+          }
+        },
+        "type": "object",
+        "required": [
+          "marked_count"
+        ],
+        "title": "MarkAllReadResponse",
+        "description": "POST /notifications/read-all 응답."
+      },
+      "MarkReadResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "unread": {
+            "type": "boolean",
+            "title": "Unread",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": [
+          "id"
+        ],
+        "title": "MarkReadResponse",
+        "description": "POST /notifications/{id}/read 응답."
+      },
       "MarketLeader": {
         "properties": {
           "rank": {
@@ -3672,6 +3706,74 @@
         ],
         "title": "MonthlyReturnCell",
         "description": "월간(일간) 수익률 캘린더 셀."
+      },
+      "Notification": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id",
+            "description": "알림 ID (예: price-3, portfolio-12)"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title",
+            "description": "알림 제목"
+          },
+          "message": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Message",
+            "description": "알림 상세 메시지"
+          },
+          "severity": {
+            "type": "string",
+            "enum": [
+              "info",
+              "warning",
+              "critical"
+            ],
+            "title": "Severity",
+            "description": "심각도 (info | warning | critical)"
+          },
+          "category": {
+            "type": "string",
+            "enum": [
+              "price",
+              "portfolio",
+              "alert",
+              "system"
+            ],
+            "title": "Category",
+            "description": "알림 범주"
+          },
+          "unread": {
+            "type": "boolean",
+            "title": "Unread",
+            "description": "읽지 않음 여부"
+          },
+          "created_at": {
+            "type": "string",
+            "title": "Created At",
+            "description": "ISO-8601 UTC 생성 시각"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "title",
+          "severity",
+          "category",
+          "unread",
+          "created_at"
+        ],
+        "title": "Notification",
+        "description": "단일 알림 항목."
       },
       "NotificationSettings": {
         "properties": {
@@ -5390,108 +5492,6 @@
         ],
         "title": "_InternalQueryRequest",
         "description": "내부 전용 확장 — OpenAPI 미노출.\n\n`_harness_step_delay_ms` : 오케스트레이터가 각 step 진입 시\n`asyncio.sleep(delay_ms / 1000)` 으로 변환. 결정론적 병렬 테스트용.\n\nFastAPI 라우트 파라미터에 이 클래스를 사용하면 `_InternalQueryRequest` 가\nOpenAPI components/schemas 에 등록된다. openapi_extra 의 requestBody override 로\n외부에는 `QueryRequest` 스키마만 노출한다."
-      },
-      "MarkAllReadResponse": {
-        "properties": {
-          "marked_count": {
-            "type": "integer",
-            "title": "Marked Count",
-            "description": "읽음 처리된 알림 수"
-          }
-        },
-        "type": "object",
-        "required": [
-          "marked_count"
-        ],
-        "title": "MarkAllReadResponse",
-        "description": "POST /notifications/read-all 응답."
-      },
-      "MarkReadResponse": {
-        "properties": {
-          "id": {
-            "type": "string",
-            "title": "Id"
-          },
-          "unread": {
-            "type": "boolean",
-            "title": "Unread",
-            "default": false
-          }
-        },
-        "type": "object",
-        "required": [
-          "id"
-        ],
-        "title": "MarkReadResponse",
-        "description": "POST /notifications/{id}/read 응답."
-      },
-      "Notification": {
-        "properties": {
-          "id": {
-            "type": "string",
-            "title": "Id",
-            "description": "알림 ID (예: price-3, portfolio-12)"
-          },
-          "title": {
-            "type": "string",
-            "title": "Title",
-            "description": "알림 제목"
-          },
-          "message": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Message",
-            "description": "알림 상세 메시지"
-          },
-          "severity": {
-            "type": "string",
-            "enum": [
-              "info",
-              "warning",
-              "critical"
-            ],
-            "title": "Severity",
-            "description": "심각도 (info | warning | critical)"
-          },
-          "category": {
-            "type": "string",
-            "enum": [
-              "price",
-              "portfolio",
-              "alert",
-              "system"
-            ],
-            "title": "Category",
-            "description": "알림 범주"
-          },
-          "unread": {
-            "type": "boolean",
-            "title": "Unread",
-            "description": "읽지 않음 여부"
-          },
-          "created_at": {
-            "type": "string",
-            "title": "Created At",
-            "description": "ISO-8601 UTC 생성 시각"
-          }
-        },
-        "type": "object",
-        "required": [
-          "id",
-          "title",
-          "severity",
-          "category",
-          "unread",
-          "created_at"
-        ],
-        "title": "Notification",
-        "description": "단일 알림 항목."
       }
     }
   }

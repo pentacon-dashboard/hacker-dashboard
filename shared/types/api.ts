@@ -75,7 +75,7 @@ export interface paths {
         };
         /**
          * Get Quote
-         * @description 단일 심볼 시세 조회 (stub — legacy 호환)
+         * @description 단일 심볼 시세 조회 (stub -- legacy 호환)
          */
         get: operations["get_quote_market_quotes__symbol__get"];
         put?: never;
@@ -135,7 +135,7 @@ export interface paths {
         };
         /**
          * List Watchlist
-         * @description 워치리스트 조회 (user_id='demo' 고정).
+         * @description 워치리스트 조회 (user_id='demo' 고정). pnl_7d 스파크라인 포함.
          */
         get: operations["list_watchlist_market_watchlist_items_get"];
         put?: never;
@@ -165,6 +165,115 @@ export interface paths {
          * @description 워치리스트 항목 삭제.
          */
         delete: operations["delete_watchlist_market_watchlist_items__item_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/market/symbol/{market}/{code}/indicators": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Symbol Indicators
+         * @description 심볼 기술 지표 (RSI-14, MACD, 볼린저, 스토캐스틱).
+         *
+         *     실제 OHLC 어댑터 시도 후 실패하면 stub 데이터로 폴백.
+         */
+        get: operations["get_symbol_indicators_market_symbol__market___code__indicators_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/market/indices": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Market Indices
+         * @description KOSPI/KOSDAQ/S&P/NASDAQ/DOW/VIX/USD-KRW 7종 스냅샷.
+         *
+         *     yfinance 실시간 조회 (캐시 TTL 60s). 실패 시 stub 폴백.
+         *     sparkline_7d 는 항상 7포인트 보장.
+         */
+        get: operations["get_market_indices_market_indices_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/market/sectors": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Market Sectors
+         * @description 11 GICS 섹터 KPI.
+         *
+         *     SPDR ETF yfinance 실시간 조회 (캐시 TTL 60s). 실패 시 stub 폴백.
+         */
+        get: operations["get_market_sectors_market_sectors_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/market/commodities": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Market Commodities
+         * @description 원자재 5종 (금/은/WTI/브렌트유/천연가스).
+         *
+         *     yfinance 실시간 조회 (캐시 TTL 60s). 실패 시 stub 폴백.
+         */
+        get: operations["get_market_commodities_market_commodities_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/market/world-heatmap": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get World Heatmap
+         * @description 20개국 세계 히트맵 (stub).
+         */
+        get: operations["get_world_heatmap_market_world_heatmap_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -300,7 +409,7 @@ export interface paths {
         };
         /**
          * List Snapshots
-         * @description 포트폴리오 스냅샷 조회 (날짜 범위 필터).
+         * @description 포트폴리오 스냅샷 조회 (날짜 범위 필터). pattern 불일치 시 422 자동 반환.
          */
         get: operations["list_snapshots_portfolio_snapshots_get"];
         put?: never;
@@ -329,6 +438,95 @@ export interface paths {
          *     LLM 실패 시 llm_analysis=None, status="degraded" 로 graceful degrade.
          */
         post: operations["rebalance_portfolio_rebalance_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/portfolio/sectors/heatmap": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * 섹터 히트맵
+         * @description 섹터별 비중 + 가중 PnL 히트맵 데이터를 반환한다.
+         *
+         *     보유 종목을 섹터로 분류하고 각 섹터의 value_krw 비중 및 손익률을 집계한다.
+         *     미분류 종목은 '기타' 섹터로 통합.
+         */
+        get: operations["get_sector_heatmap_portfolio_sectors_heatmap_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/portfolio/monthly-returns": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * 월간(일간) 수익률 캘린더
+         * @description 지정 연도의 일별 수익률 셀 목록을 반환한다 (365일).
+         *
+         *     실제 스냅샷 서비스 미구축 시 결정론적 sin stub 값 제공.
+         *     year 미지정 시 현재 연도 사용.
+         */
+        get: operations["get_monthly_returns_portfolio_monthly_returns_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/portfolio/ai-insight": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * AI 포트폴리오 인사이트 (stub 모드)
+         * @description 포트폴리오 요약 기반 AI 인사이트를 반환한다.
+         *
+         *     ADR-0012 stub 모드: LLM 호출 없이 결정론적 문단 생성.
+         *     gates 필드로 3단 품질 게이트 통과 여부 표시.
+         */
+        get: operations["get_ai_insight_portfolio_ai_insight_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/portfolio/market-leaders": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * 시장 주도주 목록
+         * @description 글로벌 시장 주도 종목을 최대 20개까지 반환한다. 현재 stub 데이터 (NVDA/AAPL/TSLA/삼성전자/BTC) 를 순위순으로 반환. 실 시장 API 연동은 non-goal.
+         */
+        get: operations["get_market_leaders_endpoint_portfolio_market_leaders_get"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -369,6 +567,46 @@ export interface paths {
          * @description 자연어 질의를 받아 멀티-스텝 에이전트 오케스트레이션을 실행하고 결과를 Server-Sent Events 로 스트리밍한다. 각 이벤트는 `data: <JSON>\n\n` 포맷 (data-only SSE). JSON 은 CopilotEvent discriminated union.
          */
         post: operations["query_copilot_copilot_query_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/copilot/sessions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * 세션 히스토리 목록 조회
+         * @description 저장된 코파일럿 세션 목록을 최근순으로 반환한다. limit/offset 으로 페이지네이션. TTL 만료 세션은 제외.
+         */
+        get: operations["list_sessions_copilot_sessions_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/copilot/sessions/{session_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * 세션 상세 조회 (sessions 경로)
+         * @description GET /copilot/session/{session_id} 의 alias. /sessions/ 경로로도 동일하게 접근 가능.
+         */
+        get: operations["get_session_alias_copilot_sessions__session_id__get"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -439,6 +677,283 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/upload/csv": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * CSV 파일 업로드 및 검증
+         * @description multipart/form-data 로 CSV 파일을 업로드한다. 필수 컬럼 (date, market, code, quantity, avg_cost, currency) 검증 후 UploadValidationResult 반환. upload_id 는 30분간 서버 메모리에 캐시된다.
+         */
+        post: operations["upload_csv_upload_csv_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/upload/analyze": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * 업로드 데이터 분석 (SSE 스트림)
+         * @description upload_id 와 분석 설정을 받아 3단 게이트 분석 진행 이벤트를 SSE 로 스트리밍한다. media_type: text/event-stream. 각 이벤트는 data: {JSON} 형식.
+         */
+        post: operations["analyze_upload_upload_analyze_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/upload/template": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * 샘플 포트폴리오 CSV 다운로드
+         * @description 업로드 형식을 확인할 수 있는 샘플 CSV 파일을 다운로드한다.
+         */
+        get: operations["get_template_upload_template_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/watchlist/summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Watchlist Summary
+         * @description 현재 워치리스트 기반 통계 요약.
+         *
+         *     demo user(_watchlist in-memory) 기준으로 집계.
+         *     워치리스트가 비어 있으면 전부 0 반환.
+         */
+        get: operations["get_watchlist_summary_watchlist_summary_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/watchlist/popular": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Popular
+         * @description 전역 인기 종목 Top-5 (stub 하드코드 — AAPL/NVDA/005930/KRW-BTC/TSLA).
+         */
+        get: operations["get_popular_watchlist_popular_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/watchlist/gainers-losers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Gainers Losers
+         * @description 상승/하락 Top-5 (stub 하드코드, deterministic).
+         *
+         *     응답: `{"gainers": [...], "losers": [...]}`
+         */
+        get: operations["get_gainers_losers_watchlist_gainers_losers_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/watchlist/alerts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * 워치리스트 알림 목록 조회
+         * @description demo user 의 워치리스트 알림 전체 조회.
+         */
+        get: operations["list_watchlist_alerts_watchlist_alerts_get"];
+        put?: never;
+        /**
+         * 워치리스트 알림 추가
+         * @description 워치리스트 알림 신규 생성.
+         */
+        post: operations["create_watchlist_alert_watchlist_alerts_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/watchlist/alerts/{alert_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * 워치리스트 알림 삭제
+         * @description 워치리스트 알림 삭제.
+         */
+        delete: operations["delete_watchlist_alert_watchlist_alerts__alert_id__delete"];
+        options?: never;
+        head?: never;
+        /**
+         * 워치리스트 알림 수정
+         * @description 알림 활성화 여부 또는 임계가격 변경.
+         */
+        patch: operations["update_watchlist_alert_watchlist_alerts__alert_id__patch"];
+        trace?: never;
+    };
+    "/users/me": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * 현재 사용자 정보 조회
+         * @description X-User-Id 헤더 기반 fake auth. 헤더 없으면 user_id='demo-user' 로 fallback.
+         */
+        get: operations["get_me_users_me_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/users/me/settings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * 사용자 설정 조회
+         * @description 현재 사용자의 설정을 DB 에서 반환한다. 없으면 기본값 행을 INSERT 후 반환.
+         */
+        get: operations["get_settings_users_me_settings_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * 사용자 설정 부분 업데이트
+         * @description partial update. 전달된 필드만 deep-merge 로 반영하고 updated_at 갱신.
+         */
+        patch: operations["patch_settings_users_me_settings_patch"];
+        trace?: never;
+    };
+    "/notifications": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * 알림 목록 조회
+         * @description watchlist_alerts + holdings + portfolio_snapshots 에서 파생한 알림 목록. 새 테이블 없이 on-the-fly 계산.
+         */
+        get: operations["list_notifications_notifications_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/notifications/read-all": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * 전체 읽음 처리
+         * @description 현재 알림 목록 전체를 읽음 처리한다.
+         */
+        post: operations["mark_all_notifications_read_notifications_read_all_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/notifications/{notification_id}/read": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * 단건 읽음 처리
+         * @description 단일 알림을 읽음 처리한다.
+         */
+        post: operations["mark_notification_read_notifications__notification_id__read_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -454,6 +969,24 @@ export interface components {
             prior_turns: components["schemas"]["PriorTurn"][];
             /** User Query */
             user_query: string;
+        };
+        /**
+         * AiInsightResponse
+         * @description AI 인사이트 stub 응답 (ADR-0012 stub 모드).
+         */
+        AiInsightResponse: {
+            /** Summary */
+            summary: string;
+            /** Bullets */
+            bullets: string[];
+            /** Generated At */
+            generated_at: string;
+            /** Stub Mode */
+            stub_mode: boolean;
+            /** Gates */
+            gates: {
+                [key: string]: string;
+            };
         };
         /**
          * AnalyzeContext
@@ -557,6 +1090,12 @@ export interface components {
             } | null;
             meta: components["schemas"]["AnalyzeMeta"];
         };
+        /** AnalyzeStartRequest */
+        AnalyzeStartRequest: {
+            /** Upload Id */
+            upload_id: string;
+            config: components["schemas"]["UploadAnalyzerConfig"];
+        };
         /** Body_analyze_csv_analyze_csv_post */
         Body_analyze_csv_analyze_csv_post: {
             /** File */
@@ -576,6 +1115,20 @@ export interface components {
              * @default false
              */
             include_portfolio_context: boolean;
+        };
+        /** Body_upload_csv_upload_csv_post */
+        Body_upload_csv_upload_csv_post: {
+            /** File */
+            file: string;
+        };
+        /** BollingerBands */
+        BollingerBands: {
+            /** Upper */
+            upper: components["schemas"]["IndicatorPoint"][];
+            /** Mid */
+            mid: components["schemas"]["IndicatorPoint"][];
+            /** Lower */
+            lower: components["schemas"]["IndicatorPoint"][];
         };
         /** CacheMetrics */
         CacheMetrics: {
@@ -652,6 +1205,40 @@ export interface components {
              */
             thumbnail_url?: string | null;
         };
+        /** CommodityItem */
+        CommodityItem: {
+            /**
+             * Symbol
+             * @description 예: GC=F
+             */
+            symbol: string;
+            /**
+             * Name
+             * @description 예: 금
+             */
+            name: string;
+            /** Price */
+            price: string;
+            /** Change Pct */
+            change_pct: string;
+            /**
+             * Unit
+             * @description 예: USD/oz
+             */
+            unit: string;
+        };
+        /** ConnectedAccount */
+        ConnectedAccount: {
+            /**
+             * Provider
+             * @enum {string}
+             */
+            provider: "google" | "apple" | "kakao" | "github";
+            /** Email */
+            email?: string | null;
+            /** Connected At */
+            connected_at?: string | null;
+        };
         /**
          * CopilotPlan
          * @description 자연어 질의로부터 생성된 멀티-스텝 에이전트 실행 계획.
@@ -711,6 +1298,29 @@ export interface components {
             /** Depends On */
             depends_on?: string[];
             gate_policy?: components["schemas"]["GatePolicy"];
+        };
+        /** DataSettings */
+        DataSettings: {
+            /**
+             * Refresh Interval Sec
+             * @default 60
+             */
+            refresh_interval_sec: number;
+            /**
+             * Auto Refresh
+             * @default true
+             */
+            auto_refresh: boolean;
+            /**
+             * Auto Backup
+             * @default false
+             */
+            auto_backup: boolean;
+            /**
+             * Cache Size Mb
+             * @default 256
+             */
+            cache_size_mb: number;
         };
         /**
          * DimensionItem
@@ -858,6 +1468,97 @@ export interface components {
             /** Avg Cost */
             avg_cost?: number | string | null;
         };
+        /** IndexSnapshot */
+        IndexSnapshot: {
+            /**
+             * Ticker
+             * @description 예: ^GSPC
+             */
+            ticker: string;
+            /**
+             * Display Name
+             * @description 예: S&P 500
+             */
+            display_name: string;
+            /** Value */
+            value: string;
+            /** Change Pct */
+            change_pct: string;
+            /** Change Abs */
+            change_abs: string;
+            /** Sparkline 7D */
+            sparkline_7d: number[];
+        };
+        /** IndicatorBundle */
+        IndicatorBundle: {
+            /**
+             * Interval
+             * @description 1m | 5m | 15m | 60m | day | week | month
+             */
+            interval: string;
+            /** Period */
+            period: number;
+            /** Rsi 14 */
+            rsi_14: components["schemas"]["IndicatorPoint"][];
+            /** Macd */
+            macd: components["schemas"]["MacdPoint"][];
+            bollinger: components["schemas"]["BollingerBands"];
+            /** Stochastic */
+            stochastic: components["schemas"]["StochasticPoint"][];
+            /**
+             * Ma20
+             * @description MA-20 시계열
+             */
+            ma20?: components["schemas"]["IndicatorPoint"][];
+            /**
+             * Ma60
+             * @description MA-60 시계열
+             */
+            ma60?: components["schemas"]["IndicatorPoint"][];
+            metrics: components["schemas"]["IndicatorMetrics"];
+            /**
+             * Signal
+             * @description buy | hold | sell
+             */
+            signal: string;
+        };
+        /** IndicatorMetrics */
+        IndicatorMetrics: {
+            /** Rsi Latest */
+            rsi_latest: number;
+            /** Macd Latest */
+            macd_latest: number;
+            /**
+             * Macd Signal
+             * @description golden_cross | dead_cross | neutral
+             */
+            macd_signal: string;
+            /**
+             * Bollinger Position
+             * @description upper | mid | lower
+             */
+            bollinger_position: string;
+            /**
+             * Ma20 Latest
+             * @description MA-20 최신값
+             */
+            ma20_latest?: number | null;
+            /**
+             * Ma60 Latest
+             * @description MA-60 최신값
+             */
+            ma60_latest?: number | null;
+        };
+        /** IndicatorPoint */
+        IndicatorPoint: {
+            /**
+             * T
+             * @description ISO timestamp
+             */
+            t: string;
+            /** V */
+            v: number;
+        };
         /**
          * IngestRequest
          * @description POST /search/news/ingest 요청 본문.
@@ -910,6 +1611,145 @@ export interface components {
              * @default 0
              */
             confidence: number;
+        };
+        /** MacdPoint */
+        MacdPoint: {
+            /** T */
+            t: string;
+            /** Macd */
+            macd: number;
+            /** Signal */
+            signal: number;
+            /** Histogram */
+            histogram: number;
+        };
+        /**
+         * MarkAllReadResponse
+         * @description POST /notifications/read-all 응답.
+         */
+        MarkAllReadResponse: {
+            /**
+             * Marked Count
+             * @description 읽음 처리된 알림 수
+             */
+            marked_count: number;
+        };
+        /**
+         * MarkReadResponse
+         * @description POST /notifications/{id}/read 응답.
+         */
+        MarkReadResponse: {
+            /** Id */
+            id: string;
+            /**
+             * Unread
+             * @default false
+             */
+            unread: boolean;
+        };
+        /**
+         * MarketLeader
+         * @description 대시보드·포트폴리오 상단 시장 리더 종목 / GET /portfolio/market-leaders 응답.
+         */
+        MarketLeader: {
+            /** Rank */
+            rank: number;
+            /** Ticker */
+            ticker: string;
+            /** Name */
+            name: string;
+            /** Market */
+            market: string;
+            /** Price */
+            price: string;
+            /** Change Pct */
+            change_pct: string;
+            /** Currency */
+            currency: string;
+            /** Logo Url */
+            logo_url?: string | null;
+            /** Price Display */
+            price_display?: string | null;
+            /** Change Krw */
+            change_krw?: string | null;
+        };
+        /**
+         * MonthlyReturnCell
+         * @description 월간(일간) 수익률 캘린더 셀.
+         */
+        MonthlyReturnCell: {
+            /** Date */
+            date: string;
+            /** Return Pct */
+            return_pct: string;
+            /** Cell Level */
+            cell_level: number;
+        };
+        /**
+         * Notification
+         * @description 단일 알림 항목.
+         */
+        Notification: {
+            /**
+             * Id
+             * @description 알림 ID (예: price-3, portfolio-12)
+             */
+            id: string;
+            /**
+             * Title
+             * @description 알림 제목
+             */
+            title: string;
+            /**
+             * Message
+             * @description 알림 상세 메시지
+             */
+            message?: string | null;
+            /**
+             * Severity
+             * @description 심각도 (info | warning | critical)
+             * @enum {string}
+             */
+            severity: "info" | "warning" | "critical";
+            /**
+             * Category
+             * @description 알림 범주
+             * @enum {string}
+             */
+            category: "price" | "portfolio" | "alert" | "system";
+            /**
+             * Unread
+             * @description 읽지 않음 여부
+             */
+            unread: boolean;
+            /**
+             * Created At
+             * @description ISO-8601 UTC 생성 시각
+             */
+            created_at: string;
+        };
+        /** NotificationSettings */
+        NotificationSettings: {
+            /**
+             * Email Alerts
+             * @default true
+             */
+            email_alerts: boolean;
+            /**
+             * Push Alerts
+             * @default false
+             */
+            push_alerts: boolean;
+            /**
+             * Price Threshold Pct
+             * @default 5
+             */
+            price_threshold_pct: number;
+            /**
+             * Daily Digest
+             * @default true
+             */
+            daily_digest: boolean;
         };
         /**
          * OhlcBar
@@ -1001,6 +1841,17 @@ export interface components {
              * @description 자산군 차원 비중 + 수익률 (바차트용)
              */
             dimension_breakdown?: components["schemas"]["DimensionItem"][];
+            /**
+             * Win Rate Pct
+             * @description 보유 종목 중 pnl_pct > 0 비율 × 100 (문자열, 소수점 2자리)
+             * @default 0.00
+             */
+            win_rate_pct: string;
+            /**
+             * Market Leaders
+             * @description value_krw 상위 3개 종목 (보유 없으면 S&P top3 fallback)
+             */
+            market_leaders?: components["schemas"]["MarketLeader"][];
         };
         /**
          * PriorTurn
@@ -1154,12 +2005,67 @@ export interface components {
             /** Rebalance Cost Estimate Krw */
             rebalance_cost_estimate_krw: string;
         };
+        /**
+         * SectorHeatmapTile
+         * @description 섹터 히트맵 단일 타일.
+         */
+        SectorHeatmapTile: {
+            /** Sector */
+            sector: string;
+            /** Weight Pct */
+            weight_pct: string;
+            /** Pnl Pct */
+            pnl_pct: string;
+            /** Intensity */
+            intensity: string;
+        };
+        /** SectorKpi */
+        SectorKpi: {
+            /**
+             * Name
+             * @description 예: 반도체
+             */
+            name: string;
+            /** Change Pct */
+            change_pct: string;
+            /**
+             * Constituents
+             * @description 포함 종목 수
+             */
+            constituents: number;
+            /**
+             * Leaders
+             * @description 예: ['AAPL', 'MSFT']
+             */
+            leaders: string[];
+        };
         /** ServiceStatus */
         ServiceStatus: {
             /** Db */
             db: string;
             /** Redis */
             redis: string;
+        };
+        /**
+         * SessionMeta
+         * @description GET /copilot/sessions 목록 아이템 — 세션별 요약 메타.
+         */
+        SessionMeta: {
+            /** Session Id */
+            session_id: string;
+            /** Title */
+            title: string;
+            /** Last Turn At */
+            last_turn_at: string;
+            /** Turn Count */
+            turn_count: number;
+            /** Preview */
+            preview: string;
+            /**
+             * Tags
+             * @default []
+             */
+            tags: string[];
         };
         /**
          * SessionResponse
@@ -1221,6 +2127,15 @@ export interface components {
             holdings_detail: unknown[];
             /** Created At */
             created_at: string;
+        };
+        /** StochasticPoint */
+        StochasticPoint: {
+            /** T */
+            t: string;
+            /** K */
+            k: number;
+            /** D */
+            d: number;
         };
         /** Symbol */
         Symbol: {
@@ -1315,6 +2230,148 @@ export interface components {
              */
             fx: number;
         };
+        /** ThemeSettings */
+        ThemeSettings: {
+            /**
+             * Mode
+             * @default system
+             * @enum {string}
+             */
+            mode: "light" | "dark" | "system";
+            /**
+             * Accent
+             * @default violet
+             * @enum {string}
+             */
+            accent: "violet" | "cyan" | "blue" | "orange" | "rose";
+        };
+        /** TopListItem */
+        TopListItem: {
+            /** Rank */
+            rank: number;
+            /** Ticker */
+            ticker: string;
+            /** Name */
+            name: string;
+            /**
+             * Change Pct
+             * @description 등락률 문자열 (예: +3.21)
+             */
+            change_pct: string;
+            /**
+             * Views 24H
+             * @description 24시간 조회수 (popular 전용)
+             */
+            views_24h?: number | null;
+        };
+        /** UploadAnalyzerConfig */
+        UploadAnalyzerConfig: {
+            /**
+             * Analyzer
+             * @enum {string}
+             */
+            analyzer: "portfolio" | "crypto" | "stock";
+            /**
+             * Period Days
+             * @default 365
+             */
+            period_days: number;
+            /**
+             * Base Currency
+             * @default KRW
+             * @enum {string}
+             */
+            base_currency: "KRW" | "USD";
+            /**
+             * Include Fx
+             * @default false
+             */
+            include_fx: boolean;
+        };
+        /** UploadErrorDetail */
+        UploadErrorDetail: {
+            /** Row */
+            row: number;
+            /** Column */
+            column?: string | null;
+            /** Code */
+            code: string;
+            /** Message */
+            message: string;
+        };
+        /** UploadValidationResult */
+        UploadValidationResult: {
+            /** Upload Id */
+            upload_id: string;
+            /** Total Rows */
+            total_rows: number;
+            /** Valid Rows */
+            valid_rows: number;
+            /** Error Rows */
+            error_rows: number;
+            /** Warning Rows */
+            warning_rows: number;
+            /** Errors */
+            errors: components["schemas"]["UploadErrorDetail"][];
+            /** Preview */
+            preview: {
+                [key: string]: unknown;
+            }[];
+            /** Schema Fingerprint */
+            schema_fingerprint: string;
+            /** Created At */
+            created_at: string;
+        };
+        /** UserMe */
+        UserMe: {
+            /** User Id */
+            user_id: string;
+            /** Name */
+            name: string;
+            /** Email */
+            email: string;
+            /** Avatar Url */
+            avatar_url?: string | null;
+        };
+        /** UserSettings */
+        UserSettings: {
+            /** User Id */
+            user_id: string;
+            /** Name */
+            name: string;
+            /** Email */
+            email: string;
+            /**
+             * Language
+             * @default ko
+             * @enum {string}
+             */
+            language: "ko" | "en";
+            /**
+             * Timezone
+             * @default Asia/Seoul
+             */
+            timezone: string;
+            theme: components["schemas"]["ThemeSettings"];
+            notifications: components["schemas"]["NotificationSettings"];
+            data: components["schemas"]["DataSettings"];
+            /** Connected Accounts */
+            connected_accounts: components["schemas"]["ConnectedAccount"][];
+            /** Updated At */
+            updated_at: string;
+        };
+        /** UserSettingsPatch */
+        UserSettingsPatch: {
+            /** Name */
+            name?: string | null;
+            /** Language */
+            language?: ("ko" | "en") | null;
+            /** Timezone */
+            timezone?: string | null;
+            theme?: components["schemas"]["ThemeSettings"] | null;
+            notifications?: components["schemas"]["NotificationSettings"] | null;
+            data?: components["schemas"]["DataSettings"] | null;
+        };
         /** ValidationError */
         ValidationError: {
             /** Location */
@@ -1327,6 +2384,77 @@ export interface components {
             input?: unknown;
             /** Context */
             ctx?: Record<string, never>;
+        };
+        /**
+         * WatchlistAlertCreate
+         * @description POST /watchlist/alerts 요청 본문.
+         */
+        WatchlistAlertCreate: {
+            /**
+             * Symbol
+             * @description 심볼 (예: NVDA, KRW-BTC)
+             */
+            symbol: string;
+            /**
+             * Market
+             * @description 마켓 (yahoo | upbit | naver_kr | binance)
+             */
+            market: string;
+            /**
+             * Direction
+             * @description above | below
+             * @enum {string}
+             */
+            direction: "above" | "below";
+            /**
+             * Threshold
+             * @description 알림 임계가격
+             */
+            threshold: number | string;
+        };
+        /**
+         * WatchlistAlertResponse
+         * @description GET/POST/PATCH /watchlist/alerts 응답.
+         */
+        WatchlistAlertResponse: {
+            /** Id */
+            id: number;
+            /** User Id */
+            user_id: string;
+            /** Symbol */
+            symbol: string;
+            /** Market */
+            market: string;
+            /** Direction */
+            direction: string;
+            /**
+             * Threshold
+             * @description Decimal 문자열
+             */
+            threshold: string;
+            /** Enabled */
+            enabled: boolean;
+            /**
+             * Created At
+             * @description ISO-8601 UTC
+             */
+            created_at: string;
+        };
+        /**
+         * WatchlistAlertUpdate
+         * @description PATCH /watchlist/alerts/{id} 요청 본문 (부분 업데이트).
+         */
+        WatchlistAlertUpdate: {
+            /**
+             * Enabled
+             * @description 알림 활성화 여부
+             */
+            enabled?: boolean | null;
+            /**
+             * Threshold
+             * @description 임계가격 변경
+             */
+            threshold?: number | string | null;
         };
         /** WatchlistItemCreate */
         WatchlistItemCreate: {
@@ -1354,10 +2482,57 @@ export interface components {
             /** Memo */
             memo?: string | null;
             /**
+             * Pnl 7D
+             * @description 7일 종가 스파크라인
+             */
+            pnl_7d?: number[];
+            /**
              * Created At
              * @description ISO-8601 UTC
              */
             created_at: string;
+        };
+        /** WatchlistSummary */
+        WatchlistSummary: {
+            /**
+             * Watched Count
+             * @description 워치리스트 종목 수
+             */
+            watched_count: number;
+            /**
+             * Up Avg Pct
+             * @description 상승 종목 평균 등락률 (예: +6.42)
+             */
+            up_avg_pct: string;
+            /**
+             * Down Avg Pct
+             * @description 하락 종목 평균 등락률 (예: -4.33)
+             */
+            down_avg_pct: string;
+            /**
+             * Top Gainer Name
+             * @description 최대 상승 종목명 (예: 삼성전자)
+             */
+            top_gainer_name: string;
+            /**
+             * Top Gainer Pct
+             * @description 최대 상승률 (예: +12.4)
+             */
+            top_gainer_pct: string;
+        };
+        /** WorldHeatmapRegion */
+        WorldHeatmapRegion: {
+            /**
+             * Country Code
+             * @description ISO 2자리 예: US
+             */
+            country_code: string;
+            /** Country Name */
+            country_name: string;
+            /** Change Pct */
+            change_pct: string;
+            /** Market Cap Usd */
+            market_cap_usd: string;
         };
         /**
          * _InternalQueryRequest
@@ -1528,6 +2703,13 @@ export interface operations {
                     "application/json": components["schemas"]["Quote"];
                 };
             };
+            /** @description market 또는 code 를 찾을 수 없음 */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
             /** @description Validation Error */
             422: {
                 headers: {
@@ -1562,6 +2744,13 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["OhlcBar"][];
                 };
+            };
+            /** @description market 또는 code 를 찾을 수 없음 */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Validation Error */
             422: {
@@ -1616,6 +2805,13 @@ export interface operations {
                     "application/json": components["schemas"]["WatchlistItemResponse"];
                 };
             };
+            /** @description JSON 파싱 실패 */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
             /** @description Validation Error */
             422: {
                 headers: {
@@ -1645,6 +2841,13 @@ export interface operations {
                 };
                 content?: never;
             };
+            /** @description 워치리스트 항목을 찾을 수 없음 */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
             /** @description Validation Error */
             422: {
                 headers: {
@@ -1652,6 +2855,129 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_symbol_indicators_market_symbol__market___code__indicators_get: {
+        parameters: {
+            query?: {
+                /** @description 1m|5m|15m|60m|day|week|month */
+                interval?: string;
+                period?: number;
+            };
+            header?: never;
+            path: {
+                market: string;
+                code: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IndicatorBundle"];
+                };
+            };
+            /** @description interval 값이 유효하지 않음 */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_market_indices_market_indices_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IndexSnapshot"][];
+                };
+            };
+        };
+    };
+    get_market_sectors_market_sectors_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SectorKpi"][];
+                };
+            };
+        };
+    };
+    get_market_commodities_market_commodities_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommodityItem"][];
+                };
+            };
+        };
+    };
+    get_world_heatmap_market_world_heatmap_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WorldHeatmapRegion"][];
                 };
             };
         };
@@ -1677,6 +3003,13 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["AnalyzeResponse"];
                 };
+            };
+            /** @description JSON 파싱 실패 */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Validation Error */
             422: {
@@ -1711,14 +3044,33 @@ export interface operations {
                     "application/json": components["schemas"]["AnalyzeResponse"];
                 };
             };
-            /** @description Validation Error */
+            /** @description CSV 파싱 실패 또는 빈 파일 */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description 파일 크기 10MB 초과 */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description 지원하지 않는 Content-Type */
+            415: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description 요청 파라미터 검증 실패 */
             422: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
+                content?: never;
             };
         };
     };
@@ -1764,6 +3116,13 @@ export interface operations {
                     "application/json": components["schemas"]["HoldingResponse"];
                 };
             };
+            /** @description JSON 파싱 실패 */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
             /** @description Validation Error */
             422: {
                 headers: {
@@ -1780,6 +3139,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description 보유 종목 ID */
                 holding_id: number;
             };
             cookie?: never;
@@ -1788,6 +3148,13 @@ export interface operations {
         responses: {
             /** @description Successful Response */
             204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Holding not found */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -1809,6 +3176,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description 보유 종목 ID */
                 holding_id: number;
             };
             cookie?: never;
@@ -1827,6 +3195,20 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["HoldingResponse"];
                 };
+            };
+            /** @description JSON 파싱 실패 */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Holding not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Validation Error */
             422: {
@@ -1914,6 +3296,22 @@ export interface operations {
         };
         requestBody: {
             content: {
+                /**
+                 * @example {
+                 *       "target_allocation": {
+                 *         "stock_kr": 0.3,
+                 *         "stock_us": 0.3,
+                 *         "crypto": 0.2,
+                 *         "cash": 0.1,
+                 *         "fx": 0.1
+                 *       },
+                 *       "constraints": {
+                 *         "max_single_weight": 0.5,
+                 *         "min_trade_krw": 100000,
+                 *         "allow_fractional": true
+                 *       }
+                 *     }
+                 */
                 "application/json": components["schemas"]["RebalanceRequest"];
             };
         };
@@ -1925,6 +3323,115 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["RebalanceResponse"];
+                };
+            };
+            /** @description JSON 파싱 실패 */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description target_allocation 합계가 1.0이 아님 (sum > 0 필요) */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    get_sector_heatmap_portfolio_sectors_heatmap_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SectorHeatmapTile"][];
+                };
+            };
+        };
+    };
+    get_monthly_returns_portfolio_monthly_returns_get: {
+        parameters: {
+            query?: {
+                /** @description 조회 연도 (기본: 현재 연도) */
+                year?: number | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MonthlyReturnCell"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_ai_insight_portfolio_ai_insight_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AiInsightResponse"];
+                };
+            };
+        };
+    };
+    get_market_leaders_endpoint_portfolio_market_leaders_get: {
+        parameters: {
+            query?: {
+                /** @description 반환 개수 (1~20) */
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MarketLeader"][];
                 };
             };
             /** @description Validation Error */
@@ -1959,6 +3466,13 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["CopilotPlan"];
                 };
+            };
+            /** @description JSON 파싱 실패 */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Validation Error */
             422: {
@@ -2006,6 +3520,76 @@ export interface operations {
             };
         };
     };
+    list_sessions_copilot_sessions_get: {
+        parameters: {
+            query?: {
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SessionMeta"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_session_alias_copilot_sessions__session_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                session_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SessionResponse"];
+                };
+            };
+            /** @description 세션을 찾을 수 없거나 TTL 만료 */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     get_session_copilot_session__session_id__get: {
         parameters: {
             query?: never;
@@ -2025,6 +3609,13 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["SessionResponse"];
                 };
+            };
+            /** @description 세션을 찾을 수 없거나 TTL 만료 */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Validation Error */
             422: {
@@ -2127,6 +3718,497 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["IngestResponse"];
                 };
+            };
+            /** @description Invalid request body (JSON parse error) */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    upload_csv_upload_csv_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["Body_upload_csv_upload_csv_post"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UploadValidationResult"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    analyze_upload_upload_analyze_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AnalyzeStartRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                    "text/event-stream": unknown;
+                };
+            };
+            /** @description upload_id 미존재 또는 만료 */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_template_upload_template_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    get_watchlist_summary_watchlist_summary_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WatchlistSummary"];
+                };
+            };
+        };
+    };
+    get_popular_watchlist_popular_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TopListItem"][];
+                };
+            };
+        };
+    };
+    get_gainers_losers_watchlist_gainers_losers_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: components["schemas"]["TopListItem"][];
+                    };
+                };
+            };
+        };
+    };
+    list_watchlist_alerts_watchlist_alerts_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WatchlistAlertResponse"][];
+                };
+            };
+        };
+    };
+    create_watchlist_alert_watchlist_alerts_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WatchlistAlertCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WatchlistAlertResponse"];
+                };
+            };
+            /** @description JSON 파싱 실패 */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_watchlist_alert_watchlist_alerts__alert_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description 알림 ID */
+                alert_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description 알림을 찾을 수 없음 */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_watchlist_alert_watchlist_alerts__alert_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description 알림 ID */
+                alert_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WatchlistAlertUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WatchlistAlertResponse"];
+                };
+            };
+            /** @description 알림을 찾을 수 없음 */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_me_users_me_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-User-Id"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserMe"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_settings_users_me_settings_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-User-Id"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserSettings"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    patch_settings_users_me_settings_patch: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-User-Id"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UserSettingsPatch"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserSettings"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_notifications_notifications_get: {
+        parameters: {
+            query?: {
+                /** @description 반환 개수 (1~50) */
+                limit?: number;
+                /** @description 미확인 알림만 반환 */
+                unread_only?: boolean;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Notification"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    mark_all_notifications_read_notifications_read_all_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MarkAllReadResponse"];
+                };
+            };
+        };
+    };
+    mark_notification_read_notifications__notification_id__read_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description 알림 ID (예: price-3, portfolio-12) */
+                notification_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MarkReadResponse"];
+                };
+            };
+            /** @description 알림을 찾을 수 없음 */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Validation Error */
             422: {
