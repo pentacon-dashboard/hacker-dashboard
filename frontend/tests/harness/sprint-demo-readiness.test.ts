@@ -1,8 +1,8 @@
 // frontend/tests/harness/sprint-demo-readiness.test.ts
 // sprint-demo-readiness FE-side 회귀 가드 — integration-qa 위임 결과
 import { describe, expect, it } from 'vitest'
-import { readFileSync, existsSync } from 'node:fs'
-import { resolve } from 'node:path'
+import fs, { readFileSync, existsSync } from 'node:fs'
+import path, { resolve } from 'node:path'
 
 const REPO_ROOT = resolve(__dirname, '..', '..', '..')
 const DEMO_DOC = resolve(REPO_ROOT, 'docs/qa/demo-rehearsal-2026-04-24.md')
@@ -51,8 +51,6 @@ describe('sprint-demo-readiness FE-side acceptance', () => {
 
   it('demo mode standard copy (§0) present in settings page or sidebar component', () => {
     // "Demo User" 또는 "DEMO 배지" 가 사이드바/설정 컴포넌트에 노출되어야 함
-    const fs = require('node:fs') as typeof import('node:fs')
-    const path = require('node:path') as typeof import('node:path')
     const targets = [
       resolve(REPO_ROOT, 'frontend/components/layout'),
       resolve(REPO_ROOT, 'frontend/components/settings'),

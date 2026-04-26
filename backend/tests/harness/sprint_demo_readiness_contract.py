@@ -66,10 +66,21 @@ def live_backend_with_seed():
         "ANTHROPIC_API_KEY": "stub",
         "OPENAI_API_KEY": "stub",
     }
+    # coverage 플러그인이 subprocess uvicorn 에 간섭하지 않도록 관련 환경 변수 제거.
+    # pytest-cov 는 COVERAGE_PROCESS_START / COV_CORE_* 로 subprocess 에 자신을 주입한다.
+    subprocess_env = {**os.environ, **env}
+    for cov_key in (
+        "COVERAGE_PROCESS_START",
+        "COV_CORE_SOURCE",
+        "COV_CORE_CONFIG",
+        "COV_CORE_DATAFILE",
+        "PYTEST_COVE_PLUGIN",
+    ):
+        subprocess_env.pop(cov_key, None)
     proc = subprocess.Popen(
         ["uv", "run", "uvicorn", "app.main:app", "--host", "127.0.0.1", "--port", "8766"],
         cwd=BACKEND_DIR,
-        env={**os.environ, **env},
+        env=subprocess_env,
         stdout=subprocess.PIPE, stderr=subprocess.PIPE,
     )
     base = "http://127.0.0.1:8766"
