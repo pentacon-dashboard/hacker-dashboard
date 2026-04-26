@@ -6,6 +6,7 @@ Portfolio Analyzer 단위·통합 테스트.
 - PortfolioAnalyzer.run: fake LLM 응답으로 전체 흐름
 - fallback 신호 3개 이상 보장
 """
+
 from __future__ import annotations
 
 import json
@@ -118,15 +119,24 @@ def test_portfolio_metrics_multi_currency() -> None:
     assert non_krw >= 0.7
     # FX 헤지 신호가 medium 이상
     signals = metrics["suggested_signals"]
-    assert any(
-        s["kind"] == "fx_hedge" and s["strength"] in {"medium", "high"} for s in signals
-    ), signals
+    assert any(s["kind"] == "fx_hedge" and s["strength"] in {"medium", "high"} for s in signals), (
+        signals
+    )
 
 
 def test_portfolio_metrics_with_snapshots() -> None:
     """snapshot 시계열이 섞여 있으면 MDD/volatility 가 채워진다."""
     rows = [
-        {"market": "upbit", "code": "KRW-BTC", "quantity": 1, "avg_cost": 50_000_000, "currency": "KRW", "value_krw": 60_000_000, "cost_krw": 50_000_000, "asset_class": "crypto"},
+        {
+            "market": "upbit",
+            "code": "KRW-BTC",
+            "quantity": 1,
+            "avg_cost": 50_000_000,
+            "currency": "KRW",
+            "value_krw": 60_000_000,
+            "cost_krw": 50_000_000,
+            "asset_class": "crypto",
+        },
     ]
     snaps = [
         {"snapshot_date": "2024-01-01", "total_value_krw": 60_000_000},
@@ -203,7 +213,13 @@ async def test_portfolio_analyzer_handles_parse_error(fake_client) -> None:
     analyzer = PortfolioAnalyzer()
     state = {
         "input_data": [
-            {"market": "upbit", "code": "KRW-BTC", "quantity": 1, "avg_cost": 50_000_000, "currency": "KRW"},
+            {
+                "market": "upbit",
+                "code": "KRW-BTC",
+                "quantity": 1,
+                "avg_cost": 50_000_000,
+                "currency": "KRW",
+            },
         ],
         "query": None,
         "asset_class_hint": None,

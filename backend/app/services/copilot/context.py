@@ -9,6 +9,7 @@ build_active_context(): 이전 세션 턴을 읽어 Planner 에게 전달할 Act
 - user_query 는 <user_query> 태그로 래핑
 - prior turn 의 query(sanitized) + final.card 요약만 포함
 """
+
 from __future__ import annotations
 
 import html
@@ -64,12 +65,7 @@ def _build_xml_context(prior_turns: list[PriorTurn]) -> str:
         return ""
     parts = ["<prior_turns>"]
     for i, pt in enumerate(prior_turns, start=1):
-        parts.append(
-            f'<turn id="{i}">'
-            f"query: {pt.query}\n"
-            f"summary: {pt.summary}"
-            f"</turn>"
-        )
+        parts.append(f'<turn id="{i}">query: {pt.query}\nsummary: {pt.summary}</turn>')
     parts.append("</prior_turns>")
     return "\n".join(parts)
 

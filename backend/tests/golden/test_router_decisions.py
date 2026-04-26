@@ -7,6 +7,7 @@ Router 결정률 회귀 테스트.
 
 결정적 heuristic 이 대부분을 커버하므로 LLM 호출은 최소화된다.
 """
+
 from __future__ import annotations
 
 from typing import Any

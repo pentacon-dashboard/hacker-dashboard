@@ -1,4 +1,5 @@
 """알림 스키마 — Pydantic v2."""
+
 from __future__ import annotations
 
 from typing import Literal
@@ -15,9 +16,7 @@ class Notification(BaseModel):
     severity: Literal["info", "warning", "critical"] = Field(
         ..., description="심각도 (info | warning | critical)"
     )
-    category: Literal["price", "portfolio", "alert", "system"] = Field(
-        ..., description="알림 범주"
-    )
+    category: Literal["price", "portfolio", "alert", "system"] = Field(..., description="알림 범주")
     unread: bool = Field(..., description="읽지 않음 여부")
     created_at: str = Field(..., description="ISO-8601 UTC 생성 시각")
 

@@ -1,7 +1,7 @@
 """업로드 API 통합 테스트 — sprint-08 Phase B-5."""
+
 from __future__ import annotations
 
-import io
 import json
 
 import pytest
@@ -16,7 +16,9 @@ async def client() -> AsyncClient:
         yield ac
 
 
-def _csv_bytes(rows: list[str], header: str = "date,market,code,quantity,avg_cost,currency,note") -> bytes:
+def _csv_bytes(
+    rows: list[str], header: str = "date,market,code,quantity,avg_cost,currency,note"
+) -> bytes:
     lines = [header] + rows
     return "\n".join(lines).encode("utf-8")
 
@@ -25,13 +27,16 @@ def _csv_bytes(rows: list[str], header: str = "date,market,code,quantity,avg_cos
 # POST /upload/csv
 # ──────────────────────────────────────────────────────────────────────────────
 
+
 @pytest.mark.asyncio
 async def test_upload_csv_200(client: AsyncClient) -> None:
     """정상 CSV → 200 + UploadValidationResult."""
-    content = _csv_bytes([
-        "2024-01-15,yahoo,AAPL,10,182.50,USD,note",
-        "2024-03-22,upbit,KRW-BTC,0.05,85000000,KRW,note",
-    ])
+    content = _csv_bytes(
+        [
+            "2024-01-15,yahoo,AAPL,10,182.50,USD,note",
+            "2024-03-22,upbit,KRW-BTC,0.05,85000000,KRW,note",
+        ]
+    )
     resp = await client.post(
         "/upload/csv",
         files={"file": ("test.csv", content, "text/csv")},
@@ -51,10 +56,12 @@ async def test_upload_csv_200(client: AsyncClient) -> None:
 @pytest.mark.asyncio
 async def test_upload_csv_with_errors(client: AsyncClient) -> None:
     """오류 포함 CSV → 200 + 오류 목록."""
-    content = _csv_bytes([
-        "2024-01-15,yahoo,AAPL,10,182.50,USD,정상",
-        "bad-date,yahoo,AAPL,-5,150.00,BTC,다중오류",
-    ])
+    content = _csv_bytes(
+        [
+            "2024-01-15,yahoo,AAPL,10,182.50,USD,정상",
+            "bad-date,yahoo,AAPL,-5,150.00,BTC,다중오류",
+        ]
+    )
     resp = await client.post(
         "/upload/csv",
         files={"file": ("test.csv", content, "text/csv")},
@@ -69,6 +76,7 @@ async def test_upload_csv_with_errors(client: AsyncClient) -> None:
 async def test_upload_csv_returns_upload_id(client: AsyncClient) -> None:
     """upload_id 는 UUID 형식."""
     import uuid
+
     content = _csv_bytes(["2024-01-15,yahoo,AAPL,10,150.00,USD,note"])
     resp = await client.post(
         "/upload/csv",
@@ -96,6 +104,7 @@ async def test_upload_csv_preview_max_5(client: AsyncClient) -> None:
 # ──────────────────────────────────────────────────────────────────────────────
 # POST /upload/analyze (SSE)
 # ──────────────────────────────────────────────────────────────────────────────
+
 
 @pytest.mark.asyncio
 async def test_upload_analyze_sse_events(client: AsyncClient) -> None:
@@ -152,7 +161,12 @@ async def test_upload_analyze_event_schema(client: AsyncClient) -> None:
         "/upload/analyze",
         json={
             "upload_id": upload_id,
-            "config": {"analyzer": "portfolio", "period_days": 365, "base_currency": "KRW", "include_fx": False},
+            "config": {
+                "analyzer": "portfolio",
+                "period_days": 365,
+                "base_currency": "KRW",
+                "include_fx": False,
+            },
         },
     )
     text = analyze_resp.text
@@ -174,7 +188,12 @@ async def test_upload_analyze_invalid_upload_id(client: AsyncClient) -> None:
         "/upload/analyze",
         json={
             "upload_id": "00000000-0000-0000-0000-000000000000",
-            "config": {"analyzer": "portfolio", "period_days": 365, "base_currency": "KRW", "include_fx": False},
+            "config": {
+                "analyzer": "portfolio",
+                "period_days": 365,
+                "base_currency": "KRW",
+                "include_fx": False,
+            },
         },
     )
     assert analyze_resp.status_code == 200  # SSE 는 항상 200
@@ -193,6 +212,7 @@ async def test_upload_analyze_invalid_upload_id(client: AsyncClient) -> None:
 # ──────────────────────────────────────────────────────────────────────────────
 # GET /upload/template
 # ──────────────────────────────────────────────────────────────────────────────
+
 
 @pytest.mark.asyncio
 async def test_upload_template_200(client: AsyncClient) -> None:
@@ -217,5 +237,5 @@ async def test_upload_template_has_sample_rows(client: AsyncClient) -> None:
     """템플릿 CSV 에 샘플 데이터 존재 (헤더 제외 최소 1행)."""
     resp = await client.get("/upload/template")
     assert resp.status_code == 200
-    lines = [l for l in resp.text.strip().split("\n") if l.strip()]
+    lines = [line for line in resp.text.strip().split("\n") if line.strip()]
     assert len(lines) >= 2  # 헤더 + 최소 1행

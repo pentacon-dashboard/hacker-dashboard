@@ -11,6 +11,7 @@ Critique Gate — 별도 LLM 호출로 Analyzer 결론의 근거 진위 검증.
   (운영 중 외부 의존성 장애로 파이프라인이 통째로 막히는 것을 방지)
 - verdict 누락이나 JSON 파싱 실패는 'fail: ...' 로 처리.
 """
+
 from __future__ import annotations
 
 import json

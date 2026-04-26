@@ -1,13 +1,12 @@
 """업로드 서비스 단위 테스트 — sprint-08 Phase B-5."""
+
 from __future__ import annotations
 
-import io
 from pathlib import Path
 
 import pytest
 
 from app.services.upload import (
-    _make_schema_fingerprint,
     build_validation_result,
     get_cached_df,
     parse_csv,
@@ -19,7 +18,10 @@ _GOLDEN_DIR = Path(__file__).parent.parent / "golden" / "upload_samples"
 # 헬퍼
 # ──────────────────────────────────────────────────────────────────────────────
 
-def _csv(rows: list[str], header: str = "date,market,code,quantity,avg_cost,currency,note") -> bytes:
+
+def _csv(
+    rows: list[str], header: str = "date,market,code,quantity,avg_cost,currency,note"
+) -> bytes:
     lines = [header] + rows
     return "\n".join(lines).encode("utf-8")
 
@@ -28,20 +30,23 @@ def _csv(rows: list[str], header: str = "date,market,code,quantity,avg_cost,curr
 # parse_csv — 정상 케이스
 # ──────────────────────────────────────────────────────────────────────────────
 
+
 class TestParseCsvNormal:
     def test_normal_file_no_errors(self):
         """정상 CSV → 오류 없음."""
-        content = _csv([
-            "2024-01-15,yahoo,AAPL,10,182.50,USD,note",
-            "2024-03-22,upbit,KRW-BTC,0.05,85000000,KRW,note",
-        ])
+        content = _csv(
+            [
+                "2024-01-15,yahoo,AAPL,10,182.50,USD,note",
+                "2024-03-22,upbit,KRW-BTC,0.05,85000000,KRW,note",
+            ]
+        )
         df, errors = parse_csv(content)
         assert len(errors) == 0
         assert len(df) == 2
 
     def test_column_normalization(self):
         """헤더 대소문자 정규화."""
-        content = "Date,Market,Code,Quantity,Avg_Cost,Currency,Note\n2024-01-01,yahoo,AAPL,10,150.00,USD,test\n".encode()
+        content = b"Date,Market,Code,Quantity,Avg_Cost,Currency,Note\n2024-01-01,yahoo,AAPL,10,150.00,USD,test\n"
         df, errors = parse_csv(content)
         assert "date" in df.columns
         assert "market" in df.columns
@@ -56,7 +61,7 @@ class TestParseCsvNormal:
 
     def test_unicode_content(self):
         """한국어 note 파싱."""
-        content = "date,market,code,quantity,avg_cost,currency,note\n2024-01-15,naver_kr,005930,100,72000,KRW,삼성전자 한국어 메모\n".encode("utf-8")
+        content = "date,market,code,quantity,avg_cost,currency,note\n2024-01-15,naver_kr,005930,100,72000,KRW,삼성전자 한국어 메모\n".encode()
         df, errors = parse_csv(content)
         assert len(errors) == 0
 
@@ -72,6 +77,7 @@ class TestParseCsvNormal:
 # parse_csv — 오류 케이스
 # ──────────────────────────────────────────────────────────────────────────────
 
+
 class TestParseCsvErrors:
     def test_empty_file(self):
         """빈 파일 → empty_file 오류."""
@@ -81,7 +87,7 @@ class TestParseCsvErrors:
 
     def test_missing_required_columns(self):
         """필수 컬럼 누락 → missing_columns 오류."""
-        content = "date,market,code\n2024-01-01,yahoo,AAPL\n".encode()
+        content = b"date,market,code\n2024-01-01,yahoo,AAPL\n"
         df, errors = parse_csv(content)
         codes = [e.code for e in errors]
         assert "missing_columns" in codes
@@ -123,10 +129,12 @@ class TestParseCsvErrors:
 
     def test_multiple_errors_in_one_file(self):
         """여러 오류 동시 감지."""
-        content = _csv([
-            "2024-01-15,yahoo,AAPL,10,182.50,USD,정상",
-            "bad-date,yahoo,AAPL,-5,150.00,BTC,다중오류",
-        ])
+        content = _csv(
+            [
+                "2024-01-15,yahoo,AAPL,10,182.50,USD,정상",
+                "bad-date,yahoo,AAPL,-5,150.00,BTC,다중오류",
+            ]
+        )
         df, errors = parse_csv(content)
         codes = [e.code for e in errors]
         assert "invalid_date" in codes
@@ -153,10 +161,12 @@ class TestParseCsvErrors:
 # build_validation_result
 # ──────────────────────────────────────────────────────────────────────────────
 
+
 class TestBuildValidationResult:
     def test_upload_id_is_uuid(self):
         """upload_id 는 UUID 형식."""
         import uuid
+
         content = _csv(["2024-01-15,yahoo,AAPL,10,150.00,USD,note"])
         df, errors = parse_csv(content)
         result = build_validation_result(df, errors)
@@ -174,10 +184,12 @@ class TestBuildValidationResult:
 
     def test_total_rows_correct(self):
         """total_rows 계산."""
-        content = _csv([
-            "2024-01-15,yahoo,AAPL,10,150.00,USD,note",
-            "2024-02-15,yahoo,MSFT,5,300.00,USD,note",
-        ])
+        content = _csv(
+            [
+                "2024-01-15,yahoo,AAPL,10,150.00,USD,note",
+                "2024-02-15,yahoo,MSFT,5,300.00,USD,note",
+            ]
+        )
         df, errors = parse_csv(content)
         result = build_validation_result(df, errors)
         assert result.total_rows == 2
@@ -208,6 +220,7 @@ class TestBuildValidationResult:
     def test_created_at_is_iso(self):
         """created_at 은 ISO 형식."""
         from datetime import datetime
+
         content = _csv(["2024-01-15,yahoo,AAPL,10,150.00,USD,note"])
         df, errors = parse_csv(content)
         result = build_validation_result(df, errors)
@@ -218,6 +231,7 @@ class TestBuildValidationResult:
 # ──────────────────────────────────────────────────────────────────────────────
 # 골든 샘플 기반 테스트
 # ──────────────────────────────────────────────────────────────────────────────
+
 
 def test_golden_normal_01():
     """골든: normal_01.csv → 오류 없음."""

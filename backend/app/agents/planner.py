@@ -10,6 +10,7 @@
 
 모든 게이트는 1회 재시도(schema only) 또는 즉시 실패(domain/critique) 정책.
 """
+
 from __future__ import annotations
 
 import datetime
@@ -24,12 +25,19 @@ from app.agents.llm import LLMUnavailableError, extract_json
 from app.schemas.copilot import CopilotPlan
 
 _ALLOWED_AGENTS = {
-    "stock", "crypto", "fx", "macro",
-    "portfolio", "rebalance",
-    "comparison", "simulator", "news-rag",
+    "stock",
+    "crypto",
+    "fx",
+    "macro",
+    "portfolio",
+    "rebalance",
+    "comparison",
+    "simulator",
+    "news-rag",
 }
 
 # ── 내부 유틸 ──────────────────────────────────────────────────────────────
+
 
 def _now_iso() -> str:
     return datetime.datetime.now(datetime.UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
@@ -45,6 +53,7 @@ def _make_session_id() -> str:
 
 # ── Gate 1: Schema (Pydantic) ──────────────────────────────────────────────
 
+
 def _validate_plan_schema(raw: dict[str, Any]) -> tuple[CopilotPlan | None, str]:
     """Pydantic 으로 CopilotPlan 검증. 성공 → (plan, ""), 실패 → (None, 에러)."""
     try:
@@ -55,6 +64,7 @@ def _validate_plan_schema(raw: dict[str, Any]) -> tuple[CopilotPlan | None, str]
 
 
 # ── Gate 2: Domain (DAG 유효성) ────────────────────────────────────────────
+
 
 def _validate_plan_domain(plan: CopilotPlan) -> str | None:
     """DAG 구조 sanity check.
@@ -80,6 +90,7 @@ def _validate_plan_domain(plan: CopilotPlan) -> str | None:
 
 
 # ── Gate 3: Critique (LLM self-critique) ──────────────────────────────────
+
 
 async def _critique_plan(query: str, plan: CopilotPlan) -> tuple[bool, str]:
     """LLM 에 "모든 step 이 질의에 필요한가?" 를 묻는다.
@@ -118,6 +129,7 @@ async def _critique_plan(query: str, plan: CopilotPlan) -> tuple[bool, str]:
 
 
 # ── 메인 함수 ──────────────────────────────────────────────────────────────
+
 
 async def build_copilot_plan(
     query: str,

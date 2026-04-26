@@ -11,6 +11,7 @@ Track A의 계산 결과(actions, drift, allocations)를 입력받아 자연어 
 이 Analyzer 는 일반 `BaseAnalyzer` 그래프 흐름이 아니라 /portfolio/rebalance 엔드포인트에서
 직접 호출되므로, 게이트를 Analyzer 내부에서 같이 실행한다.
 """
+
 from __future__ import annotations
 
 import json
@@ -164,7 +165,7 @@ class RebalanceAnalyzer:
                 headline="포트폴리오가 이미 목표 비중에 도달했습니다",
                 narrative=(
                     "현재 자산군 비중이 목표와 거의 일치합니다 "
-                    f"(최대 drift {max_abs_drift*100:.2f}% < 1%). 리밸런싱이 불필요합니다."
+                    f"(최대 drift {max_abs_drift * 100:.2f}% < 1%). 리밸런싱이 불필요합니다."
                 ),
                 warnings=[],
                 confidence=0.95,

@@ -7,6 +7,7 @@ sprint-02:
 stub 모드 결정론성:
   동일 query + symbols + k → 동일 순서/점수 (fake_embed 결정론성 보장).
 """
+
 from __future__ import annotations
 
 import math

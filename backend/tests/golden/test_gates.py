@@ -5,6 +5,7 @@
 그리고 전체 파이프라인(build_graph) 통합 테스트로 golden sample 의
 기대 gate 상태를 검증한다.
 """
+
 from __future__ import annotations
 
 from typing import Any

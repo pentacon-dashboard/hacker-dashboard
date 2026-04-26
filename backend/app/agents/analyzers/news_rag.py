@@ -9,6 +9,7 @@ News-RAG Analyzer — sprint-03.
   domain : 모든 citation 의 doc_id 가 stub 저장소에 존재.
   critique: citation faithfulness — content 에 인용 근거가 있는지 확인.
 """
+
 from __future__ import annotations
 
 import os
@@ -60,9 +61,7 @@ def _check_domain(citations: list[dict[str, Any]]) -> tuple[str, str]:
         for c in citations:
             source_url = c.get("source_url", "")
             if source_url and source_url not in known_urls:
-                return "fail", (
-                    f"citation source_url={source_url!r} not found in search index"
-                )
+                return "fail", (f"citation source_url={source_url!r} not found in search index")
     return "pass", ""
 
 
@@ -94,6 +93,7 @@ def _retrieve_citations(step: CopilotStep) -> list[dict[str, Any]]:
 
     try:
         from app.services.news.search import search_news_stub
+
         results = search_news_stub(
             query=query,
             symbols=symbols if symbols else None,

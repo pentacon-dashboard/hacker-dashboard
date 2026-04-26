@@ -2,6 +2,7 @@
 
 실 시장 데이터 연동은 non-goal. 결정론적 stub 리스트를 반환.
 """
+
 from __future__ import annotations
 
 from app.schemas.portfolio import MarketLeader

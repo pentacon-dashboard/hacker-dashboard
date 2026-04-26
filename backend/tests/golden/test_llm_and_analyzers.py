@@ -4,6 +4,7 @@ llm.py 와 Analyzer base 의 동작 보조 테스트.
 - API 키 미설정 시 LLMUnavailableError
 - Analyzer 가 파싱 실패를 _parse_error 로 전달
 """
+
 from __future__ import annotations
 
 from typing import Any

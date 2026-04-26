@@ -3,6 +3,7 @@ Symbol 검색 / Quote / OHLC API 테스트.
 
 respx로 외부 호출을 모킹.
 """
+
 from __future__ import annotations
 
 import pytest
@@ -16,6 +17,7 @@ from app.services.market.cache import set_redis
 @pytest.fixture(autouse=True)
 def inject_http_client(respx_mock):
     from httpx import AsyncClient as HxClient
+
     client = HxClient()
     set_http_client(client)
     yield
@@ -30,6 +32,7 @@ def disable_redis():
 
 
 # ─────────────────────────── 심볼 검색 ─────────────────────────────────
+
 
 @respx.mock
 @pytest.mark.asyncio
@@ -58,9 +61,7 @@ async def test_search_symbols_returns_list(client: AsyncClient) -> None:
 @respx.mock
 @pytest.mark.asyncio
 async def test_search_symbols_empty_result(client: AsyncClient) -> None:
-    respx.get("https://api.upbit.com/v1/market/all").mock(
-        return_value=Response(200, json=[])
-    )
+    respx.get("https://api.upbit.com/v1/market/all").mock(return_value=Response(200, json=[]))
     respx.get("https://query1.finance.yahoo.com/v1/finance/search").mock(
         return_value=Response(200, json={"quotes": []})
     )
@@ -71,6 +72,7 @@ async def test_search_symbols_empty_result(client: AsyncClient) -> None:
 
 
 # ─────────────────────────── Quote 조회 ────────────────────────────────
+
 
 @respx.mock
 @pytest.mark.asyncio
@@ -139,6 +141,7 @@ async def test_get_quote_unknown_market(client: AsyncClient) -> None:
 
 # ─────────────────────────── OHLC 조회 ─────────────────────────────────
 
+
 @respx.mock
 @pytest.mark.asyncio
 async def test_get_ohlc_binance(client: AsyncClient) -> None:
@@ -146,8 +149,20 @@ async def test_get_ohlc_binance(client: AsyncClient) -> None:
         return_value=Response(
             200,
             json=[
-                [1704067200000, "44000", "46000", "43000", "45000", "1000",
-                 1704153599999, "45000000", 5000, "500", "22500000", "0"],
+                [
+                    1704067200000,
+                    "44000",
+                    "46000",
+                    "43000",
+                    "45000",
+                    "1000",
+                    1704153599999,
+                    "45000000",
+                    5000,
+                    "500",
+                    "22500000",
+                    "0",
+                ],
             ],
         )
     )

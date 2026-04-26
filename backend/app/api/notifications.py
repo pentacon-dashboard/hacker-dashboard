@@ -8,6 +8,7 @@ POST /notifications/read-all  — 전체 읽음 처리
 데이터는 watchlist_alerts + holdings + portfolio_snapshots 에서 on-the-fly 파생.
 새 DB 테이블 없음 (옵션 A).
 """
+
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends, HTTPException, Path, Query
@@ -85,9 +86,7 @@ async def mark_notification_read(
     # (POST /notifications/{id}/read 수락 기준: 200 반환이면 충분)
     success = mark_read(notification_id)
     if not success and notification_id not in existing_ids:
-        raise HTTPException(
-            status_code=404, detail=f"notification {notification_id!r} not found"
-        )
+        raise HTTPException(status_code=404, detail=f"notification {notification_id!r} not found")
     # mark_read 가 False 를 반환해도 ID 가 목록에 있으면 처리
     mark_read(notification_id)
 

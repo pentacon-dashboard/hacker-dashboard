@@ -1,4 +1,5 @@
 """Unit tests — session history list_sessions + build_session_meta (sprint-08 B-7)."""
+
 from __future__ import annotations
 
 import datetime

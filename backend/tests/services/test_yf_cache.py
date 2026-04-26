@@ -1,7 +1,6 @@
 """yf_cache in-memory TTL 캐시 단위 테스트."""
-from __future__ import annotations
 
-import asyncio
+from __future__ import annotations
 
 import pytest
 
@@ -33,6 +32,7 @@ async def test_cache_set_and_get() -> None:
 async def test_cache_expires_after_ttl() -> None:
     """TTL 0 으로 설정하면 즉시 만료."""
     import time as _time
+
     from app.services.market import yf_cache as _mod
 
     # 과거 시각으로 expire_at 직접 삽입

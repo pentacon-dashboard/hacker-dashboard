@@ -3,6 +3,7 @@
 
 calc_rsi, calc_macd, calc_bollinger, calc_stochastic 정확성 검증.
 """
+
 from __future__ import annotations
 
 import math
@@ -10,6 +11,7 @@ import math
 from app.services.indicators import calc_bollinger, calc_ma, calc_macd, calc_rsi, calc_stochastic
 
 # ──────────────── 공통 픽스처 ────────────────
+
 
 def _make_closes(n: int = 50, base: float = 100.0, trend: float = 0.5) -> list[float]:
     """단조 상승 closes (RSI 계산 기준값 확인용)."""
@@ -22,6 +24,7 @@ def _make_alternating(n: int = 60) -> list[float]:
 
 
 # ──────────────── RSI ────────────────
+
 
 class TestCalcRsi:
     def test_returns_correct_length(self) -> None:
@@ -67,6 +70,7 @@ class TestCalcRsi:
 
 # ──────────────── MACD ────────────────
 
+
 class TestCalcMacd:
     def test_returns_three_lists(self) -> None:
         closes = _make_closes(80)
@@ -95,6 +99,7 @@ class TestCalcMacd:
 
 
 # ──────────────── 볼린저 밴드 ────────────────
+
 
 class TestCalcBollinger:
     def test_returns_three_lists(self) -> None:
@@ -132,6 +137,7 @@ class TestCalcBollinger:
 
 # ──────────────── 스토캐스틱 ────────────────
 
+
 class TestCalcStochastic:
     def _make_hls(self, n: int = 60) -> tuple[list[float], list[float], list[float]]:
         closes = _make_alternating(n)
@@ -148,7 +154,9 @@ class TestCalcStochastic:
     def test_range_0_to_100(self) -> None:
         highs, lows, closes = self._make_hls(80)
         k, d = calc_stochastic(highs, lows, closes)
-        assert all(0 <= v <= 100 for v in k), f"K 범위 벗어남: {[v for v in k if not (0 <= v <= 100)]}"
+        assert all(0 <= v <= 100 for v in k), (
+            f"K 범위 벗어남: {[v for v in k if not (0 <= v <= 100)]}"
+        )
         assert all(0 <= v <= 100 for v in d), "D 범위 벗어남"
 
     def test_constant_price_returns_50(self) -> None:
@@ -169,6 +177,7 @@ class TestCalcStochastic:
 
 
 # ──────────────── MA (이동평균) ────────────────
+
 
 class TestCalcMa:
     def test_ma5_length(self) -> None:

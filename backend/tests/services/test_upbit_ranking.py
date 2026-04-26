@@ -3,6 +3,7 @@ Upbit 랭킹 점수 테스트.
 
 respx 로 Upbit API 응답 모킹. 랭킹 우선순위 검증.
 """
+
 from __future__ import annotations
 
 import pytest

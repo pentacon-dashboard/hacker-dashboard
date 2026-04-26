@@ -11,7 +11,6 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_asyn
 
 from app.main import app
 
-
 # ──────────────── fake_orchestrator_llm — sprint-04/05 공통 fixture ──────────────
 
 
@@ -71,16 +70,19 @@ def fake_orchestrator_llm(monkeypatch: pytest.MonkeyPatch) -> _FakeOrchestratorL
         # system prompt 텍스트 로드 (실제 파일)
         try:
             from app.agents.llm import load_prompt
+
             system_text = load_prompt(system_prompt_name)
         except Exception:  # noqa: BLE001
             system_text = system_prompt_name
 
-        spy.captured_prompts.append({
-            "role_tag": role_tag,
-            "system": system_text,
-            "user": user_content,
-            "system_prompt_name": system_prompt_name,
-        })
+        spy.captured_prompts.append(
+            {
+                "role_tag": role_tag,
+                "system": system_text,
+                "user": user_content,
+                "system_prompt_name": system_prompt_name,
+            }
+        )
 
         # 반환값
         if role_tag == "planner":
@@ -97,6 +99,7 @@ def fake_orchestrator_llm(monkeypatch: pytest.MonkeyPatch) -> _FakeOrchestratorL
 
             # <prior_turns> 에서 symbol 추출 시도
             import re as _re
+
             prior_match = _re.search(
                 r"<prior_turns>.*?query:.*?([A-Z]{2,5}).*?</prior_turns>",
                 user_content,
@@ -118,9 +121,8 @@ def fake_orchestrator_llm(monkeypatch: pytest.MonkeyPatch) -> _FakeOrchestratorL
                 has_extreme_shock = True
 
             # follow-up 단축 조건: prior_turns 있고 "계속"/"조금" 등 단축 키워드이면 1개 step
-            is_followup_short = (
-                "<prior_turns>" in user_content and
-                any(kw in user_content for kw in ("계속", "조금", "더", "만", "그럼", "그"))
+            is_followup_short = "<prior_turns>" in user_content and any(
+                kw in user_content for kw in ("계속", "조금", "더", "만", "그럼", "그")
             )
 
             if has_unknown_symbol:
@@ -179,12 +181,14 @@ def fake_orchestrator_llm(monkeypatch: pytest.MonkeyPatch) -> _FakeOrchestratorL
                     },
                 ]
 
-            return json.dumps({
-                "plan_id": "p-fake",
-                "session_id": "s-fake",
-                "steps": steps,
-                "created_at": "2026-04-22T00:00:00Z",
-            })
+            return json.dumps(
+                {
+                    "plan_id": "p-fake",
+                    "session_id": "s-fake",
+                    "steps": steps,
+                    "created_at": "2026-04-22T00:00:00Z",
+                }
+            )
 
         if role_tag == "critique":
             return json.dumps({"verdict": "pass", "ok": True, "text": "fake critique pass"})
@@ -197,6 +201,7 @@ def fake_orchestrator_llm(monkeypatch: pytest.MonkeyPatch) -> _FakeOrchestratorL
     # 세션 저장소 초기화 (테스트 격리)
     try:
         from app.services.session import get_session_store
+
         store = get_session_store()
         if hasattr(store, "reset_all"):
             store.reset_all()
@@ -326,7 +331,7 @@ class _FakeResponse:
 
 @dataclass
 class _FakeCompletions:
-    parent: "FakeOpenAIClient"
+    parent: FakeOpenAIClient
 
     async def create(self, **kwargs: Any) -> _FakeResponse:
         # OpenAI 스타일: messages 리스트에서 system 메시지 추출

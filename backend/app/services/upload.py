@@ -5,6 +5,7 @@ run_analyze_stream: upload_id + config → SSE 이벤트 스트림 (AsyncIterato
 
 업로드 캐시: 서버 메모리 _upload_cache (TTL 30분 asyncio cleanup)
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -74,6 +75,7 @@ def get_cached_df(upload_id: str) -> Any | None:
 # parse_csv
 # ────────────────────────────────────────────────────────────────────────────
 
+
 def parse_csv(
     content: bytes,
     filename: str = "upload.csv",
@@ -102,6 +104,7 @@ def parse_csv(
             )
         )
         import pandas as pd
+
         return pd.DataFrame(), errors
 
     try:
@@ -113,6 +116,7 @@ def parse_csv(
             )
         )
         import pandas as pd
+
         return pd.DataFrame(), errors
 
     if df.empty:
@@ -144,6 +148,7 @@ def parse_csv(
         if date_val:
             try:
                 from datetime import date as _date
+
                 _date.fromisoformat(date_val)
             except ValueError:
                 errors.append(

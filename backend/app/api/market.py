@@ -4,6 +4,7 @@ Market 엔드포인트.
 Week-2: 시장 데이터 어댑터 + 심볼 검색 + Watchlist CRUD 연동.
 Sprint-08 B-3/B-4: Symbol indicators + Market analysis 엔드포인트.
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -47,10 +48,20 @@ _watchlist: dict[int, dict[str, Any]] = {}
 _next_id: int = 1
 
 _SAMPLE_SYMBOLS: list[Symbol] = [
-    Symbol(symbol="AAPL", name="Apple Inc.", asset_class="stock", exchange="NASDAQ", market="yahoo"),
+    Symbol(
+        symbol="AAPL", name="Apple Inc.", asset_class="stock", exchange="NASDAQ", market="yahoo"
+    ),
     Symbol(symbol="BTC-USD", name="Bitcoin", asset_class="crypto", exchange=None, market="yahoo"),
-    Symbol(symbol="KRW-BTC", name="Bitcoin/KRW", asset_class="crypto", exchange="Upbit", market="upbit"),
-    Symbol(symbol="BTCUSDT", name="Bitcoin/USDT", asset_class="crypto", exchange="Binance", market="binance"),
+    Symbol(
+        symbol="KRW-BTC", name="Bitcoin/KRW", asset_class="crypto", exchange="Upbit", market="upbit"
+    ),
+    Symbol(
+        symbol="BTCUSDT",
+        name="Bitcoin/USDT",
+        asset_class="crypto",
+        exchange="Binance",
+        market="binance",
+    ),
     Symbol(symbol="USD-KRW", name="USD/KRW", asset_class="fx", exchange=None, market="yahoo"),
 ]
 
@@ -92,9 +103,7 @@ async def search_symbols(
         upbit_task, yahoo_task, naver_task, alias_task
     )
 
-    def _assign_adapter_scores(
-        items: list[SymbolInfo], base: int
-    ) -> list[tuple[SymbolInfo, int]]:
+    def _assign_adapter_scores(items: list[SymbolInfo], base: int) -> list[tuple[SymbolInfo, int]]:
         scored = []
         total = len(items)
         for i, item in enumerate(items):
@@ -204,6 +213,7 @@ async def get_ohlc(
 
 # ─────────────────────── Watchlist CRUD ───────────────────────────────
 
+
 @router.get("/watchlist/items", response_model=list[WatchlistItemResponse])
 async def list_watchlist() -> list[WatchlistItemResponse]:
     """워치리스트 조회 (user_id='demo' 고정). pnl_7d 스파크라인 포함."""
@@ -303,14 +313,16 @@ def _generate_stub_ohlc(market: str, code: str, interval: str, n: int) -> list[O
         low = close * (1 - abs(math.cos(i * 0.7)) * 0.01)
         open_ = price
         price = close
-        bars.append(OhlcBar(
-            ts=ts.isoformat(),
-            open=round(open_, 4),
-            high=round(high, 4),
-            low=round(low, 4),
-            close=round(close, 4),
-            volume=round(1_000_000 + (seed * i % 500_000), 0),
-        ))
+        bars.append(
+            OhlcBar(
+                ts=ts.isoformat(),
+                open=round(open_, 4),
+                high=round(high, 4),
+                low=round(low, 4),
+                close=round(close, 4),
+                volume=round(1_000_000 + (seed * i % 500_000), 0),
+            )
+        )
     return bars
 
 

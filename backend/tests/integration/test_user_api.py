@@ -1,4 +1,5 @@
 """Integration tests — /users/me + /users/me/settings (sprint-08 B-6)."""
+
 from __future__ import annotations
 
 import pytest
@@ -48,9 +49,7 @@ class TestGetSettings:
 
     @pytest.mark.asyncio
     async def test_get_settings_with_header(self, client: AsyncClient):
-        resp = await client.get(
-            "/users/me/settings", headers={"X-User-Id": "custom-user"}
-        )
+        resp = await client.get("/users/me/settings", headers={"X-User-Id": "custom-user"})
         assert resp.status_code == 200
         data = resp.json()
         assert data["user_id"] == "custom-user"

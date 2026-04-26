@@ -1,12 +1,11 @@
 """sprint-06 acceptance — integration / goldens / ADR / README / harness-green."""
+
 from __future__ import annotations
 
 import json
 import re
 import subprocess
 from pathlib import Path
-
-import pytest
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 
@@ -52,8 +51,9 @@ def test_demo_script_merged_into_rehearsal() -> None:
     section = re.search(r"## Copilot 시나리오(.*?)(?=\n## |\Z)", txt, flags=re.S)
     assert section and section.group(1).count("- ") >= 6
     # 기존 copilot-demo.md 새 파일 생성 금지
-    assert not (REPO_ROOT / "docs/demo/copilot-demo.md").exists(), \
+    assert not (REPO_ROOT / "docs/demo/copilot-demo.md").exists(), (
         "use rehearsal doc merge, not a new copilot-demo.md"
+    )
 
 
 def test_readme_has_copilot_section_and_links() -> None:
@@ -69,10 +69,11 @@ def test_readme_has_copilot_section_and_links() -> None:
 def test_golden_end_to_end_suite_passes() -> None:
     """ASGI in-process 실행: subprocess 는 fake fixture 상속 목적상 허용."""
     result = subprocess.run(
-        ["uv", "run", "pytest", "-q",
-         "tests/golden/test_copilot_end_to_end.py", "--tb=short"],
+        ["uv", "run", "pytest", "-q", "tests/golden/test_copilot_end_to_end.py", "--tb=short"],
         cwd=REPO_ROOT / "backend",
-        capture_output=True, text=True, timeout=900,
+        capture_output=True,
+        text=True,
+        timeout=900,
     )
     assert result.returncode == 0, result.stdout + result.stderr
 
@@ -82,9 +83,15 @@ def test_golden_coverage_is_ten() -> None:
     ids = {p.stem for p in samples}
     # sprint-03 의 9건 + follow_up_2turn 1건
     required = {
-        "comparison_01", "comparison_02", "comparison_03",
-        "simulator_01", "simulator_02", "simulator_03",
-        "news_rag_01", "news_rag_02", "news_rag_03",
+        "comparison_01",
+        "comparison_02",
+        "comparison_03",
+        "simulator_01",
+        "simulator_02",
+        "simulator_03",
+        "news_rag_01",
+        "news_rag_02",
+        "news_rag_03",
         "follow_up_2turn",
     }
     missing = required - ids
@@ -98,15 +105,22 @@ def test_harness_contracts_still_green() -> None:
     false-fail 이 발생하는 문제를 방지한다.
     """
     result = subprocess.run(
-        ["uv", "run", "pytest", "-q",
-         "tests/harness/sprint_01_contract.py",
-         "tests/harness/sprint_02_contract.py",
-         "tests/harness/sprint_03_contract.py",
-         "tests/harness/sprint_04_contract.py",
-         "tests/harness/sprint_05_contract.py",
-         "--tb=short"],
+        [
+            "uv",
+            "run",
+            "pytest",
+            "-q",
+            "tests/harness/sprint_01_contract.py",
+            "tests/harness/sprint_02_contract.py",
+            "tests/harness/sprint_03_contract.py",
+            "tests/harness/sprint_04_contract.py",
+            "tests/harness/sprint_05_contract.py",
+            "--tb=short",
+        ],
         cwd=REPO_ROOT / "backend",
-        capture_output=True, text=True, timeout=600,
+        capture_output=True,
+        text=True,
+        timeout=600,
     )
     assert result.returncode == 0, result.stdout + result.stderr
 

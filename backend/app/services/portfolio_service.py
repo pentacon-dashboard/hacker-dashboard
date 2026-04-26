@@ -9,6 +9,7 @@
 
 모든 함수는 외부 I/O 없는 순수 함수. (market_leaders 는 stub 가격 포함)
 """
+
 from __future__ import annotations
 
 import math
@@ -40,6 +41,7 @@ def _d(v: object) -> Decimal:
 # ──────────────────────────────────────────────────────────────────────────────
 # calc_win_rate
 # ──────────────────────────────────────────────────────────────────────────────
+
 
 def calc_win_rate(holdings: list[HoldingDetail]) -> str:
     """보유 종목 중 pnl_pct > 0 비율 × 100 (문자열 소수점 2자리).
@@ -164,6 +166,7 @@ def build_market_leaders(holdings: list[HoldingDetail]) -> list[MarketLeader]:
 # sector_heatmap
 # ──────────────────────────────────────────────────────────────────────────────
 
+
 def sector_heatmap(
     holdings: list[HoldingDetail],
     sector_map: dict[str, str] | None = None,
@@ -174,6 +177,7 @@ def sector_heatmap(
     """
     if sector_map is None:
         from app.services.sector_map import get_sector_map
+
         sector_map = get_sector_map()
 
     total_value = sum((_d(h.value_krw) for h in holdings), Decimal("0"))
@@ -217,6 +221,7 @@ def sector_heatmap(
 # ──────────────────────────────────────────────────────────────────────────────
 # monthly_returns
 # ──────────────────────────────────────────────────────────────────────────────
+
 
 def monthly_returns(
     holdings: list[HoldingDetail],
@@ -279,6 +284,7 @@ def monthly_returns(
 # ──────────────────────────────────────────────────────────────────────────────
 # ai_insight_stub
 # ──────────────────────────────────────────────────────────────────────────────
+
 
 def ai_insight_stub(summary: PortfolioSummary) -> AiInsightResponse:
     """ADR-0012 stub 모드 AI 인사이트 생성.

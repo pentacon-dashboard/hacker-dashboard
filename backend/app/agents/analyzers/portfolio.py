@@ -23,6 +23,7 @@ Week-3 신규 analyzer. 입력 특징:
 숫자 근거를 검증하며, highlights/evidence 의 수치는 compute_portfolio_metrics 가 미리 계산해서
 사실 검증이 가능하도록 _indicators 에 노출된다.
 """
+
 from __future__ import annotations
 
 import json
@@ -80,7 +81,11 @@ def _holding_value(h: dict[str, Any]) -> float | None:
         if v is not None and v > 0:
             return v
     q = _as_float(h.get("quantity"))
-    p = _as_float(h.get("current_price_krw")) or _as_float(h.get("current_price")) or _as_float(h.get("avg_cost"))
+    p = (
+        _as_float(h.get("current_price_krw"))
+        or _as_float(h.get("current_price"))
+        or _as_float(h.get("avg_cost"))
+    )
     if q is not None and p is not None and q > 0 and p > 0:
         return q * p
     return None

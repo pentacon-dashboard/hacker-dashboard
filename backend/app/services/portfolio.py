@@ -7,6 +7,7 @@ compute_summary(holdings) → PortfolioSummary:
   - 자산군 분포 계산
   - 전일 스냅샷 대비 일간 변동
 """
+
 from __future__ import annotations
 
 import logging
@@ -27,7 +28,7 @@ logger = logging.getLogger(__name__)
 _MARKET_TO_ASSET_CLASS: dict[str, str] = {
     "upbit": "crypto",
     "binance": "crypto",
-    "yahoo": "stock_us",   # yahoo는 US 주식/ETF 중심
+    "yahoo": "stock_us",  # yahoo는 US 주식/ETF 중심
     "naver_kr": "stock_kr",
     "krx": "stock_kr",
     "nasdaq": "stock_us",
@@ -58,8 +59,12 @@ class HoldingInput:
         self.id: int = int(data.id) if hasattr(data, "id") else int(data["id"])
         self.market: str = data.market if hasattr(data, "market") else data["market"]
         self.code: str = data.code if hasattr(data, "code") else data["code"]
-        self.quantity: Decimal = _d(data.quantity if hasattr(data, "quantity") else data["quantity"])
-        self.avg_cost: Decimal = _d(data.avg_cost if hasattr(data, "avg_cost") else data["avg_cost"])
+        self.quantity: Decimal = _d(
+            data.quantity if hasattr(data, "quantity") else data["quantity"]
+        )
+        self.avg_cost: Decimal = _d(
+            data.avg_cost if hasattr(data, "avg_cost") else data["avg_cost"]
+        )
         self.currency: str = data.currency if hasattr(data, "currency") else data["currency"]
 
 
@@ -92,7 +97,9 @@ async def compute_summary(
             current_price = _d(quote.price)
             price_currency = quote.currency.upper()
         except Exception as exc:
-            logger.warning("현재가 조회 실패 (%s/%s): %s — avg_cost 로 대체", item.market, item.code, exc)
+            logger.warning(
+                "현재가 조회 실패 (%s/%s): %s — avg_cost 로 대체", item.market, item.code, exc
+            )
             current_price = item.avg_cost
             price_currency = item.currency
 
@@ -151,7 +158,9 @@ async def compute_summary(
             else prev_snapshot["total_value_krw"]
         )
         daily_change_krw = total_value - prev_value
-        daily_change_pct = (daily_change_krw / prev_value * 100) if prev_value != 0 else Decimal("0")
+        daily_change_pct = (
+            (daily_change_krw / prev_value * 100) if prev_value != 0 else Decimal("0")
+        )
 
     # 기간 변동 (N일 전 스냅샷 대비)
     period_change_pct = Decimal("0")
@@ -249,9 +258,7 @@ async def build_portfolio_context(
     from app.schemas.analyze import PortfolioContext, PortfolioHolding
 
     try:
-        result = await db.execute(
-            select(Holding).where(Holding.user_id == user_id)
-        )
+        result = await db.execute(select(Holding).where(Holding.user_id == user_id))
         holdings_rows = list(result.scalars().all())
     except Exception as exc:
         logger.warning("build_portfolio_context: holdings 조회 실패 — %s", exc)
@@ -318,9 +325,7 @@ async def build_portfolio_context(
     # matched_holding 분리
     matched_holding: PortfolioHolding | None = None
     if target_market is not None and target_code is not None:
-        matched_holding = holding_map.get(
-            (target_market.lower(), target_code.lower())
-        )
+        matched_holding = holding_map.get((target_market.lower(), target_code.lower()))
 
     return PortfolioContext(
         holdings=portfolio_holdings,

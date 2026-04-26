@@ -2,8 +2,8 @@ from typing import Any, TypedDict
 
 
 class GateState(TypedDict):
-    schema_gate: str   # ok | fail | pending
-    domain_gate: str   # ok | fail | pending
+    schema_gate: str  # ok | fail | pending
+    domain_gate: str  # ok | fail | pending
     critique_gate: str  # ok | fail | pending
 
 
@@ -16,8 +16,8 @@ class AgentState(TypedDict, total=False):
     asset_class_hint: str | None
 
     # Router 출력
-    asset_class: str          # stock | crypto | fx | macro | mixed | portfolio
-    router_reason: str        # Router 가 선택한 이유
+    asset_class: str  # stock | crypto | fx | macro | mixed | portfolio
+    router_reason: str  # Router 가 선택한 이유
 
     # Analyzer 출력
     analyzer_output: dict[str, Any] | None
@@ -39,10 +39,10 @@ class AgentState(TypedDict, total=False):
     # plan.md AgentState 확장 명세 준수.
     # copilot_plan 은 CopilotPlan.model_dump() dict 로 직렬화해서 저장한다
     # (LangGraph StateGraph 가 런타임에 type_hints 를 resolve 하므로 순환 import 방지).
-    copilot_plan: dict[str, Any] | None        # CopilotPlan.model_dump()
-    copilot_step_results: dict[str, Any]       # step_id → CopilotCard.model_dump()
+    copilot_plan: dict[str, Any] | None  # CopilotPlan.model_dump()
+    copilot_step_results: dict[str, Any]  # step_id → CopilotCard.model_dump()
     copilot_session_id: str | None
-    copilot_citations: list[dict[str, Any]]    # Citation list
+    copilot_citations: list[dict[str, Any]]  # Citation list
     copilot_turn_id: str | None
 
     # ── sprint-05: follow-up 라우팅용 세션 컨텍스트 (WARN-1 해소) ─────────────

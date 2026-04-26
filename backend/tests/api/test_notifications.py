@@ -7,6 +7,7 @@
 
 conftest.py 의 app 의존 없이 notifications 서비스만 독립 테스트.
 """
+
 from __future__ import annotations
 
 import pytest
@@ -22,7 +23,6 @@ from app.services.notifications import (
     mark_all_read,
     mark_read,
 )
-
 
 # ──────────────────────────── 스키마 단위 테스트 ─────────────────────────────
 

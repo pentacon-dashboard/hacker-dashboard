@@ -7,6 +7,7 @@ PATCH /users/me/settings   → UserSettings  (DB UPDATE, deep merge)
 인증 없음: X-User-Id 헤더 기반 fake auth. 헤더 없으면 "demo-user" default.
 변경 이유: in-memory store 대신 Postgres session 을 Depends 로 주입해 영속화.
 """
+
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends, Header
@@ -31,10 +32,7 @@ def _resolve_user_id(x_user_id: str | None) -> str:
     "/me",
     response_model=UserMe,
     summary="현재 사용자 정보 조회",
-    description=(
-        "X-User-Id 헤더 기반 fake auth. "
-        "헤더 없으면 user_id='demo-user' 로 fallback."
-    ),
+    description=("X-User-Id 헤더 기반 fake auth. 헤더 없으면 user_id='demo-user' 로 fallback."),
 )
 async def get_me(
     x_user_id: str | None = Header(default=None, alias="X-User-Id"),

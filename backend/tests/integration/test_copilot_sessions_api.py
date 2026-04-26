@@ -1,4 +1,5 @@
 """Integration tests — GET /copilot/sessions (sprint-08 B-7)."""
+
 from __future__ import annotations
 
 import datetime
@@ -11,7 +12,9 @@ from app.services.session import get_session_store
 from app.services.session.memory_store import make_turn_id
 
 
-def _add_session(session_id: str, queries: list[str], updated_at: datetime.datetime | None = None) -> None:
+def _add_session(
+    session_id: str, queries: list[str], updated_at: datetime.datetime | None = None
+) -> None:
     """헬퍼: in-memory store 에 세션과 턴을 직접 추가."""
     store = get_session_store()
     store._sessions[session_id] = [

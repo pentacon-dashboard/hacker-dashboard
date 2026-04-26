@@ -5,6 +5,7 @@ Router 의 portfolio/macro/mixed 라우팅 회귀 테스트.
 - 쿼리에 '소비자물가' → macro
 - stock + crypto 티커 혼합 → mixed
 """
+
 from __future__ import annotations
 
 from typing import Any
@@ -14,7 +15,9 @@ import pytest
 from app.agents.router import heuristic_classify, router_node
 
 
-def _initial(rows: list[dict[str, Any]], query: str | None = None, hint: str | None = None) -> dict[str, Any]:
+def _initial(
+    rows: list[dict[str, Any]], query: str | None = None, hint: str | None = None
+) -> dict[str, Any]:
     return {
         "input_data": rows,
         "query": query,
@@ -32,7 +35,13 @@ def _initial(rows: list[dict[str, Any]], query: str | None = None, hint: str | N
 
 def test_heuristic_detects_holdings() -> None:
     rows = [
-        {"market": "upbit", "code": "KRW-BTC", "quantity": 1, "avg_cost": 50_000_000, "currency": "KRW"},
+        {
+            "market": "upbit",
+            "code": "KRW-BTC",
+            "quantity": 1,
+            "avg_cost": 50_000_000,
+            "currency": "KRW",
+        },
         {"market": "yahoo", "code": "AAPL", "quantity": 10, "avg_cost": 150, "currency": "USD"},
     ]
     ac, reason, _ = heuristic_classify(rows)
@@ -43,8 +52,24 @@ def test_heuristic_detects_holdings() -> None:
 def test_heuristic_distinguishes_ohlc_from_holdings() -> None:
     """OHLC 시계열은 portfolio 로 잘못 라우팅되면 안 된다."""
     rows = [
-        {"symbol": "AAPL", "date": "2024-01-01", "open": 170, "high": 171, "low": 169, "close": 170.5, "volume": 1000000},
-        {"symbol": "AAPL", "date": "2024-01-02", "open": 170, "high": 172, "low": 169, "close": 171.2, "volume": 900000},
+        {
+            "symbol": "AAPL",
+            "date": "2024-01-01",
+            "open": 170,
+            "high": 171,
+            "low": 169,
+            "close": 170.5,
+            "volume": 1000000,
+        },
+        {
+            "symbol": "AAPL",
+            "date": "2024-01-02",
+            "open": 170,
+            "high": 172,
+            "low": 169,
+            "close": 171.2,
+            "volume": 900000,
+        },
     ]
     ac, _reason, _ = heuristic_classify(rows)
     assert ac == "stock"
@@ -62,8 +87,20 @@ def test_heuristic_macro_from_query() -> None:
 @pytest.mark.asyncio
 async def test_router_routes_portfolio() -> None:
     rows = [
-        {"market": "upbit", "code": "KRW-BTC", "quantity": 1, "avg_cost": 50_000_000, "currency": "KRW"},
-        {"market": "upbit", "code": "KRW-ETH", "quantity": 1, "avg_cost": 3_000_000, "currency": "KRW"},
+        {
+            "market": "upbit",
+            "code": "KRW-BTC",
+            "quantity": 1,
+            "avg_cost": 50_000_000,
+            "currency": "KRW",
+        },
+        {
+            "market": "upbit",
+            "code": "KRW-ETH",
+            "quantity": 1,
+            "avg_cost": 3_000_000,
+            "currency": "KRW",
+        },
     ]
     result = await router_node(_initial(rows))  # type: ignore[arg-type]
     assert result["asset_class"] == "portfolio"

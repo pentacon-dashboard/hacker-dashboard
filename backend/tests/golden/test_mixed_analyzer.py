@@ -7,6 +7,7 @@ Mixed Analyzer 병렬 실행 + 머지 테스트.
 - 머지 결과: headline/highlights/signals 에 자산군 prefix 가 붙는가
 - 일부 서브 실패해도 파이프라인은 통과
 """
+
 from __future__ import annotations
 
 from typing import Any

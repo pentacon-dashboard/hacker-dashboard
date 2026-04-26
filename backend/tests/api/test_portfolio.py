@@ -1,22 +1,34 @@
 """포트폴리오 API 통합 테스트 — in-memory SQLite + DI override."""
+
 from __future__ import annotations
 
-from datetime import date, datetime, timezone
+from collections.abc import AsyncGenerator
+from datetime import UTC, datetime
 from decimal import Decimal
-from typing import Any, AsyncGenerator
+from typing import Any
 from unittest.mock import AsyncMock, patch
 
 import pytest
 from httpx import ASGITransport, AsyncClient
-from sqlalchemy import Column, Date, DateTime, Integer, JSON, Numeric, String, UniqueConstraint
-from sqlalchemy import MetaData, Table
+from sqlalchemy import (
+    JSON,
+    Column,
+    Date,
+    DateTime,
+    Integer,
+    MetaData,
+    Numeric,
+    String,
+    Table,
+    UniqueConstraint,
+)
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
-from app.main import app
 from app.db.session import get_db
-
+from app.main import app
 
 # ──────────── in-memory DB fixtures ────────────
+
 
 def _create_portfolio_tables(conn: Any) -> None:
     metadata = MetaData()
@@ -73,6 +85,7 @@ async def portfolio_client() -> AsyncGenerator[AsyncClient, None]:
 
 # ──────────── Holdings CRUD 테스트 ────────────
 
+
 @pytest.mark.asyncio
 async def test_create_holding(portfolio_client: AsyncClient) -> None:
     """POST /portfolio/holdings → 201 + HoldingResponse."""
@@ -114,7 +127,13 @@ async def test_list_holdings_after_create(portfolio_client: AsyncClient) -> None
         mock_reg.return_value = AsyncMock()
         await portfolio_client.post(
             "/portfolio/holdings",
-            json={"market": "binance", "code": "BTCUSDT", "quantity": "0.5", "avg_cost": "40000", "currency": "USDT"},
+            json={
+                "market": "binance",
+                "code": "BTCUSDT",
+                "quantity": "0.5",
+                "avg_cost": "40000",
+                "currency": "USDT",
+            },
         )
 
     resp = await portfolio_client.get("/portfolio/holdings")
@@ -131,7 +150,13 @@ async def test_update_holding(portfolio_client: AsyncClient) -> None:
         mock_reg.return_value = AsyncMock()
         create_resp = await portfolio_client.post(
             "/portfolio/holdings",
-            json={"market": "upbit", "code": "KRW-ETH", "quantity": "2.0", "avg_cost": "3000000", "currency": "KRW"},
+            json={
+                "market": "upbit",
+                "code": "KRW-ETH",
+                "quantity": "2.0",
+                "avg_cost": "3000000",
+                "currency": "KRW",
+            },
         )
     holding_id = create_resp.json()["id"]
 
@@ -160,7 +185,13 @@ async def test_delete_holding(portfolio_client: AsyncClient) -> None:
         mock_reg.return_value = AsyncMock()
         create_resp = await portfolio_client.post(
             "/portfolio/holdings",
-            json={"market": "yahoo", "code": "AAPL", "quantity": "10", "avg_cost": "150", "currency": "USD"},
+            json={
+                "market": "yahoo",
+                "code": "AAPL",
+                "quantity": "10",
+                "avg_cost": "150",
+                "currency": "USD",
+            },
         )
     holding_id = create_resp.json()["id"]
 
@@ -184,12 +215,19 @@ async def test_create_holding_invalid_market(portfolio_client: AsyncClient) -> N
     """잘못된 market → 422."""
     resp = await portfolio_client.post(
         "/portfolio/holdings",
-        json={"market": "invalid_exchange", "code": "XYZ", "quantity": "1", "avg_cost": "100", "currency": "USD"},
+        json={
+            "market": "invalid_exchange",
+            "code": "XYZ",
+            "quantity": "1",
+            "avg_cost": "100",
+            "currency": "USD",
+        },
     )
     assert resp.status_code == 422
 
 
 # ──────────── Summary 테스트 ────────────
+
 
 @pytest.mark.asyncio
 async def test_get_summary_empty(portfolio_client: AsyncClient) -> None:
@@ -215,7 +253,13 @@ async def test_get_summary_with_holdings(portfolio_client: AsyncClient) -> None:
         mock_reg.return_value = AsyncMock()
         await portfolio_client.post(
             "/portfolio/holdings",
-            json={"market": "upbit", "code": "KRW-BTC", "quantity": "1.0", "avg_cost": "50000000", "currency": "KRW"},
+            json={
+                "market": "upbit",
+                "code": "KRW-BTC",
+                "quantity": "1.0",
+                "avg_cost": "50000000",
+                "currency": "KRW",
+            },
         )
 
     from app.schemas.market import Quote
@@ -227,7 +271,7 @@ async def test_get_summary_with_holdings(portfolio_client: AsyncClient) -> None:
         change=0.0,
         change_pct=0.0,
         currency="KRW",
-        timestamp=datetime.now(timezone.utc).isoformat(),
+        timestamp=datetime.now(UTC).isoformat(),
     )
 
     with (
@@ -247,6 +291,7 @@ async def test_get_summary_with_holdings(portfolio_client: AsyncClient) -> None:
 
 
 # ──────────── Snapshots 테스트 ────────────
+
 
 @pytest.mark.asyncio
 async def test_list_snapshots_empty(portfolio_client: AsyncClient) -> None:
@@ -271,7 +316,13 @@ async def test_holdings_currency_uppercase(portfolio_client: AsyncClient) -> Non
         mock_reg.return_value = AsyncMock()
         resp = await portfolio_client.post(
             "/portfolio/holdings",
-            json={"market": "binance", "code": "ETHUSDT", "quantity": "5", "avg_cost": "2000", "currency": "usdt"},
+            json={
+                "market": "binance",
+                "code": "ETHUSDT",
+                "quantity": "5",
+                "avg_cost": "2000",
+                "currency": "usdt",
+            },
         )
     assert resp.status_code == 201
     assert resp.json()["currency"] == "USDT"

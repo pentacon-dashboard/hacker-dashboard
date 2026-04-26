@@ -5,6 +5,7 @@
 - request_id 는 X-Request-ID 헤더를 그대로 쓰거나 UUID 자동 생성
 - 요청 컨텍스트(request_id, path)는 contextvars 로 전파 → 멀티 코루틴 충돌 없음
 """
+
 from __future__ import annotations
 
 import logging

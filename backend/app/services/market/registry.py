@@ -2,6 +2,7 @@
 
 get_adapter(market) → MarketAdapter 인스턴스 (싱글턴).
 """
+
 from __future__ import annotations
 
 from app.services.market.base import MarketAdapter

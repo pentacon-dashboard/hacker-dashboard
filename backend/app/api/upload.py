@@ -5,6 +5,7 @@
   POST /upload/analyze   → SSE 스트림 of AnalyzeProgressEvent
   GET  /upload/template  → sample_portfolio.csv FileResponse
 """
+
 from __future__ import annotations
 
 import json
@@ -38,6 +39,7 @@ _MAX_FILE_SIZE = 50 * 1024 * 1024  # 50 MB
 # ──────────────────────────────────────────────────────────────────────────────
 # POST /upload/csv
 # ──────────────────────────────────────────────────────────────────────────────
+
 
 @router.post(
     "/csv",
@@ -84,6 +86,7 @@ async def upload_csv(
 # POST /upload/analyze  (SSE)
 # ──────────────────────────────────────────────────────────────────────────────
 
+
 @router.post(
     "/analyze",
     summary="업로드 데이터 분석 (SSE 스트림)",
@@ -121,6 +124,7 @@ async def analyze_upload(
 # ──────────────────────────────────────────────────────────────────────────────
 # GET /upload/template
 # ──────────────────────────────────────────────────────────────────────────────
+
 
 @router.get(
     "/template",

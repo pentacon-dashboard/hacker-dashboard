@@ -5,6 +5,7 @@ GET  /market/watchlist/items
 POST /market/watchlist/items
 DELETE /market/watchlist/items/{id}
 """
+
 from __future__ import annotations
 
 import pytest

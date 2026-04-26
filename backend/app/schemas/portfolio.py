@@ -1,4 +1,5 @@
 """포트폴리오 관련 Pydantic 스키마 — week-3 + sprint-08."""
+
 from __future__ import annotations
 
 from decimal import Decimal
@@ -9,13 +10,14 @@ from pydantic import BaseModel, Field, field_serializer
 
 class MarketLeader(BaseModel):
     """대시보드·포트폴리오 상단 시장 리더 종목 / GET /portfolio/market-leaders 응답."""
+
     rank: int
     ticker: str
     name: str
     market: str
-    price: str         # decimal string (예: "847.23", "115898000")
-    change_pct: str    # "+12.34" 또는 "-1.72" 포맷
-    currency: str      # "USD" | "KRW" | ...
+    price: str  # decimal string (예: "847.23", "115898000")
+    change_pct: str  # "+12.34" 또는 "-1.72" 포맷
+    currency: str  # "USD" | "KRW" | ...
     # 하위호환 필드 (summary.market_leaders 에서 사용)
     logo_url: str | None = None
     price_display: str | None = None
@@ -24,26 +26,29 @@ class MarketLeader(BaseModel):
 
 class SectorHeatmapTile(BaseModel):
     """섹터 히트맵 단일 타일."""
+
     sector: str
     weight_pct: str
     pnl_pct: str
-    intensity: str          # "-1.0" ~ "+1.0"
+    intensity: str  # "-1.0" ~ "+1.0"
 
 
 class MonthlyReturnCell(BaseModel):
     """월간(일간) 수익률 캘린더 셀."""
-    date: str               # "YYYY-MM-DD"
+
+    date: str  # "YYYY-MM-DD"
     return_pct: str
-    cell_level: int         # 0~4
+    cell_level: int  # 0~4
 
 
 class AiInsightResponse(BaseModel):
     """AI 인사이트 stub 응답 (ADR-0012 stub 모드)."""
+
     summary: str
     bullets: list[str]
     generated_at: str
     stub_mode: bool
-    gates: dict[str, str]   # {schema:"pass", domain:"pass", critique:"pass"}
+    gates: dict[str, str]  # {schema:"pass", domain:"pass", critique:"pass"}
 
 
 class HoldingCreate(BaseModel):
@@ -51,7 +56,9 @@ class HoldingCreate(BaseModel):
     code: str = Field(..., min_length=1, description="심볼/코드 (예: KRW-BTC, AAPL)")
     quantity: Decimal = Field(..., gt=Decimal("0"), description="보유 수량")
     avg_cost: Decimal = Field(..., gt=Decimal("0"), description="평균 매입 단가")
-    currency: str = Field(..., min_length=3, max_length=4, description="통화 코드 (KRW/USD/USDT/EUR/JPY)")
+    currency: str = Field(
+        ..., min_length=3, max_length=4, description="통화 코드 (KRW/USD/USDT/EUR/JPY)"
+    )
 
 
 class HoldingUpdate(BaseModel):
@@ -79,6 +86,7 @@ class HoldingResponse(BaseModel):
 
 class HoldingDetail(BaseModel):
     """집계 결과에서 종목별 상세."""
+
     id: int
     market: str
     code: str
@@ -95,6 +103,7 @@ class HoldingDetail(BaseModel):
 
 class DimensionItem(BaseModel):
     """디멘션 분석 바 차트의 단일 항목 (자산군·섹터·통화 등 차원별 집계)."""
+
     label: str = Field(..., description="표시 라벨 (예: 'stock_us', 'crypto')")
     weight_pct: str = Field(..., description="비중 %% (예: '43.20')")
     pnl_pct: str = Field(..., description="해당 차원의 가중 수익률 %% (예: '+3.40')")
@@ -106,6 +115,7 @@ class PortfolioSummary(BaseModel):
     week-3 기본 필드 + sprint-07 대시보드 확장 필드 (holdings_count,
     worst_asset_pct, risk_score_pct, period_change_pct, dimension_breakdown).
     """
+
     user_id: str = "demo"
     total_value_krw: str
     total_cost_krw: str
@@ -119,9 +129,7 @@ class PortfolioSummary(BaseModel):
     holdings: list[HoldingDetail]
     # ── 대시보드 KPI 확장 ─────────────────────────────
     holdings_count: int = Field(0, description="보유 종목 수")
-    worst_asset_pct: str = Field(
-        "0.00", description="보유 종목 중 최저 손익률 %% (예: '-3.85')"
-    )
+    worst_asset_pct: str = Field("0.00", description="보유 종목 중 최저 손익률 %% (예: '-3.85')")
     risk_score_pct: str = Field(
         "0.00",
         description="HHI 기반 집중도 리스크 점수 %% (0: 완전분산 ~ 100: 단일자산)",

@@ -10,6 +10,7 @@
 
 LLM 호출은 conftest.FakeAnthropicClient 를 통해 mock — 실 Anthropic API 불호출.
 """
+
 from __future__ import annotations
 
 from typing import Any
@@ -120,9 +121,7 @@ async def test_analyze_without_portfolio_context(client: AsyncClient) -> None:
     llm_module.set_client(fake)  # type: ignore[arg-type]
 
     try:
-        with patch(
-            "app.api.analyze.build_portfolio_context", new_callable=AsyncMock
-        ) as mock_build:
+        with patch("app.api.analyze.build_portfolio_context", new_callable=AsyncMock) as mock_build:
             response = await client.post(
                 "/analyze",
                 json={
@@ -245,7 +244,8 @@ async def test_analyze_portfolio_context_with_matched_holding(client: AsyncClien
         result = body.get("result") or {}
         evidence_list = result.get("evidence") or []
         portfolio_evidence = [
-            ev for ev in evidence_list
+            ev
+            for ev in evidence_list
             if isinstance(ev, dict) and ev.get("source") == "portfolio.matched_holding"
         ]
         assert len(portfolio_evidence) >= 1, (
@@ -357,11 +357,13 @@ async def test_cache_key_separation_portfolio_on_off(client: AsyncClient) -> Non
         r2_result = resp2.json().get("result") or {}
         # portfolio 버전에는 matched_holding source evidence 가 있음
         r2_evidence = [
-            ev for ev in (r2_result.get("evidence") or [])
+            ev
+            for ev in (r2_result.get("evidence") or [])
             if isinstance(ev, dict) and ev.get("source") == "portfolio.matched_holding"
         ]
         r1_evidence = [
-            ev for ev in (r1_result.get("evidence") or [])
+            ev
+            for ev in (r1_result.get("evidence") or [])
             if isinstance(ev, dict) and ev.get("source") == "portfolio.matched_holding"
         ]
         assert len(r2_evidence) >= 1, "portfolio 버전에 matched_holding evidence 없음"

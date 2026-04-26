@@ -7,6 +7,7 @@ Golden 테스트 공용 fixture.
 - OpenAI SDK 인터페이스(`chat.completions.create`) 를 흉내낸다.
 - API 키 없이 100% 동작한다.
 """
+
 from __future__ import annotations
 
 import json
@@ -59,7 +60,7 @@ class _Response:
 
 @dataclass
 class _Completions:
-    parent: "FakeAnthropicClient"
+    parent: FakeAnthropicClient
 
     async def create(self, **kwargs: Any) -> _Response:
         # OpenAI 스타일: messages 리스트에서 system 메시지 추출

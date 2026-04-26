@@ -4,6 +4,7 @@
 - OHLC: TTL 60s
 - Redis 미연결 시 passthrough (예외 삼키고 None 반환)
 """
+
 from __future__ import annotations
 
 import json

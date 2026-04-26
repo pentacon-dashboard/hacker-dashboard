@@ -1,4 +1,5 @@
 """sprint-02 acceptance — News/Filing RAG 인프라."""
+
 from __future__ import annotations
 
 import asyncio
@@ -36,12 +37,8 @@ def test_alembic_migration_file_content() -> None:
     assert mig_dir.exists(), "alembic/versions 디렉토리 필요"
     candidates = list(mig_dir.glob("*.py"))
     contents = "\n".join(p.read_text(encoding="utf-8") for p in candidates)
-    assert "CREATE EXTENSION IF NOT EXISTS vector" in contents, (
-        "pgvector extension 생성 DDL 누락"
-    )
-    assert "VECTOR(1024)" in contents or "Vector(1024)" in contents, (
-        "VECTOR(1024) 컬럼 정의 누락"
-    )
+    assert "CREATE EXTENSION IF NOT EXISTS vector" in contents, "pgvector extension 생성 DDL 누락"
+    assert "VECTOR(1024)" in contents or "Vector(1024)" in contents, "VECTOR(1024) 컬럼 정의 누락"
     assert ("ivfflat" in contents.lower()) or ("hnsw" in contents.lower()), (
         "벡터 인덱스 DDL (ivfflat 또는 hnsw) 누락"
     )
@@ -59,7 +56,9 @@ def test_alembic_head_applies(tmp_path: Path) -> None:
     result = subprocess.run(
         ["uv", "run", "alembic", "upgrade", "head"],
         cwd=REPO_ROOT / "backend",
-        capture_output=True, text=True, timeout=120,
+        capture_output=True,
+        text=True,
+        timeout=120,
     )
     assert result.returncode == 0, result.stderr
 
@@ -113,8 +112,7 @@ def test_search_news_stub_mode_is_deterministic(monkeypatch: pytest.MonkeyPatch)
     items = r1.json()
     assert len(items) >= 1 and len(items) <= 5
     for it in items:
-        for k in ("doc_id", "chunk_id", "source_url", "title",
-                  "published_at", "excerpt", "score"):
+        for k in ("doc_id", "chunk_id", "source_url", "title", "published_at", "excerpt", "score"):
             assert k in it, f"Citation.{k} missing"
 
 
@@ -161,7 +159,9 @@ def test_openapi_in_sync() -> None:
     result = subprocess.run(
         ["uv", "run", "python", "-m", "app.export_openapi"],
         cwd=REPO_ROOT / "backend",
-        capture_output=True, text=True, timeout=120,
+        capture_output=True,
+        text=True,
+        timeout=120,
     )
     assert result.returncode == 0, result.stderr
     spec = json.loads(result.stdout)

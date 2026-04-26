@@ -5,6 +5,7 @@
 ruff/mypy/lint/typecheck/build/openapi-sync/golden)은 contract.md 의 AC-01-0
 게이트 명령 묶음으로 Evaluator 가 직접 실행한다.
 """
+
 from __future__ import annotations
 
 import json
@@ -148,9 +149,15 @@ def test_copilot_plan_agent_literal_union() -> None:
     from app.schemas.copilot import CopilotStep, GatePolicy  # type: ignore
 
     allowed = {
-        "stock", "crypto", "fx", "macro",
-        "portfolio", "rebalance",
-        "comparison", "simulator", "news-rag",
+        "stock",
+        "crypto",
+        "fx",
+        "macro",
+        "portfolio",
+        "rebalance",
+        "comparison",
+        "simulator",
+        "news-rag",
     }
     assert len(allowed) == 9, "CopilotStepAgent must have exactly 9 literals"
     for name in allowed:
@@ -202,9 +209,15 @@ def test_copilot_plan_returns_valid_dag(fake_planner_llm: None) -> None:
     assert len(plan["steps"]) >= 1
     seen = {s["step_id"] for s in plan["steps"]}
     allowed = {
-        "stock", "crypto", "fx", "macro",
-        "portfolio", "rebalance",
-        "comparison", "simulator", "news-rag",
+        "stock",
+        "crypto",
+        "fx",
+        "macro",
+        "portfolio",
+        "rebalance",
+        "comparison",
+        "simulator",
+        "news-rag",
     }
     for s in plan["steps"]:
         for dep in s["depends_on"]:
@@ -219,9 +232,9 @@ def test_copilot_plan_passes_three_gates(fake_planner_llm: None) -> None:
     - 본 스프린트에서는 모듈 import 가능성 + /copilot/plan 응답이 gate 를 통과한
       결과(200 + valid plan)로 돌아오는지만 검증한다.
     """
-    from app.agents.gates import schema as schema_gate  # type: ignore
-    from app.agents.gates import domain as domain_gate  # type: ignore
     from app.agents.gates import critique as critique_gate  # type: ignore
+    from app.agents.gates import domain as domain_gate  # type: ignore
+    from app.agents.gates import schema as schema_gate  # type: ignore
 
     for mod in (schema_gate, domain_gate, critique_gate):
         assert hasattr(mod, "__name__")

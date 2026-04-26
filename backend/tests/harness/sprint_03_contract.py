@@ -1,8 +1,8 @@
 """sprint-03 acceptance — comparison / simulator / news-rag sub-agents."""
+
 from __future__ import annotations
 
 import importlib
-import json
 from pathlib import Path
 
 import pytest
@@ -31,11 +31,13 @@ def test_copilot_card_union_shape() -> None:
             v = defs.get(ref_key, v)
         if "properties" in v and "type" in v["properties"]:
             # Literal const in Pydantic v2 JSON schema
-            t = v["properties"]["type"].get("const") or v["properties"]["type"].get("enum", [None])[0]
+            t = (
+                v["properties"]["type"].get("const")
+                or v["properties"]["type"].get("enum", [None])[0]
+            )
             if t:
                 kinds.add(t)
-    expected = {"text", "chart", "scorecard", "citation",
-                "comparison_table", "simulator_result"}
+    expected = {"text", "chart", "scorecard", "citation", "comparison_table", "simulator_result"}
     assert expected.issubset(kinds), f"missing variants: {expected - kinds}"
 
 
@@ -108,10 +110,12 @@ def test_graph_registers_exactly_three_new_nodes() -> None:
 def test_golden_copilot_analyzers_green() -> None:
     """`pytest backend/tests/golden/test_copilot_analyzers.py` 가 diff=0 통과."""
     import subprocess
+
     result = subprocess.run(
-        ["uv", "run", "pytest", "-q",
-         "tests/golden/test_copilot_analyzers.py", "--tb=short"],
+        ["uv", "run", "pytest", "-q", "tests/golden/test_copilot_analyzers.py", "--tb=short"],
         cwd=REPO_ROOT / "backend",
-        capture_output=True, text=True, timeout=600,
+        capture_output=True,
+        text=True,
+        timeout=600,
     )
     assert result.returncode == 0, result.stdout + result.stderr

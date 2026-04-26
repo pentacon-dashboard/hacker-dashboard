@@ -707,7 +707,8 @@ async def stream_copilot_query(
                 for ev in result_dict.get("_gate_events", []):
                     yield ev
                 step_results[step.step_id] = {
-                    k: v for k, v in result_dict.items()
+                    k: v
+                    for k, v in result_dict.items()
                     if k not in ("_start_events", "_gate_events")
                 }
 

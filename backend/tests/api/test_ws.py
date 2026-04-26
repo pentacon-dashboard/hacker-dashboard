@@ -4,6 +4,7 @@ WebSocket /ws/ticks 엔드포인트 테스트.
 TestClient websocket_connect로 연결 후 단순 동작 검증.
 실제 업스트림(Upbit/Binance)은 모킹.
 """
+
 from __future__ import annotations
 
 import pytest

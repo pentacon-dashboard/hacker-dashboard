@@ -7,6 +7,7 @@
 fetch_quote / fetch_ohlc: yfinance (.KS/.KQ) 로 실시간 데이터 조회.
 실패 시 _STUB_QUOTES 폴백.
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -27,16 +28,76 @@ _SEARCH_URL = "https://m.stock.naver.com/api/search/all"
 # yfinance 실패 시 이 값으로 폴백.
 # key: 6자리 종목코드 (문자열)
 _STUB_QUOTES: dict[str, dict[str, Any]] = {
-    "005930": {"price": 72000.0, "change": 400.0, "change_pct": 0.56, "volume": 12345678, "name": "삼성전자"},
-    "000660": {"price": 231000.0, "change": -2500.0, "change_pct": -1.07, "volume": 4567890, "name": "SK하이닉스"},
-    "035420": {"price": 215500.0, "change": 1500.0, "change_pct": 0.70, "volume": 1234567, "name": "NAVER"},
-    "035720": {"price": 51800.0, "change": -200.0, "change_pct": -0.38, "volume": 2345678, "name": "카카오"},
-    "005380": {"price": 245000.0, "change": 3500.0, "change_pct": 1.45, "volume": 987654, "name": "현대차"},
-    "051910": {"price": 385000.0, "change": -5000.0, "change_pct": -1.28, "volume": 543210, "name": "LG화학"},
-    "006400": {"price": 165000.0, "change": 2000.0, "change_pct": 1.23, "volume": 876543, "name": "삼성SDI"},
-    "207940": {"price": 725000.0, "change": 8000.0, "change_pct": 1.12, "volume": 234567, "name": "삼성바이오로직스"},
-    "005490": {"price": 590000.0, "change": -3000.0, "change_pct": -0.51, "volume": 345678, "name": "POSCO홀딩스"},
-    "028260": {"price": 98000.0, "change": 1200.0, "change_pct": 1.24, "volume": 654321, "name": "삼성물산"},
+    "005930": {
+        "price": 72000.0,
+        "change": 400.0,
+        "change_pct": 0.56,
+        "volume": 12345678,
+        "name": "삼성전자",
+    },
+    "000660": {
+        "price": 231000.0,
+        "change": -2500.0,
+        "change_pct": -1.07,
+        "volume": 4567890,
+        "name": "SK하이닉스",
+    },
+    "035420": {
+        "price": 215500.0,
+        "change": 1500.0,
+        "change_pct": 0.70,
+        "volume": 1234567,
+        "name": "NAVER",
+    },
+    "035720": {
+        "price": 51800.0,
+        "change": -200.0,
+        "change_pct": -0.38,
+        "volume": 2345678,
+        "name": "카카오",
+    },
+    "005380": {
+        "price": 245000.0,
+        "change": 3500.0,
+        "change_pct": 1.45,
+        "volume": 987654,
+        "name": "현대차",
+    },
+    "051910": {
+        "price": 385000.0,
+        "change": -5000.0,
+        "change_pct": -1.28,
+        "volume": 543210,
+        "name": "LG화학",
+    },
+    "006400": {
+        "price": 165000.0,
+        "change": 2000.0,
+        "change_pct": 1.23,
+        "volume": 876543,
+        "name": "삼성SDI",
+    },
+    "207940": {
+        "price": 725000.0,
+        "change": 8000.0,
+        "change_pct": 1.12,
+        "volume": 234567,
+        "name": "삼성바이오로직스",
+    },
+    "005490": {
+        "price": 590000.0,
+        "change": -3000.0,
+        "change_pct": -0.51,
+        "volume": 345678,
+        "name": "POSCO홀딩스",
+    },
+    "028260": {
+        "price": 98000.0,
+        "change": 1200.0,
+        "change_pct": 1.24,
+        "volume": 654321,
+        "name": "삼성물산",
+    },
 }
 
 _DEFAULT_STUB_PRICE = 50000.0  # _STUB_QUOTES 에 없는 종목 fallback
@@ -109,18 +170,10 @@ def _parse_section(items: list[dict[str, Any]]) -> list[SymbolInfo]:
         try:
             # 종목 코드
             item_code: str = (
-                item.get("itemCode")
-                or item.get("reutersCode")
-                or item.get("symbol")
-                or ""
+                item.get("itemCode") or item.get("reutersCode") or item.get("symbol") or ""
             )
             # 종목명
-            name: str = (
-                item.get("stockName")
-                or item.get("name")
-                or item.get("itemName")
-                or ""
-            )
+            name: str = item.get("stockName") or item.get("name") or item.get("itemName") or ""
             if not item_code or not name:
                 continue
 
@@ -365,6 +418,7 @@ def _find_name(symbol: str) -> str:
 
 
 # ─── yfinance 동기 헬퍼 (executor 에서 호출) ─────────────────────────────────
+
 
 def _fetch_yf_quote_sync(yf_symbol: str) -> dict[str, Any] | None:
     """yfinance Ticker.info 에서 quote 데이터 추출. 실패 시 None 반환."""

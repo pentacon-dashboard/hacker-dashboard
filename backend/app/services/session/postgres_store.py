@@ -4,6 +4,7 @@ COPILOT_SESSION_STORE=postgres 환경에서 사용된다.
 실 DB 연결 없이 import 만 해도 작동하도록 설계 (연결 실패 시 런타임 오류).
 테스트 환경에서는 COPILOT_SESSION_STORE=memory 로 동작하므로 인스턴스화 skip 허용.
 """
+
 from __future__ import annotations
 
 import datetime
@@ -37,6 +38,7 @@ class PostgresSessionStore:
             )
         try:
             import asyncpg  # noqa: PLC0415
+
             self._pool = await asyncpg.create_pool(self._dsn)
         except ImportError as exc:
             raise RuntimeError("asyncpg 가 설치되어 있지 않습니다.") from exc
@@ -71,19 +73,24 @@ class PostgresSessionStore:
                     ORDER BY t.turn_idx DESC
                     LIMIT $2
                     """,
-                    session_id, limit,
+                    session_id,
+                    limit,
                 )
                 turns = []
                 for row in reversed(rows):
-                    turns.append(SessionTurn(
-                        turn_id=str(row["id"]),
-                        query=row["query"],
-                        plan_id=row["plan_id"],
-                        final_card=json.loads(row["final_card"]) if row["final_card"] else None,
-                        citations=json.loads(row["citations"]) if row["citations"] else [],
-                        created_at=row["created_at"].isoformat() if row["created_at"] else "",
-                        active_context=json.loads(row["active_context"]) if row["active_context"] else None,
-                    ))
+                    turns.append(
+                        SessionTurn(
+                            turn_id=str(row["id"]),
+                            query=row["query"],
+                            plan_id=row["plan_id"],
+                            final_card=json.loads(row["final_card"]) if row["final_card"] else None,
+                            citations=json.loads(row["citations"]) if row["citations"] else [],
+                            created_at=row["created_at"].isoformat() if row["created_at"] else "",
+                            active_context=json.loads(row["active_context"])
+                            if row["active_context"]
+                            else None,
+                        )
+                    )
                 return turns
         except Exception:  # noqa: BLE001
             return []
@@ -101,7 +108,8 @@ class PostgresSessionStore:
                     VALUES ($1, $2, $2)
                     ON CONFLICT (id) DO UPDATE SET updated_at = $2
                     """,
-                    session_id, now,
+                    session_id,
+                    now,
                 )
                 # 현재 turn_idx 계산
                 row = await conn.fetchrow(
@@ -140,7 +148,8 @@ class PostgresSessionStore:
                         LIMIT $2
                       )
                     """,
-                    session_id, max_t,
+                    session_id,
+                    max_t,
                 )
         except Exception:  # noqa: BLE001
             pass  # 저장 실패는 조용히 무시 (로깅은 상위에서)
@@ -150,12 +159,8 @@ class PostgresSessionStore:
         try:
             pool = await self._get_pool()
             async with pool.acquire() as conn:
-                await conn.execute(
-                    "DELETE FROM copilot_turns WHERE session_id = $1", session_id
-                )
-                await conn.execute(
-                    "DELETE FROM copilot_sessions WHERE id = $1", session_id
-                )
+                await conn.execute("DELETE FROM copilot_turns WHERE session_id = $1", session_id)
+                await conn.execute("DELETE FROM copilot_sessions WHERE id = $1", session_id)
         except Exception:  # noqa: BLE001
             pass
 
@@ -168,7 +173,8 @@ class PostgresSessionStore:
             async with pool.acquire() as conn:
                 await conn.execute(
                     "INSERT INTO copilot_sessions (id, created_at, updated_at) VALUES ($1, $2, $2)",
-                    session_id, now,
+                    session_id,
+                    now,
                 )
         except Exception:  # noqa: BLE001
             pass

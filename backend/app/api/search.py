@@ -4,6 +4,7 @@ sprint-02:
   GET  /search/news         — 질의 + 심볼 + 기간 → top-k Citation[]
   POST /search/news/ingest  — 문서 적재 (stub 모드: fixture no-op)
 """
+
 from __future__ import annotations
 
 from fastapi import APIRouter, HTTPException, Query, status

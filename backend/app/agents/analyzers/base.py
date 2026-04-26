@@ -11,6 +11,7 @@ Week-2 보강:
 - 프롬프트는 이 지표를 "evidence_snippets" 형태로 인용하도록 유도.
 - 모델 선택: 행 수가 많으면 Opus 로 승급(`select_model`).
 """
+
 from __future__ import annotations
 
 import abc

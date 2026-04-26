@@ -12,6 +12,7 @@ fake_embed 계약 (contract.md 고정):
   4. L2 정규화: v / max(||v||_2, 1e-12)
   5. list[float] 반환
 """
+
 from __future__ import annotations
 
 import hashlib
@@ -65,8 +66,7 @@ def _embed_openai(text: str) -> list[float]:
 
 def _embed_voyage(text: str) -> list[float]:
     raise NotImplementedError(
-        "voyage embedding provider는 sprint-03 이후 구현 예정. "
-        "COPILOT_EMBED_PROVIDER=fake 사용."
+        "voyage embedding provider는 sprint-03 이후 구현 예정. COPILOT_EMBED_PROVIDER=fake 사용."
     )
 
 

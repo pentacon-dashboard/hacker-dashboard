@@ -3,6 +3,7 @@ Naver KR 어댑터 검색 단위 테스트.
 
 respx 로 네이버 API 응답을 모킹. 실 네트워크 없이 동작.
 """
+
 from __future__ import annotations
 
 import pytest
@@ -331,6 +332,7 @@ class TestNaverStubOhlc:
     async def test_ohlc_reproducible(self, mock_yf_failure: None):
         """동일 심볼에 대해 두 번 호출해도 동일한 결과 (stub 폴백 시드 고정)."""
         from app.services.market.yf_cache import yf_cache_clear
+
         yf_cache_clear()
         adapter = NaverKrAdapter()
         bars_a = await adapter.fetch_ohlc("005930")

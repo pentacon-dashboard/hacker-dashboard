@@ -1,4 +1,5 @@
 """포트폴리오 확장 서비스 단위 테스트 — sprint-08 Phase B-1."""
+
 from __future__ import annotations
 
 import json
@@ -7,12 +8,8 @@ from pathlib import Path
 import pytest
 
 from app.schemas.portfolio import (
-    AiInsightResponse,
     HoldingDetail,
-    MarketLeader,
-    MonthlyReturnCell,
     PortfolioSummary,
-    SectorHeatmapTile,
 )
 from app.services.portfolio_service import (
     ai_insight_stub,
@@ -25,6 +22,7 @@ from app.services.portfolio_service import (
 # ──────────────────────────────────────────────────────────────────────────────
 # 테스트 헬퍼
 # ──────────────────────────────────────────────────────────────────────────────
+
 
 def _make_holding(
     id_: int,
@@ -53,7 +51,8 @@ def _make_holding(
 
 
 def _make_summary(holdings: list[HoldingDetail]) -> PortfolioSummary:
-    from app.services.portfolio_service import calc_win_rate, build_market_leaders
+    from app.services.portfolio_service import build_market_leaders, calc_win_rate
+
     return PortfolioSummary(
         total_value_krw="10000000.00",
         total_cost_krw="9500000.00",
@@ -76,6 +75,7 @@ def _make_summary(holdings: list[HoldingDetail]) -> PortfolioSummary:
 # ──────────────────────────────────────────────────────────────────────────────
 # calc_win_rate 테스트
 # ──────────────────────────────────────────────────────────────────────────────
+
 
 class TestCalcWinRate:
     def test_empty_holdings(self):
@@ -129,12 +129,13 @@ class TestCalcWinRate:
 # build_market_leaders 테스트
 # ──────────────────────────────────────────────────────────────────────────────
 
+
 class TestBuildMarketLeaders:
     def test_empty_returns_fallback(self):
         """보유 없으면 S&P top3 fallback."""
         leaders = build_market_leaders([])
         assert len(leaders) == 3
-        tickers = [l.ticker for l in leaders]
+        tickers = [item.ticker for item in leaders]
         assert "NVDA" in tickers
         assert "AAPL" in tickers
         assert "MSFT" in tickers
@@ -142,7 +143,7 @@ class TestBuildMarketLeaders:
     def test_fallback_has_correct_ranks(self):
         """fallback rank 순서."""
         leaders = build_market_leaders([])
-        ranks = [l.rank for l in leaders]
+        ranks = [item.rank for item in leaders]
         assert ranks == [1, 2, 3]
 
     def test_returns_top3_by_value(self):
@@ -186,7 +187,9 @@ class TestBuildMarketLeaders:
         """KRW 통화 종목은 ₩ 표기."""
         holdings = [
             _make_holding(
-                1, "005930", "4.17",
+                1,
+                "005930",
+                "4.17",
                 value_krw="7500000.00",
                 market="naver_kr",
                 currency="KRW",
@@ -201,6 +204,7 @@ class TestBuildMarketLeaders:
 # sector_heatmap 테스트
 # ──────────────────────────────────────────────────────────────────────────────
 
+
 class TestSectorHeatmap:
     def test_empty_holdings(self):
         """빈 보유 → 빈 목록."""
@@ -211,7 +215,9 @@ class TestSectorHeatmap:
         holdings = [
             _make_holding(1, "AAPL", "3.75", value_krw="5000000.00"),
             _make_holding(2, "NVDA", "8.50", value_krw="3000000.00"),
-            _make_holding(3, "KRW-BTC", "10.00", value_krw="2000000.00", market="upbit", currency="KRW"),
+            _make_holding(
+                3, "KRW-BTC", "10.00", value_krw="2000000.00", market="upbit", currency="KRW"
+            ),
         ]
         tiles = sector_heatmap(holdings)
         assert len(tiles) >= 2  # 최소 Tech + Crypto
@@ -221,7 +227,9 @@ class TestSectorHeatmap:
         holdings = [
             _make_holding(1, "AAPL", "3.75", value_krw="5000000.00"),
             _make_holding(2, "NVDA", "8.50", value_krw="3000000.00"),
-            _make_holding(3, "KRW-BTC", "10.00", value_krw="2000000.00", market="upbit", currency="KRW"),
+            _make_holding(
+                3, "KRW-BTC", "10.00", value_krw="2000000.00", market="upbit", currency="KRW"
+            ),
         ]
         tiles = sector_heatmap(holdings)
         total = sum(float(t.weight_pct) for t in tiles)
@@ -255,6 +263,7 @@ class TestSectorHeatmap:
 # ──────────────────────────────────────────────────────────────────────────────
 # monthly_returns 테스트
 # ──────────────────────────────────────────────────────────────────────────────
+
 
 class TestMonthlyReturns:
     def test_365_cells_for_non_leap_year(self):
@@ -312,6 +321,7 @@ class TestMonthlyReturns:
 # ai_insight_stub 테스트
 # ──────────────────────────────────────────────────────────────────────────────
 
+
 class TestAiInsightStub:
     def _make_summary_with_holdings(self, holdings: list[HoldingDetail]) -> PortfolioSummary:
         return _make_summary(holdings)
@@ -345,6 +355,7 @@ class TestAiInsightStub:
     def test_generated_at_is_iso(self):
         """generated_at 은 ISO 형식."""
         from datetime import datetime
+
         summary = _make_summary([])
         result = ai_insight_stub(summary)
         # 파싱 가능해야 함

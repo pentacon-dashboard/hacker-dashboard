@@ -9,6 +9,7 @@ N개 종목/자산을 재무/수익률/변동성/상관 기준으로 비교.
   domain : 비교 대상 종목이 알려진 심볼 목록에 존재 (존재하지 않는 심볼 → degraded)
   critique: 쿼리와 무관한 필드 생성 금지 확인
 """
+
 from __future__ import annotations
 
 from typing import Any
@@ -18,12 +19,25 @@ from app.schemas.copilot import ComparisonTableCard, CopilotStep
 
 # 알려진 심볼 목록 (데모용 고정값 — /market/symbols 와 동기화)
 _KNOWN_SYMBOLS: set[str] = {
-    "AAPL", "MSFT", "GOOGL", "AMZN", "NVDA", "TSLA", "META", "NFLX",
-    "KRW-BTC", "KRW-ETH", "KRW-XRP", "BTC", "ETH",
+    "AAPL",
+    "MSFT",
+    "GOOGL",
+    "AMZN",
+    "NVDA",
+    "TSLA",
+    "META",
+    "NFLX",
+    "KRW-BTC",
+    "KRW-ETH",
+    "KRW-XRP",
+    "BTC",
+    "ETH",
     "005930",  # 삼성전자
     "000660",  # SK하이닉스
     "035420",  # NAVER
-    "SPY", "QQQ", "TLT",
+    "SPY",
+    "QQQ",
+    "TLT",
 }
 
 
@@ -62,15 +76,17 @@ def _build_card_from_llm(step: CopilotStep) -> dict[str, Any]:
     for i, sym in enumerate(symbols):
         # deterministic fake values based on symbol hash
         seed = sum(ord(c) for c in sym)
-        rows.append({
-            "symbol": sym,
-            "metrics": {
-                "return_3m_pct": round((seed % 50) - 10, 2),
-                "volatility_pct": round(10 + (seed % 30), 2),
-                "pe_ratio": round(15 + (seed % 20), 1) if i % 2 == 0 else None,
-                "market_cap_usd": (seed % 10 + 1) * 1_000_000_000,
-            },
-        })
+        rows.append(
+            {
+                "symbol": sym,
+                "metrics": {
+                    "return_3m_pct": round((seed % 50) - 10, 2),
+                    "volatility_pct": round(10 + (seed % 30), 2),
+                    "pe_ratio": round(15 + (seed % 20), 1) if i % 2 == 0 else None,
+                    "market_cap_usd": (seed % 10 + 1) * 1_000_000_000,
+                },
+            }
+        )
     return {
         "type": "comparison_table",
         "symbols": symbols,

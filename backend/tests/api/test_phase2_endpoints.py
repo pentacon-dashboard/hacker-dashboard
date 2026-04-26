@@ -4,6 +4,7 @@
 2-B: GET /market/symbol/{market}/{code}/indicators (ma20/ma60 필드 추가)
 2-D: GET/POST/PATCH/DELETE /watchlist/alerts
 """
+
 from __future__ import annotations
 
 import pytest
@@ -171,12 +172,15 @@ async def test_create_alert_schema(client: AsyncClient) -> None:
 async def test_patch_alert_enabled(client: AsyncClient) -> None:
     """PATCH /watchlist/alerts/{id} → enabled 변경."""
     try:
-        create_resp = await client.post("/watchlist/alerts", json={
-            "symbol": "TSLA",
-            "market": "yahoo",
-            "direction": "below",
-            "threshold": 200,
-        })
+        create_resp = await client.post(
+            "/watchlist/alerts",
+            json={
+                "symbol": "TSLA",
+                "market": "yahoo",
+                "direction": "below",
+                "threshold": 200,
+            },
+        )
     except Exception:
         pytest.skip("DB connection error — skip")
         return
@@ -211,11 +215,14 @@ async def test_delete_nonexistent_alert(client: AsyncClient) -> None:
 @pytest.mark.asyncio
 async def test_create_alert_invalid_direction(client: AsyncClient) -> None:
     """direction 이 above | below 이 아니면 422 (Pydantic 검증 — DB 불필요)."""
-    resp = await client.post("/watchlist/alerts", json={
-        "symbol": "AAPL",
-        "market": "yahoo",
-        "direction": "sideways",
-        "threshold": 300,
-    })
+    resp = await client.post(
+        "/watchlist/alerts",
+        json={
+            "symbol": "AAPL",
+            "market": "yahoo",
+            "direction": "sideways",
+            "threshold": 300,
+        },
+    )
     # Pydantic 검증 → DB 연결 전에 처리됨 → 항상 422
     assert resp.status_code == 422

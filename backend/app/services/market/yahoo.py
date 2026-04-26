@@ -4,6 +4,7 @@ API:
   - GET https://query1.finance.yahoo.com/v8/finance/chart/{symbol}?interval=1d&range=3mo
   - GET https://query1.finance.yahoo.com/v1/finance/search?q={query}&quotesCount=10
 """
+
 from __future__ import annotations
 
 from datetime import UTC, datetime
@@ -84,11 +85,19 @@ class YahooAdapter(MarketAdapter):
             bars.append(
                 OhlcBar(
                     ts=_epoch_to_iso(ts_epoch),
-                    open=float(opens[i]) if i < len(opens) and opens[i] is not None else float(closes[i]),
-                    high=float(highs[i]) if i < len(highs) and highs[i] is not None else float(closes[i]),
-                    low=float(lows[i]) if i < len(lows) and lows[i] is not None else float(closes[i]),
+                    open=float(opens[i])
+                    if i < len(opens) and opens[i] is not None
+                    else float(closes[i]),
+                    high=float(highs[i])
+                    if i < len(highs) and highs[i] is not None
+                    else float(closes[i]),
+                    low=float(lows[i])
+                    if i < len(lows) and lows[i] is not None
+                    else float(closes[i]),
                     close=float(closes[i]),
-                    volume=float(volumes[i]) if i < len(volumes) and volumes[i] is not None else None,
+                    volume=float(volumes[i])
+                    if i < len(volumes) and volumes[i] is not None
+                    else None,
                 )
             )
         return bars

@@ -4,6 +4,7 @@ sprint-05: GET/DELETE /copilot/session/{session_id}.
 SSE 스트리밍(/copilot/query) 은 sprint-04 에서 추가.
 포맷: data-only SSE (`data: {json}\\n\\n`), `event:` 라인 없음 (revision 2 결정).
 """
+
 from __future__ import annotations
 
 import uuid as _uuid
@@ -216,12 +217,16 @@ async def get_session_alias(session_id: str) -> SessionResponse:
 
     if hasattr(store, "exists"):
         if not store.exists(session_id):
-            raise HTTPException(status_code=404, detail=f"session {session_id!r} not found or expired")
+            raise HTTPException(
+                status_code=404, detail=f"session {session_id!r} not found or expired"
+            )
         turns = await store.get_turns(session_id, limit=50)
     else:
         turns = await store.get_turns(session_id, limit=50)
         if not turns:
-            raise HTTPException(status_code=404, detail=f"session {session_id!r} not found or expired")
+            raise HTTPException(
+                status_code=404, detail=f"session {session_id!r} not found or expired"
+            )
 
     active_ctx = await build_active_context(
         session_id=session_id,
@@ -256,12 +261,16 @@ async def get_session(session_id: str) -> SessionResponse:
     # 존재 여부 확인 (InMemorySessionStore: exists() 사용, 그 외: get_turns 결과로 판단)
     if hasattr(store, "exists"):
         if not store.exists(session_id):
-            raise HTTPException(status_code=404, detail=f"session {session_id!r} not found or expired")
+            raise HTTPException(
+                status_code=404, detail=f"session {session_id!r} not found or expired"
+            )
         turns = await store.get_turns(session_id, limit=50)
     else:
         turns = await store.get_turns(session_id, limit=50)
         if not turns:
-            raise HTTPException(status_code=404, detail=f"session {session_id!r} not found or expired")
+            raise HTTPException(
+                status_code=404, detail=f"session {session_id!r} not found or expired"
+            )
 
     active_ctx = await build_active_context(
         session_id=session_id,

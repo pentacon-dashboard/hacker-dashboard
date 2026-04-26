@@ -6,6 +6,7 @@ sprint-02: URL 또는 텍스트를 받아 청킹 → 임베딩 → DB 업서트.
 
 backend 규약: 모든 쿼리 비동기 → `async def ingest_document(...)` 고정.
 """
+
 from __future__ import annotations
 
 import json
@@ -80,6 +81,7 @@ async def ingest_document(doc: dict[str, Any]) -> dict[str, Any]:
 # stub 모드 구현
 # ---------------------------------------------------------------------------
 
+
 async def _ingest_stub(
     source_url: str,
     title: str,
@@ -130,6 +132,7 @@ async def _ingest_stub(
 # production 모드 구현 (pgvector DB)
 # ---------------------------------------------------------------------------
 
+
 async def _ingest_db(
     source_url: str,
     title: str,
@@ -153,9 +156,7 @@ async def _ingest_db(
             if existing_doc is not None:
                 # 청크 수 조회
                 chunk_result = await session.execute(
-                    select(DocumentChunk).where(
-                        DocumentChunk.document_id == existing_doc.id
-                    )
+                    select(DocumentChunk).where(DocumentChunk.document_id == existing_doc.id)
                 )
                 chunk_count = len(chunk_result.scalars().all())
                 return {
@@ -200,6 +201,7 @@ async def _ingest_db(
 # ---------------------------------------------------------------------------
 # fixture 로드 유틸 (stub 모드에서 news/*.json 고정 코퍼스 사전 로드)
 # ---------------------------------------------------------------------------
+
 
 def _ingest_stub_sync(
     source_url: str,

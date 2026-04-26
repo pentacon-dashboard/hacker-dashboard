@@ -4,6 +4,7 @@
 - actions: 순수함수로 계산 (환각 불가)
 - llm_analysis: LLM이 생성 (3단 게이트 적용)
 """
+
 from __future__ import annotations
 
 from decimal import Decimal
@@ -36,19 +37,13 @@ class TargetAllocation(BaseModel):
             + v
         )
         if abs(total - 1.0) > 0.001:
-            raise ValueError(
-                f"target_allocation 합계는 1.0이어야 합니다 (현재: {total:.4f})"
-            )
+            raise ValueError(f"target_allocation 합계는 1.0이어야 합니다 (현재: {total:.4f})")
         return v
 
 
 class RebalanceConstraints(BaseModel):
-    max_single_weight: StrictFloat = Field(
-        0.5, ge=0, le=1, description="단일 종목 최대 비중"
-    )
-    min_trade_krw: Decimal = Field(
-        Decimal("100000"), ge=0, description="최소 거래액(KRW)"
-    )
+    max_single_weight: StrictFloat = Field(0.5, ge=0, le=1, description="단일 종목 최대 비중")
+    min_trade_krw: Decimal = Field(Decimal("100000"), ge=0, description="최소 거래액(KRW)")
     allow_fractional: StrictBool = Field(
         True, description="소수점 수량 허용 (주식은 기본 False 권장)"
     )

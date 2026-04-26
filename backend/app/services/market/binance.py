@@ -6,6 +6,7 @@ API 문서: https://binance-docs.github.io/apidocs/spot/en/
   - GET https://api.binance.com/api/v3/klines?symbol=BTCUSDT&interval=1d&limit=100
   - GET https://api.binance.com/api/v3/exchangeInfo  (심볼 목록)
 """
+
 from __future__ import annotations
 
 from datetime import UTC, datetime

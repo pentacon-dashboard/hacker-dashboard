@@ -5,6 +5,7 @@
 - memory (기본): InMemorySessionStore 싱글톤 (memory_store 모듈의 _store 공유)
 - postgres: PostgresSessionStore (COPILOT_SESSION_STORE_URL 필요)
 """
+
 from __future__ import annotations
 
 import os

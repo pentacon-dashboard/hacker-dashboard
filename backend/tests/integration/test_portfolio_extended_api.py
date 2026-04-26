@@ -6,25 +6,37 @@
   GET /portfolio/ai-insight
 기존 /portfolio/summary 에 win_rate_pct, market_leaders 추가 확인.
 """
+
 from __future__ import annotations
 
+from collections.abc import AsyncGenerator
 from datetime import UTC, datetime
-from typing import Any, AsyncGenerator
+from typing import Any
 from unittest.mock import AsyncMock, patch
 
 import pytest
 from httpx import ASGITransport, AsyncClient
-from sqlalchemy import Column, Date, DateTime, Integer, JSON, Numeric, String, UniqueConstraint
-from sqlalchemy import MetaData, Table
+from sqlalchemy import (
+    JSON,
+    Column,
+    Date,
+    DateTime,
+    Integer,
+    MetaData,
+    Numeric,
+    String,
+    Table,
+    UniqueConstraint,
+)
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
-from app.main import app
 from app.db.session import get_db
-
+from app.main import app
 
 # ──────────────────────────────────────────────────────────────────────────────
 # in-memory DB fixture (portfolio_client 패턴 재사용)
 # ──────────────────────────────────────────────────────────────────────────────
+
 
 def _create_tables(conn: Any) -> None:
     metadata = MetaData()
@@ -82,11 +94,14 @@ async def portfolio_client() -> AsyncGenerator[AsyncClient, None]:
 # GET /portfolio/summary — win_rate_pct + market_leaders 필드 확인
 # ──────────────────────────────────────────────────────────────────────────────
 
+
 @pytest.mark.asyncio
 async def test_summary_has_win_rate_pct(portfolio_client: AsyncClient) -> None:
     """GET /portfolio/summary → win_rate_pct 필드 포함."""
-    with patch("app.services.portfolio.get_adapter") as mock_adp, \
-         patch("app.services.portfolio.get_rate", return_value=1.0):
+    with (
+        patch("app.services.portfolio.get_adapter") as mock_adp,
+        patch("app.services.portfolio.get_rate", return_value=1.0),
+    ):
         mock_adp.return_value.fetch_quote = AsyncMock()
         resp = await portfolio_client.get("/portfolio/summary")
 
@@ -98,8 +113,10 @@ async def test_summary_has_win_rate_pct(portfolio_client: AsyncClient) -> None:
 @pytest.mark.asyncio
 async def test_summary_has_market_leaders(portfolio_client: AsyncClient) -> None:
     """GET /portfolio/summary → market_leaders 필드 포함."""
-    with patch("app.services.portfolio.get_adapter") as mock_adp, \
-         patch("app.services.portfolio.get_rate", return_value=1.0):
+    with (
+        patch("app.services.portfolio.get_adapter") as mock_adp,
+        patch("app.services.portfolio.get_rate", return_value=1.0),
+    ):
         mock_adp.return_value.fetch_quote = AsyncMock()
         resp = await portfolio_client.get("/portfolio/summary")
 
@@ -112,8 +129,10 @@ async def test_summary_has_market_leaders(portfolio_client: AsyncClient) -> None
 @pytest.mark.asyncio
 async def test_summary_empty_portfolio_fallback_leaders(portfolio_client: AsyncClient) -> None:
     """빈 포트폴리오 → market_leaders 에 fallback top3 포함."""
-    with patch("app.services.portfolio.get_adapter") as mock_adp, \
-         patch("app.services.portfolio.get_rate", return_value=1.0):
+    with (
+        patch("app.services.portfolio.get_adapter") as mock_adp,
+        patch("app.services.portfolio.get_rate", return_value=1.0),
+    ):
         mock_adp.return_value.fetch_quote = AsyncMock()
         resp = await portfolio_client.get("/portfolio/summary")
 
@@ -121,7 +140,7 @@ async def test_summary_empty_portfolio_fallback_leaders(portfolio_client: AsyncC
     body = resp.json()
     leaders = body["market_leaders"]
     assert len(leaders) == 3
-    tickers = [l["ticker"] for l in leaders]
+    tickers = [item["ticker"] for item in leaders]
     # S&P top3 fallback
     assert "NVDA" in tickers
     assert "AAPL" in tickers
@@ -131,8 +150,10 @@ async def test_summary_empty_portfolio_fallback_leaders(portfolio_client: AsyncC
 @pytest.mark.asyncio
 async def test_summary_empty_win_rate(portfolio_client: AsyncClient) -> None:
     """빈 포트폴리오 → win_rate_pct '0.00'."""
-    with patch("app.services.portfolio.get_adapter") as mock_adp, \
-         patch("app.services.portfolio.get_rate", return_value=1.0):
+    with (
+        patch("app.services.portfolio.get_adapter") as mock_adp,
+        patch("app.services.portfolio.get_rate", return_value=1.0),
+    ):
         mock_adp.return_value.fetch_quote = AsyncMock()
         resp = await portfolio_client.get("/portfolio/summary")
 
@@ -144,11 +165,14 @@ async def test_summary_empty_win_rate(portfolio_client: AsyncClient) -> None:
 # GET /portfolio/sectors/heatmap
 # ──────────────────────────────────────────────────────────────────────────────
 
+
 @pytest.mark.asyncio
 async def test_sector_heatmap_200_empty(portfolio_client: AsyncClient) -> None:
     """빈 포트폴리오 → 200 + 빈 배열."""
-    with patch("app.services.portfolio.get_adapter") as mock_adp, \
-         patch("app.services.portfolio.get_rate", return_value=1.0):
+    with (
+        patch("app.services.portfolio.get_adapter") as mock_adp,
+        patch("app.services.portfolio.get_rate", return_value=1.0),
+    ):
         mock_adp.return_value.fetch_quote = AsyncMock()
         resp = await portfolio_client.get("/portfolio/sectors/heatmap")
 
@@ -164,17 +188,30 @@ async def test_sector_heatmap_schema(portfolio_client: AsyncClient) -> None:
         mock_reg.return_value = AsyncMock()
         await portfolio_client.post(
             "/portfolio/holdings",
-            json={"market": "yahoo", "code": "AAPL", "quantity": "10", "avg_cost": "150", "currency": "USD"},
+            json={
+                "market": "yahoo",
+                "code": "AAPL",
+                "quantity": "10",
+                "avg_cost": "150",
+                "currency": "USD",
+            },
         )
 
     from app.schemas.market import Quote
+
     mock_quote = Quote(
-        symbol="AAPL", market="yahoo",
-        price=180.0, change=0.0, change_pct=0.0,
-        currency="USD", timestamp=datetime.now(UTC).isoformat(),
+        symbol="AAPL",
+        market="yahoo",
+        price=180.0,
+        change=0.0,
+        change_pct=0.0,
+        currency="USD",
+        timestamp=datetime.now(UTC).isoformat(),
     )
-    with patch("app.services.portfolio.get_adapter") as mock_adp, \
-         patch("app.services.portfolio.get_rate", return_value=1330.0):
+    with (
+        patch("app.services.portfolio.get_adapter") as mock_adp,
+        patch("app.services.portfolio.get_rate", return_value=1330.0),
+    ):
         adapter = AsyncMock()
         adapter.fetch_quote = AsyncMock(return_value=mock_quote)
         mock_adp.return_value = adapter
@@ -194,11 +231,14 @@ async def test_sector_heatmap_schema(portfolio_client: AsyncClient) -> None:
 # GET /portfolio/monthly-returns
 # ──────────────────────────────────────────────────────────────────────────────
 
+
 @pytest.mark.asyncio
 async def test_monthly_returns_200(portfolio_client: AsyncClient) -> None:
     """GET /portfolio/monthly-returns → 200."""
-    with patch("app.services.portfolio.get_adapter") as mock_adp, \
-         patch("app.services.portfolio.get_rate", return_value=1.0):
+    with (
+        patch("app.services.portfolio.get_adapter") as mock_adp,
+        patch("app.services.portfolio.get_rate", return_value=1.0),
+    ):
         mock_adp.return_value.fetch_quote = AsyncMock()
         resp = await portfolio_client.get("/portfolio/monthly-returns")
 
@@ -208,8 +248,10 @@ async def test_monthly_returns_200(portfolio_client: AsyncClient) -> None:
 @pytest.mark.asyncio
 async def test_monthly_returns_has_365_cells(portfolio_client: AsyncClient) -> None:
     """연도 지정 → 해당 연도 일수만큼 셀 반환."""
-    with patch("app.services.portfolio.get_adapter") as mock_adp, \
-         patch("app.services.portfolio.get_rate", return_value=1.0):
+    with (
+        patch("app.services.portfolio.get_adapter") as mock_adp,
+        patch("app.services.portfolio.get_rate", return_value=1.0),
+    ):
         mock_adp.return_value.fetch_quote = AsyncMock()
         resp = await portfolio_client.get("/portfolio/monthly-returns?year=2025")
 
@@ -221,8 +263,10 @@ async def test_monthly_returns_has_365_cells(portfolio_client: AsyncClient) -> N
 @pytest.mark.asyncio
 async def test_monthly_returns_schema(portfolio_client: AsyncClient) -> None:
     """각 셀 스키마: date, return_pct, cell_level."""
-    with patch("app.services.portfolio.get_adapter") as mock_adp, \
-         patch("app.services.portfolio.get_rate", return_value=1.0):
+    with (
+        patch("app.services.portfolio.get_adapter") as mock_adp,
+        patch("app.services.portfolio.get_rate", return_value=1.0),
+    ):
         mock_adp.return_value.fetch_quote = AsyncMock()
         resp = await portfolio_client.get("/portfolio/monthly-returns?year=2025")
 
@@ -238,11 +282,14 @@ async def test_monthly_returns_schema(portfolio_client: AsyncClient) -> None:
 # GET /portfolio/ai-insight
 # ──────────────────────────────────────────────────────────────────────────────
 
+
 @pytest.mark.asyncio
 async def test_ai_insight_200(portfolio_client: AsyncClient) -> None:
     """GET /portfolio/ai-insight → 200."""
-    with patch("app.services.portfolio.get_adapter") as mock_adp, \
-         patch("app.services.portfolio.get_rate", return_value=1.0):
+    with (
+        patch("app.services.portfolio.get_adapter") as mock_adp,
+        patch("app.services.portfolio.get_rate", return_value=1.0),
+    ):
         mock_adp.return_value.fetch_quote = AsyncMock()
         resp = await portfolio_client.get("/portfolio/ai-insight")
 
@@ -252,8 +299,10 @@ async def test_ai_insight_200(portfolio_client: AsyncClient) -> None:
 @pytest.mark.asyncio
 async def test_ai_insight_stub_mode(portfolio_client: AsyncClient) -> None:
     """ai-insight → stub_mode=True."""
-    with patch("app.services.portfolio.get_adapter") as mock_adp, \
-         patch("app.services.portfolio.get_rate", return_value=1.0):
+    with (
+        patch("app.services.portfolio.get_adapter") as mock_adp,
+        patch("app.services.portfolio.get_rate", return_value=1.0),
+    ):
         mock_adp.return_value.fetch_quote = AsyncMock()
         resp = await portfolio_client.get("/portfolio/ai-insight")
 
@@ -265,8 +314,10 @@ async def test_ai_insight_stub_mode(portfolio_client: AsyncClient) -> None:
 @pytest.mark.asyncio
 async def test_ai_insight_gates_pass(portfolio_client: AsyncClient) -> None:
     """ai-insight → gates 모두 'pass'."""
-    with patch("app.services.portfolio.get_adapter") as mock_adp, \
-         patch("app.services.portfolio.get_rate", return_value=1.0):
+    with (
+        patch("app.services.portfolio.get_adapter") as mock_adp,
+        patch("app.services.portfolio.get_rate", return_value=1.0),
+    ):
         mock_adp.return_value.fetch_quote = AsyncMock()
         resp = await portfolio_client.get("/portfolio/ai-insight")
 
@@ -280,8 +331,10 @@ async def test_ai_insight_gates_pass(portfolio_client: AsyncClient) -> None:
 @pytest.mark.asyncio
 async def test_ai_insight_schema(portfolio_client: AsyncClient) -> None:
     """ai-insight 응답 필드: summary, bullets, generated_at, stub_mode, gates."""
-    with patch("app.services.portfolio.get_adapter") as mock_adp, \
-         patch("app.services.portfolio.get_rate", return_value=1.0):
+    with (
+        patch("app.services.portfolio.get_adapter") as mock_adp,
+        patch("app.services.portfolio.get_rate", return_value=1.0),
+    ):
         mock_adp.return_value.fetch_quote = AsyncMock()
         resp = await portfolio_client.get("/portfolio/ai-insight")
 

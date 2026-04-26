@@ -11,6 +11,7 @@
   - X-Request-ID 헤더 자동 전파
   - 구조화 분석 이벤트 로그
 """
+
 from __future__ import annotations
 
 import csv
@@ -145,7 +146,9 @@ async def _run_graph(
             "critique_gate": "pending",
         },
         "error": None,
-        "portfolio_context": portfolio_context.model_dump(mode="json") if portfolio_context is not None else None,
+        "portfolio_context": portfolio_context.model_dump(mode="json")
+        if portfolio_context is not None
+        else None,
     }
 
     t0 = time.monotonic()
@@ -287,7 +290,9 @@ async def analyze(
         extra = await _prefetch_ohlc_rows(req)
         rows = rows + extra
 
-    result = await _run_graph(rows, req.query, req.asset_class_hint, request_id, portfolio_context=pctx)
+    result = await _run_graph(
+        rows, req.query, req.asset_class_hint, request_id, portfolio_context=pctx
+    )
 
     # 캐시 저장
     await analyze_cache.cache_set(cache_key, result.model_dump())
@@ -409,7 +414,9 @@ async def analyze_csv(
 
     http_response.headers["X-Cache"] = "MISS"
 
-    result = await _run_graph(input_data, query, asset_class_hint, request_id, portfolio_context=pctx_csv)
+    result = await _run_graph(
+        input_data, query, asset_class_hint, request_id, portfolio_context=pctx_csv
+    )
 
     # 캐시 저장
     await analyze_cache.cache_set(cache_key, result.model_dump())

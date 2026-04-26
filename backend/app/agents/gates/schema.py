@@ -5,6 +5,7 @@ Schema Gate — Pydantic 으로 Analyzer 출력 구조를 검증.
 "다음 스키마를 만족하도록 수정해서 재출력해라" 지시한다.
 재시도 후에도 실패면 gate = "fail: <reason>" 으로 기록.
 """
+
 from __future__ import annotations
 
 import json

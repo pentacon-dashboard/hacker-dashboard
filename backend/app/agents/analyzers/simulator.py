@@ -14,6 +14,7 @@ shocks 값은 **배율(multiplier)** 단위:
   domain : shock 값이 [0.01, 1.99] 범위 안
   critique: query 에 없는 심볼에 대한 결과 포함 금지
 """
+
 from __future__ import annotations
 
 from typing import Any
@@ -22,8 +23,8 @@ from app.agents.state import AgentState
 from app.schemas.copilot import CopilotStep, SimulatorResultCard
 
 # 도메인 게이트 경계 — plan.md 기준 ±99%
-_MIN_SHOCK = 0.01   # -99%
-_MAX_SHOCK = 1.99   # +99%
+_MIN_SHOCK = 0.01  # -99%
+_MAX_SHOCK = 1.99  # +99%
 
 
 def _check_schema(card_dict: dict[str, Any]) -> tuple[bool, str]:
@@ -43,8 +44,7 @@ def _check_domain_shocks(shocks: dict[str, float]) -> tuple[str, str]:
             return "fail", f"shock for {sym} is not a number: {mult!r}"
         if not (_MIN_SHOCK <= m <= _MAX_SHOCK):
             return "fail", (
-                f"shock for {sym}={m} is outside [{_MIN_SHOCK}, {_MAX_SHOCK}] "
-                f"(±99% boundary)"
+                f"shock for {sym}={m} is outside [{_MIN_SHOCK}, {_MAX_SHOCK}] (±99% boundary)"
             )
     return "pass", ""
 
@@ -90,22 +90,20 @@ def _compute_card(step: CopilotStep) -> dict[str, Any]:
         shocked_value += holding_shocked
 
         delta_pct = (shock_mult - 1.0) * 100.0
-        scenarios.append({
-            "symbol": sym,
-            "shock": shock_mult,
-            "new_value": round(holding_shocked, 4),
-            "delta_pct": round(delta_pct, 4),
-        })
+        scenarios.append(
+            {
+                "symbol": sym,
+                "shock": shock_mult,
+                "new_value": round(holding_shocked, 4),
+                "delta_pct": round(delta_pct, 4),
+            }
+        )
 
         # sensitivity: +1pp shock → TWR change
         if base_value > 0:
             sensitivity[sym] = round((holding_base / base_value) * 1.0, 6)
 
-    twr_change = (
-        (shocked_value - base_value) / base_value * 100.0
-        if base_value > 0
-        else 0.0
-    )
+    twr_change = (shocked_value - base_value) / base_value * 100.0 if base_value > 0 else 0.0
 
     return {
         "type": "simulator_result",

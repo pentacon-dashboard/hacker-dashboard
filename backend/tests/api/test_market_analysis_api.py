@@ -8,6 +8,7 @@ GET /market/world-heatmap
 
 yfinance 실시간 경로를 None 반환으로 mock → stub 폴백 경로만 검증.
 """
+
 from __future__ import annotations
 
 import pytest

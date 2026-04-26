@@ -3,11 +3,11 @@ Symbol Indicators API 통합 테스트 — Sprint-08 B-3.
 
 GET /market/symbol/{market}/{code}/indicators
 """
+
 from __future__ import annotations
 
 import pytest
 from httpx import AsyncClient
-
 
 _VALID_INTERVALS = ["1m", "5m", "15m", "60m", "day", "week", "month"]
 
@@ -30,7 +30,16 @@ async def test_indicators_schema(client: AsyncClient) -> None:
     assert resp.status_code == 200
     data = resp.json()
 
-    required_fields = ["interval", "period", "rsi_14", "macd", "bollinger", "stochastic", "metrics", "signal"]
+    required_fields = [
+        "interval",
+        "period",
+        "rsi_14",
+        "macd",
+        "bollinger",
+        "stochastic",
+        "metrics",
+        "signal",
+    ]
     for field in required_fields:
         assert field in data, f"필드 누락: {field}"
 
@@ -78,8 +87,8 @@ async def test_indicators_bollinger_order(client: AsyncClient) -> None:
     resp = await client.get("/market/symbol/yahoo/AAPL/indicators")
     data = resp.json()
     bb = data["bollinger"]
-    for u, m, l in zip(bb["upper"], bb["mid"], bb["lower"]):
-        assert u["v"] >= m["v"] >= l["v"], f"볼린저 역전: {u['v']} {m['v']} {l['v']}"
+    for u, m, lo in zip(bb["upper"], bb["mid"], bb["lower"]):
+        assert u["v"] >= m["v"] >= lo["v"], f"볼린저 역전: {u['v']} {m['v']} {lo['v']}"
 
 
 @pytest.mark.asyncio

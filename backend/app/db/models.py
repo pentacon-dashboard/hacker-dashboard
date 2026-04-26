@@ -1,4 +1,5 @@
 """SQLAlchemy ORM 모델 — week-3 에서 Holding/PortfolioSnapshot 재설계."""
+
 from __future__ import annotations
 
 from datetime import date, datetime
@@ -30,9 +31,7 @@ class User(Base):
 
     id: Mapped[int] = mapped_column(primary_key=True)
     email: Mapped[str] = mapped_column(String(255), unique=True, nullable=False)
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now()
-    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     watchlist: Mapped[list[WatchlistItem]] = relationship(back_populates="user")
 
@@ -48,9 +47,7 @@ class WatchlistItem(Base):
     market: Mapped[str | None] = mapped_column(String(20), nullable=True)
     code: Mapped[str | None] = mapped_column(String(50), nullable=True)
     memo: Mapped[str | None] = mapped_column(Text, nullable=True)
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now()
-    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     user: Mapped[User] = relationship(back_populates="watchlist")
 
@@ -68,9 +65,7 @@ class Holding(Base):
     quantity: Mapped[Decimal] = mapped_column(Numeric(24, 8), nullable=False)
     avg_cost: Mapped[Decimal] = mapped_column(Numeric(24, 8), nullable=False)
     currency: Mapped[str] = mapped_column(String(4), nullable=False, default="USD")
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now()
-    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
     )
@@ -90,18 +85,15 @@ class PortfolioSnapshot(Base):
     asset_class_breakdown: Mapped[dict] = mapped_column(JSONB, nullable=False, default=dict)
     # [{"market": "upbit", "code": "KRW-BTC", "value_krw": ..., "pnl_krw": ...}]
     holdings_detail: Mapped[list] = mapped_column(JSONB, nullable=False, default=list)
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now()
-    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
-    __table_args__ = (
-        UniqueConstraint("user_id", "snapshot_date", name="uq_snapshot_user_date"),
-    )
+    __table_args__ = (UniqueConstraint("user_id", "snapshot_date", name="uq_snapshot_user_date"),)
 
 
 # ---------------------------------------------------------------------------
 # sprint-02: News/Filing RAG 인프라
 # ---------------------------------------------------------------------------
+
 
 class Document(Base):
     """뉴스·공시 원문 문서. source_url 을 유니크 키로 사용해 중복 적재를 방지한다."""
@@ -112,9 +104,7 @@ class Document(Base):
     source_url: Mapped[str] = mapped_column(String(2048), unique=True, nullable=False)
     title: Mapped[str] = mapped_column(String(512), nullable=False, default="")
     published_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now()
-    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     chunks: Mapped[list[DocumentChunk]] = relationship(
         "DocumentChunk", back_populates="document", cascade="all, delete-orphan"
@@ -137,9 +127,7 @@ class DocumentChunk(Base):
         Vector(1024),
         nullable=True,
     )
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now()
-    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     document: Mapped[Document] = relationship("Document", back_populates="chunks")
 
@@ -156,14 +144,12 @@ class WatchlistAlert(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     user_id: Mapped[str] = mapped_column(String(50), nullable=False, index=True, default="demo")
-    symbol: Mapped[str] = mapped_column(String(50), nullable=False)    # "NVDA", "KRW-BTC"
-    market: Mapped[str] = mapped_column(String(20), nullable=False)    # "yahoo", "upbit", "naver_kr"
+    symbol: Mapped[str] = mapped_column(String(50), nullable=False)  # "NVDA", "KRW-BTC"
+    market: Mapped[str] = mapped_column(String(20), nullable=False)  # "yahoo", "upbit", "naver_kr"
     direction: Mapped[str] = mapped_column(String(10), nullable=False)  # "above" | "below"
     threshold: Mapped[Decimal] = mapped_column(Numeric(18, 4), nullable=False)
     enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now()
-    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 
 # ---------------------------------------------------------------------------

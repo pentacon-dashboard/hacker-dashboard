@@ -5,6 +5,7 @@
 - Redis 캐시 TTL 1h. Redis 미연결 시 in-memory LRU fallback
 - 네트워크 실패 시 하드코딩 폴백 테이블 반환 (데모 안정성)
 """
+
 from __future__ import annotations
 
 import logging
@@ -40,6 +41,7 @@ _API_URL = "https://api.exchangerate.host/convert"
 
 
 # ────────────── in-memory LRU fallback (Redis 미연결 시) ──────────────
+
 
 @lru_cache(maxsize=64)
 def _mem_cache_get(key: str) -> float | None:  # pragma: no cover

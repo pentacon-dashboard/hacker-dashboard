@@ -10,6 +10,7 @@ RebalanceAnalyzer 단위 테스트.
   6. Critique gate warn: narrative 에 actions 에 없는 종목 언급 시 warn
   7. LLM unavailable 시 schema_gate=fail, analysis=None
 """
+
 from __future__ import annotations
 
 import json
@@ -22,12 +23,10 @@ import pytest
 from app.agents import llm as llm_module
 from app.agents.analyzers.rebalance import RebalanceAnalyzer
 from app.schemas.rebalance import (
-    LLMAnalysis,
     RebalanceAction,
     RebalanceConstraints,
     TargetAllocation,
 )
-
 
 # ───────────────────────────── Fake OpenAI client ─────────────────────────────
 
@@ -53,7 +52,7 @@ class _Response:
 
 @dataclass
 class _Completions:
-    parent: "FakeClient"
+    parent: FakeClient
 
     async def create(self, **kwargs: Any) -> _Response:
         self.parent.calls.append(kwargs)
@@ -93,9 +92,7 @@ def fake_llm():
 
 
 def _target() -> TargetAllocation:
-    return TargetAllocation(
-        stock_kr=0.2, stock_us=0.4, crypto=0.3, cash=0.1, fx=0.0
-    )
+    return TargetAllocation(stock_kr=0.2, stock_us=0.4, crypto=0.3, cash=0.1, fx=0.0)
 
 
 def _constraints() -> RebalanceConstraints:
@@ -203,7 +200,13 @@ async def test_normal_case_all_gates_pass(fake_llm: FakeClient) -> None:
     analysis, gates = await analyzer.analyze(
         actions=actions,
         drift={"crypto": 0.44, "stock_us": -0.21, "stock_kr": -0.13, "cash": -0.1, "fx": 0},
-        current_allocation={"crypto": 0.74, "stock_us": 0.19, "stock_kr": 0.07, "cash": 0.0, "fx": 0},
+        current_allocation={
+            "crypto": 0.74,
+            "stock_us": 0.19,
+            "stock_kr": 0.07,
+            "cash": 0.0,
+            "fx": 0,
+        },
         target_allocation=_target(),
         constraints=_constraints(),
     )
@@ -375,9 +378,7 @@ async def test_payload_includes_all_required_fields(fake_llm: FakeClient) -> Non
     )
     assert len(fake_llm.calls) == 1
     # OpenAI 스타일: messages[0]=system, messages[1]=user
-    user_msg = next(
-        m for m in fake_llm.calls[0]["messages"] if m.get("role") == "user"
-    )
+    user_msg = next(m for m in fake_llm.calls[0]["messages"] if m.get("role") == "user")
     payload = json.loads(user_msg["content"])
     assert "actions" in payload and len(payload["actions"]) == 1
     assert "drift" in payload

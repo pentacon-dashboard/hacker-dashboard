@@ -3,6 +3,7 @@
 Holdings CRUD + 집계 요약 + 스냅샷 조회 + 리밸런싱 제안.
 user_id = "demo" 고정 (단일 사용자 데모).
 """
+
 from __future__ import annotations
 
 import logging
@@ -63,8 +64,12 @@ def _holding_to_response(h: Holding) -> HoldingResponse:
         quantity=h.quantity,
         avg_cost=h.avg_cost,
         currency=h.currency,
-        created_at=h.created_at.isoformat() if isinstance(h.created_at, datetime) else str(h.created_at),
-        updated_at=h.updated_at.isoformat() if isinstance(h.updated_at, datetime) else str(h.updated_at),
+        created_at=h.created_at.isoformat()
+        if isinstance(h.created_at, datetime)
+        else str(h.created_at),
+        updated_at=h.updated_at.isoformat()
+        if isinstance(h.updated_at, datetime)
+        else str(h.updated_at),
     )
 
 
@@ -191,15 +196,11 @@ async def get_summary(
 
     6개 KPI + 자산군 비중 + 디멘션 breakdown + TOP 종목을 한 번에 반환.
     """
-    result = await db.execute(
-        select(Holding).where(Holding.user_id == _DEMO_USER)
-    )
+    result = await db.execute(select(Holding).where(Holding.user_id == _DEMO_USER))
     holdings = result.scalars().all()
 
     prev_snap = await get_prev_snapshot(db, user_id=_DEMO_USER)
-    period_snap = await get_period_snapshot(
-        db, user_id=_DEMO_USER, period_days=period_days
-    )
+    period_snap = await get_period_snapshot(db, user_id=_DEMO_USER, period_days=period_days)
     summary = await compute_summary(
         list(holdings),
         prev_snapshot=prev_snap,
@@ -237,14 +238,22 @@ async def list_snapshots(
     except ValueError as exc:
         raise HTTPException(
             status_code=422,
-            detail=[{"msg": f"from 날짜 형식 오류: {exc}", "type": "value_error", "loc": ["query", "from"]}],
+            detail=[
+                {
+                    "msg": f"from 날짜 형식 오류: {exc}",
+                    "type": "value_error",
+                    "loc": ["query", "from"],
+                }
+            ],
         ) from exc
     try:
         to_date: date | None = date.fromisoformat(to_str) if to_str else None
     except ValueError as exc:
         raise HTTPException(
             status_code=422,
-            detail=[{"msg": f"to 날짜 형식 오류: {exc}", "type": "value_error", "loc": ["query", "to"]}],
+            detail=[
+                {"msg": f"to 날짜 형식 오류: {exc}", "type": "value_error", "loc": ["query", "to"]}
+            ],
         ) from exc
     stmt = select(PortfolioSnapshot).where(PortfolioSnapshot.user_id == _DEMO_USER)
     if from_date:
@@ -265,7 +274,9 @@ async def list_snapshots(
             total_pnl_krw=str(s.total_pnl_krw),
             asset_class_breakdown=s.asset_class_breakdown,
             holdings_detail=s.holdings_detail,
-            created_at=s.created_at.isoformat() if isinstance(s.created_at, datetime) else str(s.created_at),
+            created_at=s.created_at.isoformat()
+            if isinstance(s.created_at, datetime)
+            else str(s.created_at),
         )
         for s in snapshots
     ]
@@ -429,9 +440,7 @@ async def rebalance(
         if abs(d) > 0.01:
             cur_pct = current_alloc.get(ac, 0.0) * 100
             tgt_pct = target_dict.get(ac, 0.0) * 100
-            evidence_snippets.append(
-                f"{ac} 현재 {cur_pct:.1f}% vs 목표 {tgt_pct:.1f}%"
-            )
+            evidence_snippets.append(f"{ac} 현재 {cur_pct:.1f}% vs 목표 {tgt_pct:.1f}%")
 
     return RebalanceResponse(
         request_id=request_id,
@@ -467,9 +476,7 @@ async def get_sector_heatmap(
     보유 종목을 섹터로 분류하고 각 섹터의 value_krw 비중 및 손익률을 집계한다.
     미분류 종목은 '기타' 섹터로 통합.
     """
-    result = await db.execute(
-        select(Holding).where(Holding.user_id == _DEMO_USER)
-    )
+    result = await db.execute(select(Holding).where(Holding.user_id == _DEMO_USER))
     holdings_rows = list(result.scalars().all())
 
     if not holdings_rows:
@@ -504,9 +511,7 @@ async def get_monthly_returns(
 
     target_year = year if year is not None else _date.today().year
 
-    result = await db.execute(
-        select(Holding).where(Holding.user_id == _DEMO_USER)
-    )
+    result = await db.execute(select(Holding).where(Holding.user_id == _DEMO_USER))
     holdings_rows = list(result.scalars().all())
 
     if not holdings_rows:
@@ -531,9 +536,7 @@ async def get_ai_insight(
     ADR-0012 stub 모드: LLM 호출 없이 결정론적 문단 생성.
     gates 필드로 3단 품질 게이트 통과 여부 표시.
     """
-    result = await db.execute(
-        select(Holding).where(Holding.user_id == _DEMO_USER)
-    )
+    result = await db.execute(select(Holding).where(Holding.user_id == _DEMO_USER))
     holdings_rows = list(result.scalars().all())
 
     prev_snap = await get_prev_snapshot(db, user_id=_DEMO_USER)

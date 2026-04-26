@@ -6,6 +6,7 @@ API 문서: https://docs.upbit.com/reference/
   - GET https://api.upbit.com/v1/candles/days?market=KRW-BTC&count=100
   - GET https://api.upbit.com/v1/market/all
 """
+
 from __future__ import annotations
 
 from datetime import UTC, datetime
@@ -70,11 +71,7 @@ def _score_upbit(item: dict[str, Any], query: str) -> int:
     elif english_lower.startswith(q_lower):
         score = max(score, 350)
     # substring
-    elif (
-        q_upper in market_upper
-        or q_lower in korean_lower
-        or q_lower in english_lower
-    ):
+    elif q_upper in market_upper or q_lower in korean_lower or q_lower in english_lower:
         score = max(score, 100)
 
     if score == 0:
@@ -174,6 +171,7 @@ def _parse_upbit_ts(date_kst: str, time_kst: str) -> str:
         dt_str = f"{date_kst} {time_kst}"
         # KST = UTC+9
         from datetime import timedelta
+
         dt = datetime.strptime(dt_str, "%Y%m%d %H%M%S")
         dt_utc = dt.replace(tzinfo=UTC) - timedelta(hours=9)
         return dt_utc.isoformat()

@@ -2,6 +2,7 @@
 
 모든 구현체(InMemorySessionStore, PostgresSessionStore)는 이 Protocol을 만족해야 한다.
 """
+
 from __future__ import annotations
 
 from typing import Protocol, runtime_checkable

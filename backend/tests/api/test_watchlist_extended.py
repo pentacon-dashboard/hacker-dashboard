@@ -6,6 +6,7 @@ GET /watchlist/popular
 GET /watchlist/gainers-losers
 GET /market/watchlist/items  (pnl_7d 포함 여부 확인)
 """
+
 from __future__ import annotations
 
 import pytest
@@ -25,6 +26,7 @@ def reset_watchlist():
 
 
 # ──────────────── GET /watchlist/summary ────────────────
+
 
 @pytest.mark.asyncio
 async def test_summary_empty(client: AsyncClient) -> None:
@@ -51,6 +53,7 @@ async def test_summary_with_items(client: AsyncClient) -> None:
 
 
 # ──────────────── GET /watchlist/popular ────────────────
+
 
 @pytest.mark.asyncio
 async def test_popular_returns_5_items(client: AsyncClient) -> None:
@@ -81,6 +84,7 @@ async def test_popular_ranks_are_sequential(client: AsyncClient) -> None:
 
 # ──────────────── GET /watchlist/gainers-losers ────────────────
 
+
 @pytest.mark.asyncio
 async def test_gainers_losers_structure(client: AsyncClient) -> None:
     resp = await client.get("/watchlist/gainers-losers")
@@ -96,17 +100,22 @@ async def test_gainers_losers_structure(client: AsyncClient) -> None:
 async def test_gainers_positive_pct(client: AsyncClient) -> None:
     resp = await client.get("/watchlist/gainers-losers")
     for item in resp.json()["gainers"]:
-        assert item["change_pct"].startswith("+"), f"Gainer pct should be positive: {item['change_pct']}"
+        assert item["change_pct"].startswith("+"), (
+            f"Gainer pct should be positive: {item['change_pct']}"
+        )
 
 
 @pytest.mark.asyncio
 async def test_losers_negative_pct(client: AsyncClient) -> None:
     resp = await client.get("/watchlist/gainers-losers")
     for item in resp.json()["losers"]:
-        assert item["change_pct"].startswith("-"), f"Loser pct should be negative: {item['change_pct']}"
+        assert item["change_pct"].startswith("-"), (
+            f"Loser pct should be negative: {item['change_pct']}"
+        )
 
 
 # ──────────────── GET /market/watchlist/items (pnl_7d) ────────────────
+
 
 @pytest.mark.asyncio
 async def test_watchlist_items_include_pnl_7d(client: AsyncClient) -> None:

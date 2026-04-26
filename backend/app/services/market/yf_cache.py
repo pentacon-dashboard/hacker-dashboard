@@ -7,6 +7,7 @@ TTL 정책:
   - 지수/섹터/원자재: 60초
   - 종목 quote: 10초
 """
+
 from __future__ import annotations
 
 import asyncio

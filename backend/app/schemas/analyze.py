@@ -77,9 +77,7 @@ class AnalyzerSignal(BaseModel):
     """Analyzer 가 추출한 정량·정성 신호 하나."""
 
     kind: str = Field(..., description="trend | volatility | ma_cross | breakout | risk | other")
-    strength: Literal["low", "medium", "high"] = Field(
-        ..., description="신호 강도 버킷"
-    )
+    strength: Literal["low", "medium", "high"] = Field(..., description="신호 강도 버킷")
     rationale: str = Field(..., description="왜 이 신호라고 판단했는지 한 문장")
 
 
@@ -118,9 +116,7 @@ class AnalyzeMeta(BaseModel):
         default_factory=list,
         description="critique 통과 후 확정된 근거 인용 3~5개",
     )
-    cache: CacheMetrics | None = Field(
-        None, description="직전 요청의 프롬프트 캐시/토큰 사용량"
-    )
+    cache: CacheMetrics | None = Field(None, description="직전 요청의 프롬프트 캐시/토큰 사용량")
 
 
 class AnalyzeResponse(BaseModel):

@@ -3,6 +3,7 @@
 sprint-02: 문서를 일정 크기의 chunk 로 분할한다.
 기본 전략: 512 토큰 (근사: 문자 기준 2048자), 64자 오버랩.
 """
+
 from __future__ import annotations
 
 CHUNK_SIZE = 2048  # 문자 기준

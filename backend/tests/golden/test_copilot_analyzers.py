@@ -9,6 +9,7 @@ samples/copilot/_baseline_copilot_*.json 을 각 analyzer.run() 에 직접 투�
   - simulator:  결정론적 수학 계산
   - news-rag:   COPILOT_NEWS_MODE=stub + fixture corpus (fake embedding)
 """
+
 from __future__ import annotations
 
 import json
@@ -86,8 +87,7 @@ def test_comparison_golden(sample_id: str, sample: dict[str, Any]) -> None:
         f"{sample_id}: card type mismatch. got={card['type']}"
     )
     assert _gate_matches(sample["expected_gate_results"], gate_results), (
-        f"{sample_id}: gate mismatch. expected={sample['expected_gate_results']} "
-        f"got={gate_results}"
+        f"{sample_id}: gate mismatch. expected={sample['expected_gate_results']} got={gate_results}"
     )
     if sample.get("expected_degraded") is True:
         assert card.get("degraded") is True, f"{sample_id}: expected degraded=True"
@@ -95,9 +95,7 @@ def test_comparison_golden(sample_id: str, sample: dict[str, Any]) -> None:
         assert not card.get("degraded"), f"{sample_id}: expected degraded=False"
 
     if "expected_symbols" in sample:
-        assert card["symbols"] == sample["expected_symbols"], (
-            f"{sample_id}: symbol list mismatch"
-        )
+        assert card["symbols"] == sample["expected_symbols"], f"{sample_id}: symbol list mismatch"
 
 
 # ─────────────────────────────────── simulator ──────────────────────────────
@@ -121,8 +119,7 @@ def test_simulator_golden(sample_id: str, sample: dict[str, Any]) -> None:
         f"{sample_id}: card type mismatch. got={card['type']}"
     )
     assert _gate_matches(sample["expected_gate_results"], gate_results), (
-        f"{sample_id}: gate mismatch. expected={sample['expected_gate_results']} "
-        f"got={gate_results}"
+        f"{sample_id}: gate mismatch. expected={sample['expected_gate_results']} got={gate_results}"
     )
     if sample.get("expected_degraded") is True:
         assert card.get("degraded") is True, f"{sample_id}: expected degraded=True"
@@ -171,8 +168,7 @@ def test_news_rag_golden(
         f"{sample_id}: card type mismatch. got={card['type']}"
     )
     assert _gate_matches(sample["expected_gate_results"], gate_results), (
-        f"{sample_id}: gate mismatch. expected={sample['expected_gate_results']} "
-        f"got={gate_results}"
+        f"{sample_id}: gate mismatch. expected={sample['expected_gate_results']} got={gate_results}"
     )
     if sample.get("expected_degraded") is True:
         assert card.get("degraded") is True, f"{sample_id}: expected degraded=True"

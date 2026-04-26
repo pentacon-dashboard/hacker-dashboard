@@ -1,4 +1,5 @@
 """포트폴리오 스냅샷 서비스 단위 테스트."""
+
 from __future__ import annotations
 
 from datetime import UTC, date, datetime
@@ -116,10 +117,14 @@ async def test_take_snapshot_upsert_same_date(db_session: AsyncSession) -> None:
             holdings=[],
         )
 
-    with patch("app.services.portfolio_snapshot.compute_summary", return_value=make_summary("1000000.00")):
+    with patch(
+        "app.services.portfolio_snapshot.compute_summary", return_value=make_summary("1000000.00")
+    ):
         snap1 = await take_snapshot(db_session, user_id="demo")
 
-    with patch("app.services.portfolio_snapshot.compute_summary", return_value=make_summary("2000000.00")):
+    with patch(
+        "app.services.portfolio_snapshot.compute_summary", return_value=make_summary("2000000.00")
+    ):
         snap2 = await take_snapshot(db_session, user_id="demo")
 
     # 같은 날짜 스냅샷이 갱신됨 — 최신 값 확인

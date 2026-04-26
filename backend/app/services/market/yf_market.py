@@ -4,6 +4,7 @@
 캐시 TTL: 60초 (yf_cache.py in-memory).
 실패 시 market_fixtures.py stub 폴백.
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -54,6 +55,7 @@ _COMMODITY_INFO: dict[str, dict[str, str]] = {
 
 
 # ─── 동기 헬퍼 (executor 에서 실행) ──────────────────────────────────────────
+
 
 def _fetch_indices_sync() -> list[dict[str, Any]] | None:
     """yfinance 로 7개 인덱스 스냅샷 조회."""
@@ -174,6 +176,7 @@ def _fetch_commodities_sync() -> list[dict[str, Any]] | None:
 
 # ─── 비동기 퍼블릭 API ────────────────────────────────────────────────────────
 
+
 async def get_indices() -> list[dict[str, Any]] | None:
     """시장 지수 7개. 캐시 히트 시 즉시 반환, miss 시 yfinance 조회."""
     key = "yf:market:indices"
@@ -214,6 +217,7 @@ async def get_commodities() -> list[dict[str, Any]] | None:
 
 
 # ─── 포맷 헬퍼 ───────────────────────────────────────────────────────────────
+
 
 def _fmt_number(v: float) -> str:
     """숫자를 콤마 포함 문자열로 포맷 (소수점 2자리)."""

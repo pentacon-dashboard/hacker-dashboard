@@ -9,6 +9,7 @@ OpenAI client 래퍼.
 실제 OpenAI 호출은 `openai.AsyncOpenAI` 를 쓴다. 테스트에서는 `set_client` 로
 FakeClient 를 주입해 LLM 없이 동작한다.
 """
+
 from __future__ import annotations
 
 import json
@@ -164,16 +165,12 @@ async def call_llm(
     상위 노드(router/analyzer/gates)는 이를 잡아 안전한 기본값으로 폴백한다.
     """
     if _client_override is None and not _is_api_key_configured():
-        raise LLMUnavailableError(
-            "openai API key not configured and no test client injected"
-        )
+        raise LLMUnavailableError("openai API key not configured and no test client injected")
 
     client = get_client()
     system_text = load_prompt(system_prompt_name)
 
-    response_format: dict[str, str] | None = (
-        {"type": "json_object"} if expect_json else None
-    )
+    response_format: dict[str, str] | None = {"type": "json_object"} if expect_json else None
 
     resp = await client.chat.completions.create(
         model=model,

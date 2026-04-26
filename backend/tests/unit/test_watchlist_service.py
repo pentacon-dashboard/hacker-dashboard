@@ -3,9 +3,8 @@
 
 compute_summary, generate_popular_stub, generate_gainers_losers_stub, sparkline_7d
 """
-from __future__ import annotations
 
-import pytest
+from __future__ import annotations
 
 from app.services.watchlist import (
     compute_summary,

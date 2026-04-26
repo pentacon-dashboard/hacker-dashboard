@@ -8,6 +8,7 @@ CSV 업로드 Router heuristic 회귀 테스트 (Week-4 Task #16).
 - router 가 downstream 으로 전달하는 state 의 `input_data` 는 언래핑된 실제
   rows 여야 한다 (analyzer 호환).
 """
+
 from __future__ import annotations
 
 from typing import Any
@@ -105,8 +106,20 @@ def test_heuristic_csv_portfolio() -> None:
     rows = [
         {
             "rows": [
-                {"market": "yahoo", "code": "AAPL", "quantity": 10, "avg_cost": 150, "currency": "USD"},
-                {"market": "upbit", "code": "KRW-BTC", "quantity": 0.05, "avg_cost": 50000000, "currency": "KRW"},
+                {
+                    "market": "yahoo",
+                    "code": "AAPL",
+                    "quantity": 10,
+                    "avg_cost": 150,
+                    "currency": "USD",
+                },
+                {
+                    "market": "upbit",
+                    "code": "KRW-BTC",
+                    "quantity": 0.05,
+                    "avg_cost": 50000000,
+                    "currency": "KRW",
+                },
             ],
             "columns": ["market", "code", "quantity", "avg_cost", "currency"],
             "source": "csv_upload",

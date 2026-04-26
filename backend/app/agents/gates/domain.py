@@ -10,6 +10,7 @@ Domain Gate — 도메인 sanity check.
 
 실패 시 재시도 금지 — 즉시 'fail: <reason>' 기록 후 상위로 전파.
 """
+
 from __future__ import annotations
 
 from datetime import UTC, datetime
@@ -17,7 +18,17 @@ from typing import Any
 
 from app.agents.state import AgentState
 
-_PRICE_KEYS = ("price", "close", "open", "high", "low", "rate", "latest_close", "latest_price", "latest_rate")
+_PRICE_KEYS = (
+    "price",
+    "close",
+    "open",
+    "high",
+    "low",
+    "rate",
+    "latest_close",
+    "latest_price",
+    "latest_rate",
+)
 _DATE_KEYS = ("date", "timestamp", "datetime", "time")
 _RETURN_KEYS = ("period_return_pct", "period_change_pct", "change_pct", "return_pct")
 

@@ -45,13 +45,16 @@ async def test_analyze_gates_all_ok(client: AsyncClient, fake_llm_client) -> Non
 
 
 @pytest.mark.asyncio
-async def test_analyze_without_hint_defaults_to_stock(client: AsyncClient, fake_llm_client: Any) -> None:
+async def test_analyze_without_hint_defaults_to_stock(
+    client: AsyncClient, fake_llm_client: Any
+) -> None:
     """hint 없고 heuristic 미매칭 시 LLM Router 가 기본값 "stock" 을 반환해야 한다.
 
     fake_llm_client 의 router 응답이 없으면 extract_json({}) → asset_class="stock"(기본값).
     Redis 캐시에 이전 실행 결과가 남아있을 수 있으므로 LRU 전용 모드로 캐시를 격리한다.
     """
     from app.services import analyze_cache as _ac
+
     _ac.reset_for_testing()
     _ac._redis_available = False  # 이전 Redis 잔여 데이터 방지
 

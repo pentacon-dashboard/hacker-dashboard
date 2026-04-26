@@ -3,6 +3,7 @@
 20~30 종목 매핑. 미매핑 종목은 "기타" 반환.
 sprint-08 Phase B-1.
 """
+
 from __future__ import annotations
 
 _SECTOR_MAP: dict[str, str] = {

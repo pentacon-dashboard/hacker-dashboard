@@ -9,6 +9,7 @@
 읽음(unread) 상태는 서버 측 영속화 없이 세션-in-memory dict 로 임시 관리.
 (단일 demo 사용자 컨텍스트; 재시작 시 초기화됨.)
 """
+
 from __future__ import annotations
 
 import logging
@@ -100,9 +101,8 @@ async def _build_price_notifications(
             simulated = float(alert.threshold) * (1.0 + math.sin(seed * 0.3) * 0.05)
             current_price = Decimal(str(round(simulated, 4)))
 
-        triggered = (
-            (alert.direction == "above" and current_price >= alert.threshold)
-            or (alert.direction == "below" and current_price <= alert.threshold)
+        triggered = (alert.direction == "above" and current_price >= alert.threshold) or (
+            alert.direction == "below" and current_price <= alert.threshold
         )
         if not triggered:
             continue

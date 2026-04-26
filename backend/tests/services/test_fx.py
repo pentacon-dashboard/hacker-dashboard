@@ -1,4 +1,5 @@
 """FxAdapter 단위 테스트 — respx 로 exchangerate.host mock."""
+
 from __future__ import annotations
 
 import httpx

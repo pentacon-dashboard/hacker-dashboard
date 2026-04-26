@@ -1,6 +1,7 @@
 """
 워치리스트 관련 Pydantic 스키마 — Sprint-08 B-2 + Phase 2-D (알림 CRUD).
 """
+
 from __future__ import annotations
 
 from decimal import Decimal

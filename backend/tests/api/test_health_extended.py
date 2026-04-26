@@ -7,6 +7,7 @@
   - 기존 status / services 필드 유지
   - 두 번째 요청에서 uptime_seconds 가 0 이상임을 확인 (단조 증가는 실시간으로 검증)
 """
+
 from __future__ import annotations
 
 import time

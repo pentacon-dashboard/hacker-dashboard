@@ -11,6 +11,7 @@ DELETE /watchlist/alerts/{id}
 
 기존 /market/watchlist/items CRUD 는 market.py 유지 (breaking change 방지).
 """
+
 from __future__ import annotations
 
 from datetime import UTC, datetime
@@ -51,7 +52,9 @@ def _alert_to_response(a: WatchlistAlert) -> WatchlistAlertResponse:
         direction=a.direction,
         threshold=str(a.threshold),
         enabled=a.enabled,
-        created_at=a.created_at.isoformat() if isinstance(a.created_at, datetime) else str(a.created_at),
+        created_at=a.created_at.isoformat()
+        if isinstance(a.created_at, datetime)
+        else str(a.created_at),
     )
 
 
@@ -74,10 +77,12 @@ async def get_watchlist_summary() -> WatchlistSummary:  # noqa: ANN201
             change_pct_str = f"+{change_raw:.2f}" if change_raw >= 0 else f"{change_raw:.2f}"
         else:
             change_pct_str = "+0.00"
-        enriched.append({
-            "name": item.get("code", "Unknown"),  # memo 없으면 code 를 name 으로
-            "change_pct": change_pct_str,
-        })
+        enriched.append(
+            {
+                "name": item.get("code", "Unknown"),  # memo 없으면 code 를 name 으로
+                "change_pct": change_pct_str,
+            }
+        )
 
     return compute_summary(enriched)
 

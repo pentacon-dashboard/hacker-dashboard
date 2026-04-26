@@ -8,6 +8,7 @@ PR 금지(룰: .claude/agents/analyzer-designer.md).
 추가로 각 샘플 수행 결과를 `backend/tests/golden/_last_run.json` 에 기록해
 육안 diff 가 쉽게 되도록 한다. CI 는 이 파일을 ignore.
 """
+
 from __future__ import annotations
 
 import json

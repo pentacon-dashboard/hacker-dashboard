@@ -7,6 +7,7 @@
   - uptime_seconds: int (앱 시작 이후 경과 시간)
   - version: str (pyproject.toml 또는 APP_VERSION 환경변수)
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -58,11 +59,7 @@ async def _check_redis() -> str:
 async def health(request: Request) -> HealthResponse:
     db_status, redis_status = await asyncio.gather(_check_db(), _check_redis())
 
-    overall = (
-        "ok"
-        if db_status == "ok" and redis_status == "ok"
-        else "degraded"
-    )
+    overall = "ok" if db_status == "ok" and redis_status == "ok" else "degraded"
 
     # uptime: lifespan 에서 저장한 started_at 사용
     started_at: float | None = getattr(request.app.state, "started_at", None)

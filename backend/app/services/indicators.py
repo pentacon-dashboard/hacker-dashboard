@@ -4,6 +4,7 @@
 순수 numpy 구현 (외부 ta 라이브러리 없이).
 calc_rsi, calc_macd, calc_bollinger, calc_stochastic
 """
+
 from __future__ import annotations
 
 import numpy as np
@@ -72,11 +73,11 @@ def calc_macd(
 
     macd_line = ema_fast - ema_slow
     # signal 은 macd_line 의 EMA
-    signal_line = _ema(macd_line[slow - 1:], signal)
-    histogram = macd_line[slow - 1:] - signal_line
+    signal_line = _ema(macd_line[slow - 1 :], signal)
+    histogram = macd_line[slow - 1 :] - signal_line
 
     # 길이 맞춤: slow-1 이후 데이터
-    macd_out = macd_line[slow - 1:].tolist()
+    macd_out = macd_line[slow - 1 :].tolist()
     signal_out = signal_line.tolist()
     hist_out = histogram.tolist()
 
@@ -106,7 +107,7 @@ def calc_bollinger(
     lowers: list[float] = []
 
     for i in range(period - 1, len(arr)):
-        window = arr[i - period + 1: i + 1]
+        window = arr[i - period + 1 : i + 1]
         mid = float(np.mean(window))
         std = float(np.std(window, ddof=0))
         uppers.append(round(mid + k * std, 4))
@@ -154,8 +155,8 @@ def calc_stochastic(
 
     raw_k: list[float] = []
     for i in range(period - 1, len(c)):
-        window_h = h[i - period + 1: i + 1]
-        window_lo = lo[i - period + 1: i + 1]
+        window_h = h[i - period + 1 : i + 1]
+        window_lo = lo[i - period + 1 : i + 1]
         hh = float(np.max(window_h))
         ll = float(np.min(window_lo))
         if hh == ll:
@@ -168,7 +169,7 @@ def calc_stochastic(
         arr = np.array(data, dtype=float)
         result = []
         for i in range(w - 1, len(arr)):
-            result.append(round(float(np.mean(arr[i - w + 1: i + 1])), 4))
+            result.append(round(float(np.mean(arr[i - w + 1 : i + 1])), 4))
         return result
 
     smooth_k_vals = _rolling_mean(raw_k, smooth_k)

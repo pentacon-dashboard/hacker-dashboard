@@ -1,4 +1,5 @@
 """User / Settings 스키마 — sprint-08 B-6."""
+
 from __future__ import annotations
 
 from typing import Literal

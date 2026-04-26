@@ -3,6 +3,7 @@
 
 compute_summary, generate_popular_stub, generate_gainers_losers_stub, sparkline_7d
 """
+
 from __future__ import annotations
 
 import math
@@ -11,6 +12,7 @@ from typing import Any
 from app.schemas.watchlist import TopListItem, WatchlistSummary
 
 # ──────────────── 스파크라인 ────────────────
+
 
 def sparkline_7d(market: str, code: str) -> list[float]:
     """7일 종가 스파크라인 — deterministic sin-based stub.
@@ -29,6 +31,7 @@ def sparkline_7d(market: str, code: str) -> list[float]:
 
 
 # ──────────────── 통계 계산 ────────────────
+
 
 def _parse_change_pct(change_pct: str) -> float:
     """'+3.21' / '-1.50' → float."""
@@ -92,7 +95,13 @@ _POPULAR_STUBS: list[dict[str, Any]] = [
     {"rank": 1, "ticker": "AAPL", "name": "Apple Inc.", "change_pct": "+1.23", "views_24h": 94821},
     {"rank": 2, "ticker": "NVDA", "name": "NVIDIA", "change_pct": "+3.87", "views_24h": 87432},
     {"rank": 3, "ticker": "005930", "name": "삼성전자", "change_pct": "-0.54", "views_24h": 65341},
-    {"rank": 4, "ticker": "KRW-BTC", "name": "Bitcoin/KRW", "change_pct": "+2.11", "views_24h": 58920},
+    {
+        "rank": 4,
+        "ticker": "KRW-BTC",
+        "name": "Bitcoin/KRW",
+        "change_pct": "+2.11",
+        "views_24h": 58920,
+    },
     {"rank": 5, "ticker": "TSLA", "name": "Tesla", "change_pct": "-1.72", "views_24h": 51234},
 ]
 

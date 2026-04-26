@@ -6,6 +6,7 @@
 
 응답 title/description 의 <b> 강조 태그는 strip 후 Citation 으로 매핑.
 """
+
 from __future__ import annotations
 
 import logging
@@ -90,7 +91,9 @@ async def _fetch_one(
         r.raise_for_status()
         return list(r.json().get("items", []))
     except httpx.HTTPStatusError as exc:
-        logger.warning("naver HTTP %d for %r: %s", exc.response.status_code, query, exc.response.text[:160])
+        logger.warning(
+            "naver HTTP %d for %r: %s", exc.response.status_code, query, exc.response.text[:160]
+        )
         return []
     except Exception as exc:  # noqa: BLE001
         logger.warning("naver fetch failed for %r: %s", query, exc)

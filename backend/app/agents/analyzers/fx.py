@@ -1,4 +1,5 @@
 """FX Analyzer — USDKRW=X, EURUSD 등 외환 시계열 해석."""
+
 from __future__ import annotations
 
 from app.agents.analyzers.base import BaseAnalyzer

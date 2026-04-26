@@ -3,6 +3,7 @@
 SQLite in-memory DB 를 사용해 실 Postgres 없이 테스트한다.
 db_session fixture 는 conftest.py 에서 제공한다.
 """
+
 from __future__ import annotations
 
 import pytest

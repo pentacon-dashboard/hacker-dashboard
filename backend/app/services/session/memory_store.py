@@ -4,6 +4,7 @@ sprint-04 에서 이관 + Protocol 준수.
 테스트 격리 및 로컬 개발용으로 유지 (삭제 금지).
 TTL/max_turns 정책은 COPILOT_SESSION_MAX_TURNS / COPILOT_SESSION_TTL_DAYS 환경변수 기반.
 """
+
 from __future__ import annotations
 
 import datetime
@@ -137,7 +138,9 @@ class InMemorySessionStore:
         return [m for _, m in sliced]
 
 
-def build_session_meta(session_id: str, turns: list[SessionTurn], updated_at: datetime.datetime) -> SessionMeta:
+def build_session_meta(
+    session_id: str, turns: list[SessionTurn], updated_at: datetime.datetime
+) -> SessionMeta:
     """턴 목록에서 SessionMeta 를 빌드한다.
 
     - title: 첫 번째 user 메시지 80자 truncate

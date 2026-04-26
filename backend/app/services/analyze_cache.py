@@ -11,6 +11,7 @@
 
 TTL: 5분 (300초)
 """
+
 from __future__ import annotations
 
 import hashlib

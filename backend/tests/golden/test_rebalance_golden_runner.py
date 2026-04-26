@@ -7,6 +7,7 @@ samples/rebalance_*.json 을 RebalanceAnalyzer.analyze() 에 직접 투입하고
 
 프롬프트 변경 시 이 테스트가 통과해야 PR 허용 (.claude/agents/analyzer-designer.md).
 """
+
 from __future__ import annotations
 
 import json
@@ -103,9 +104,7 @@ def _verify_expected(
     # forbidden_terms
     for term in expected.get("forbidden_terms", []):
         combined = f"{analysis.headline} {analysis.narrative} {' '.join(analysis.warnings)}"
-        assert term not in combined, (
-            f"{sid}: 금지어 '{term}' 가 응답에 포함됨"
-        )
+        assert term not in combined, f"{sid}: 금지어 '{term}' 가 응답에 포함됨"
 
 
 def _prime_llm_for_sample(fake_client, sample: dict[str, Any]) -> None:

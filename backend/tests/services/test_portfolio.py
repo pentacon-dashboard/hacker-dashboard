@@ -1,4 +1,5 @@
 """포트폴리오 집계 서비스 단위 테스트 — compute_summary."""
+
 from __future__ import annotations
 
 from datetime import UTC, datetime
@@ -11,6 +12,7 @@ import pytest
 from app.services.portfolio import _classify_asset, compute_summary
 
 # ──────────── 테스트용 더미 Holding ────────────
+
 
 def _make_holding(
     id: int,
@@ -52,6 +54,7 @@ def _mock_quote(price: float, currency: str) -> Any:
 
 # ──────────── 테스트 케이스 ────────────
 
+
 @pytest.mark.asyncio
 async def test_compute_summary_empty_holdings() -> None:
     """빈 holdings → 모든 값 0."""
@@ -64,9 +67,7 @@ async def test_compute_summary_empty_holdings() -> None:
 @pytest.mark.asyncio
 async def test_compute_summary_single_krw_holding() -> None:
     """KRW 단일 보유 — 환율 변환 없이 직접 계산."""
-    holdings = [
-        _make_holding(1, "upbit", "KRW-BTC", "0.5", "50000000", "KRW")
-    ]
+    holdings = [_make_holding(1, "upbit", "KRW-BTC", "0.5", "50000000", "KRW")]
 
     with (
         patch("app.services.portfolio.get_adapter") as mock_registry,
@@ -91,9 +92,7 @@ async def test_compute_summary_single_krw_holding() -> None:
 @pytest.mark.asyncio
 async def test_compute_summary_usd_holding_with_fx() -> None:
     """USD 보유 종목 KRW 환산."""
-    holdings = [
-        _make_holding(1, "yahoo", "AAPL", "10", "150", "USD")
-    ]
+    holdings = [_make_holding(1, "yahoo", "AAPL", "10", "150", "USD")]
 
     async def mock_get_rate(base: str, quote: str) -> float:
         if base == "USD" and quote == "KRW":
@@ -122,9 +121,9 @@ async def test_compute_summary_usd_holding_with_fx() -> None:
 async def test_compute_summary_multiple_currencies() -> None:
     """복수 통화 holdings → 올바른 KRW 집계."""
     holdings = [
-        _make_holding(1, "upbit", "KRW-ETH", "2", "3000000", "KRW"),   # KRW
-        _make_holding(2, "yahoo", "TSLA", "5", "200", "USD"),           # USD
-        _make_holding(3, "binance", "BTCUSDT", "0.1", "40000", "USDT"), # USDT
+        _make_holding(1, "upbit", "KRW-ETH", "2", "3000000", "KRW"),  # KRW
+        _make_holding(2, "yahoo", "TSLA", "5", "200", "USD"),  # USD
+        _make_holding(3, "binance", "BTCUSDT", "0.1", "40000", "USDT"),  # USDT
     ]
 
     async def mock_get_rate(base: str, quote: str) -> float:
@@ -138,6 +137,7 @@ async def test_compute_summary_multiple_currencies() -> None:
         patch("app.services.portfolio.get_adapter") as mock_registry,
         patch("app.services.portfolio.get_rate", side_effect=mock_get_rate),
     ):
+
         async def side_effect_fetch_quote(code: str) -> Any:
             prices = {
                 "KRW-ETH": (3500000, "KRW"),
@@ -165,9 +165,7 @@ async def test_compute_summary_multiple_currencies() -> None:
 @pytest.mark.asyncio
 async def test_compute_summary_quote_failure_uses_avg_cost() -> None:
     """현재가 조회 실패 시 avg_cost 로 대체 — 손익 0."""
-    holdings = [
-        _make_holding(1, "upbit", "KRW-BTC", "1", "50000000", "KRW")
-    ]
+    holdings = [_make_holding(1, "upbit", "KRW-BTC", "1", "50000000", "KRW")]
 
     with (
         patch("app.services.portfolio.get_adapter") as mock_registry,
@@ -186,9 +184,7 @@ async def test_compute_summary_quote_failure_uses_avg_cost() -> None:
 @pytest.mark.asyncio
 async def test_compute_summary_with_prev_snapshot() -> None:
     """전일 스냅샷 있을 때 일간 변동 계산."""
-    holdings = [
-        _make_holding(1, "upbit", "KRW-BTC", "1", "50000000", "KRW")
-    ]
+    holdings = [_make_holding(1, "upbit", "KRW-BTC", "1", "50000000", "KRW")]
 
     class FakeSnapshot:
         total_value_krw = Decimal("55000000")
@@ -221,9 +217,7 @@ def test_classify_asset() -> None:
 async def test_decimal_precision() -> None:
     """Decimal 정밀도 — 부동소수점 누적 오차 없음."""
     # 소수점이 많은 암호화폐 수량
-    holdings = [
-        _make_holding(1, "binance", "BTCUSDT", "0.00000001", "30000", "USDT")
-    ]
+    holdings = [_make_holding(1, "binance", "BTCUSDT", "0.00000001", "30000", "USDT")]
 
     async def mock_get_rate(base: str, quote: str) -> float:
         return 1350.0

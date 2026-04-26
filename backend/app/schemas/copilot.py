@@ -3,6 +3,7 @@
 sprint-01: NL Query Planner — CopilotPlan, CopilotStep, GatePolicy 정의.
 sprint-03: CopilotCard discriminated union 확장 (6종 variant).
 """
+
 from __future__ import annotations
 
 from typing import Annotated, Any, Literal
@@ -173,7 +174,9 @@ class CopilotStep(BaseModel):
     agent: CopilotStepAgent
     inputs: dict[str, Any] = Field(default_factory=dict)
     depends_on: list[str] = Field(default_factory=list)
-    gate_policy: GatePolicy = Field(default_factory=lambda: GatePolicy.model_validate({"schema": True}))
+    gate_policy: GatePolicy = Field(
+        default_factory=lambda: GatePolicy.model_validate({"schema": True})
+    )
 
     @field_validator("step_id")
     @classmethod
@@ -268,8 +271,8 @@ class SessionMeta(BaseModel):
     """GET /copilot/sessions 목록 아이템 — 세션별 요약 메타."""
 
     session_id: str
-    title: str           # 첫 질문 80자 truncate
+    title: str  # 첫 질문 80자 truncate
     last_turn_at: str
     turn_count: int
-    preview: str         # 마지막 user 메시지 120자 truncate
+    preview: str  # 마지막 user 메시지 120자 truncate
     tags: list[str] = []
