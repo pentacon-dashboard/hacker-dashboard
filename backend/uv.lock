@@ -575,6 +575,7 @@ dev = [
 [package.dev-dependencies]
 dev = [
     { name = "aiosqlite" },
+    { name = "black" },
     { name = "httpx" },
     { name = "mypy" },
     { name = "pytest" },
@@ -582,6 +583,7 @@ dev = [
     { name = "pytest-cov" },
     { name = "respx" },
     { name = "ruff" },
+    { name = "schemathesis" },
 ]
 
 [package.metadata]
@@ -609,7 +611,7 @@ requires-dist = [
     { name = "redis", specifier = ">=5.0" },
     { name = "respx", marker = "extra == 'dev'", specifier = ">=0.21" },
     { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.5" },
-    { name = "schemathesis", marker = "extra == 'dev'", specifier = ">=3.34" },
+    { name = "schemathesis", marker = "extra == 'dev'", specifier = ">=4.0" },
     { name = "sqlalchemy", extras = ["asyncio"], specifier = ">=2.0" },
     { name = "uvicorn", extras = ["standard"], specifier = ">=0.30" },
     { name = "yfinance", specifier = ">=0.2.50" },
@@ -619,6 +621,7 @@ provides-extras = ["dev"]
 [package.metadata.requires-dev]
 dev = [
     { name = "aiosqlite", specifier = ">=0.22.1" },
+    { name = "black", specifier = ">=24.0" },
     { name = "httpx", specifier = ">=0.28.1" },
     { name = "mypy", specifier = ">=1.20.1" },
     { name = "pytest", specifier = ">=9.0.3" },
@@ -626,6 +629,7 @@ dev = [
     { name = "pytest-cov", specifier = ">=7.1.0" },
     { name = "respx", specifier = ">=0.23.1" },
     { name = "ruff", specifier = ">=0.15.11" },
+    { name = "schemathesis", specifier = ">=4.0" },
 ]
 
 [[package]]

@@ -42,6 +42,37 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         load_fixture_corpus()
         logger.info("stub 모드: news fixture corpus 로드 완료")
 
+    # sprint-integration: 격리 harness 환경에서 sqlite 스키마 자동 생성
+    # BACKEND_DB_AUTOCREATE=1 일 때만 실행 — 운영 환경에서는 alembic 이 담당
+    if os.environ.get("BACKEND_DB_AUTOCREATE", "0") == "1":
+        try:
+            from app.db.models import Base
+            from app.db.session import engine
+
+            # SQLite 격리 환경에서는 JSONB / Vector 컴파일러가 없으므로
+            # create_all 전에 해당 컬럼 타입을 JSON / Text 로 오버라이드한다.
+            # 이 오버라이드는 프로세스 내 in-memory 패치이며 운영 PG 에는 영향 없음.
+            _db_url_str = str(engine.url)
+            if _db_url_str.startswith("sqlite"):
+                from sqlalchemy import JSON, Text
+                from sqlalchemy.dialects.postgresql import JSONB
+
+                # JSONB 컬럼을 JSON 으로 재선언
+                for _table in Base.metadata.tables.values():
+                    for _col in _table.columns:
+                        if isinstance(_col.type, JSONB):
+                            _col.type = JSON()
+                        # pgvector Vector 는 Text 로 폴백
+                        elif type(_col.type).__name__ == "Vector":
+                            _col.type = Text()
+
+            async with engine.begin() as conn:
+                await conn.run_sync(Base.metadata.create_all)
+            logger.info("BACKEND_DB_AUTOCREATE: Base.metadata.create_all 완료 (격리 환경)")
+        except Exception as _create_exc:
+            # SQLite 타입 변환 후에도 실패하는 경우 경고만 남기고 계속 기동
+            logger.warning("BACKEND_DB_AUTOCREATE: create_all 건너뜀 (%s)", _create_exc)
+
     # DB/Redis 연결 실패해도 앱은 뜬다 (/health 가 degraded 로 응답)
     yield
     logger.info("Shutting down Hacker Dashboard API")
