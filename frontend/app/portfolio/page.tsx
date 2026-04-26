@@ -133,7 +133,7 @@ export default function PortfolioPage() {
   const rawSummary = summary as typeof summary & { win_rate_pct?: string };
   const winRatePct = rawSummary.win_rate_pct
     ? Number(rawSummary.win_rate_pct)
-    : summary.holdings.filter((h) => Number(h.pnl_pct) > 0).length /
+    : summary.holdings.filter((h: { pnl_pct: string | number }) => Number(h.pnl_pct) > 0).length /
       Math.max(summary.holdings.length, 1) * 100;
 
   return (

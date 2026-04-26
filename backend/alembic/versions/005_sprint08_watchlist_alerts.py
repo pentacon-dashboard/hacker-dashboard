@@ -23,7 +23,7 @@ def upgrade() -> None:
     op.create_table(
         "watchlist_alerts",
         sa.Column("id", sa.Integer, primary_key=True, autoincrement=True),
-        sa.Column("user_id", sa.String(50), nullable=False, index=True, server_default="demo"),
+        sa.Column("user_id", sa.String(50), nullable=False, server_default="demo"),
         sa.Column("symbol", sa.String(50), nullable=False),
         sa.Column("market", sa.String(20), nullable=False),
         sa.Column("direction", sa.String(10), nullable=False),  # "above" | "below"

@@ -383,10 +383,10 @@ export default function DashboardHome() {
           }
         >
           <NewsPanel
-            symbols={summary?.holdings.map((h) => h.code) ?? []}
+            symbols={summary?.holdings.map((h: { code: string }) => h.code) ?? []}
             query={(() => {
               if (!summary) return undefined;
-              const codes = summary.holdings.map((h) => h.code);
+              const codes = summary.holdings.map((h: { code: string }) => h.code);
               return codes.length > 0 ? codes.slice(0, 5).join(" OR ") : "market";
             })()}
             limit={5}

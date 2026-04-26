@@ -19,6 +19,9 @@ depends_on = None
 
 
 def upgrade() -> None:
+    # JSONB DEFAULT 는 INSERT 시 app default_settings() 가 채우므로 SQL DEFAULT 생략.
+    # asyncpg 의 named-param 파서가 JSON 의 `"k":v` 를 placeholder 로 오해해
+    # NULL 로 치환되는 버그 회피.
     op.create_table(
         "user_settings",
         sa.Column("user_id", sa.String(64), primary_key=True),
@@ -26,36 +29,10 @@ def upgrade() -> None:
         sa.Column("email", sa.String(256), nullable=False),
         sa.Column("language", sa.String(8), nullable=False, server_default="ko"),
         sa.Column("timezone", sa.String(64), nullable=False, server_default="Asia/Seoul"),
-        sa.Column(
-            "theme",
-            sa.dialects.postgresql.JSONB,
-            nullable=False,
-            server_default=sa.text("'{\"mode\":\"system\",\"accent\":\"violet\"}'::jsonb"),
-        ),
-        sa.Column(
-            "notifications",
-            sa.dialects.postgresql.JSONB,
-            nullable=False,
-            server_default=sa.text(
-                "'{\"email_alerts\":true,\"push_alerts\":false,"
-                "\"price_threshold_pct\":5.0,\"daily_digest\":true}'::jsonb"
-            ),
-        ),
-        sa.Column(
-            "data",
-            sa.dialects.postgresql.JSONB,
-            nullable=False,
-            server_default=sa.text(
-                "'{\"refresh_interval_sec\":60,\"auto_refresh\":true,"
-                "\"auto_backup\":false,\"cache_size_mb\":256}'::jsonb"
-            ),
-        ),
-        sa.Column(
-            "connected_accounts",
-            sa.dialects.postgresql.JSONB,
-            nullable=False,
-            server_default=sa.text("'[]'::jsonb"),
-        ),
+        sa.Column("theme", sa.dialects.postgresql.JSONB, nullable=False),
+        sa.Column("notifications", sa.dialects.postgresql.JSONB, nullable=False),
+        sa.Column("data", sa.dialects.postgresql.JSONB, nullable=False),
+        sa.Column("connected_accounts", sa.dialects.postgresql.JSONB, nullable=False),
         sa.Column(
             "updated_at",
             sa.DateTime(timezone=True),
