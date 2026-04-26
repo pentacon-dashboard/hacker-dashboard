@@ -1,0 +1,55 @@
+name: Fly.io BE Deploy
+
+# main 머지 시 자동 배포 + workflow_dispatch 로 수동 트리거.
+# **사전 조건:** GitHub repo Settings → Secrets → Actions 에 FLY_API_TOKEN 추가.
+# 토큰 발급: `fly tokens create deploy -x 999999h` (로컬에서 1회).
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "backend/**"
+      - ".github/workflows/fly-deploy.yml"
+  workflow_dispatch:
+    inputs:
+      reason:
+        description: "수동 배포 사유 (옵션)"
+        required: false
+        default: "manual rollout"
+
+concurrency:
+  group: fly-deploy-prod
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Deploy to Fly.io (hacker-dashboard-api)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: production
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup flyctl
+        uses: superfly/flyctl-actions/setup-flyctl@master
+
+      - name: Deploy
+        working-directory: backend
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+        run: flyctl deploy --remote-only --strategy rolling
+
+      - name: Verify /health
+        run: |
+          for i in $(seq 1 12); do
+            response=$(curl -s --max-time 10 https://hacker-dashboard-api.fly.dev/health || echo "FAIL")
+            echo "attempt $i: $response"
+            if echo "$response" | grep -q '"status"'; then
+              echo "BE responding"
+              exit 0
+            fi
+            sleep 10
+          done
+          echo "BE did not respond after 2 minutes"
+          exit 1
