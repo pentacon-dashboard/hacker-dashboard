@@ -282,7 +282,7 @@ async def run_analyze_stream(
         # "running" 이벤트
         elapsed = int(time.time() * 1000) - start_ms
         yield AnalyzeProgressEvent(
-            step=step_name,  # type: ignore[arg-type]
+            step=step_name,
             status="running",
             message=step_msg,
             elapsed_ms=elapsed,
@@ -309,8 +309,8 @@ async def run_analyze_stream(
 
         elapsed = int(time.time() * 1000) - start_ms
         yield AnalyzeProgressEvent(
-            step=step_name,  # type: ignore[arg-type]
-            status=gate_status,  # type: ignore[arg-type]
+            step=step_name,
+            status=gate_status,
             message=done_msg,
             elapsed_ms=elapsed,
         )

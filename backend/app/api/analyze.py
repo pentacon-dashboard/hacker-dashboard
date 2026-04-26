@@ -152,7 +152,7 @@ async def _run_graph(
     }
 
     t0 = time.monotonic()
-    final_state: AgentState = await _graph.ainvoke(initial_state)
+    final_state: AgentState = await _graph.ainvoke(initial_state)  # type: ignore[assignment]
     latency_ms = int((time.monotonic() - t0) * 1000)
 
     output = final_state.get("analyzer_output")

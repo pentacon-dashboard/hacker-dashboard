@@ -332,9 +332,9 @@ def compute_portfolio_metrics(
         key=lambda s: str(s.get("snapshot_date") or ""),
     )
     for s in sorted_snaps:
-        v = _as_float(s.get("total_value_krw"))
-        if v is not None and v > 0:
-            snap_values.append(v)
+        sv: float | None = _as_float(s.get("total_value_krw"))
+        if sv is not None and sv > 0:
+            snap_values.append(sv)
 
     mdd_pct = compute_mdd(snap_values) if snap_values else None
     volatility_pct = compute_volatility(snap_values) if snap_values else None
@@ -389,8 +389,8 @@ class PortfolioAnalyzer(BaseAnalyzer):
     async def run(self, state: AgentState) -> dict[str, Any]:
         rows = state.get("input_data") or []
         query = state.get("query")
-        snapshots = state.get("snapshots") if isinstance(state, dict) else None  # type: ignore[arg-type]
-        portfolio_context = state.get("portfolio_context") if isinstance(state, dict) else None  # type: ignore[arg-type]
+        snapshots = state.get("snapshots") if isinstance(state, dict) else None
+        portfolio_context = state.get("portfolio_context") if isinstance(state, dict) else None
         metrics = compute_portfolio_metrics(rows, snapshots=snapshots)
 
         raw = await self._call(

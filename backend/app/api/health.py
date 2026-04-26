@@ -48,7 +48,8 @@ async def _check_db() -> str:
 async def _check_redis() -> str:
     try:
         client = aioredis.from_url(settings.redis_url, socket_connect_timeout=2)
-        await asyncio.wait_for(client.ping(), timeout=2.0)
+        ping_coro = client.ping()
+        await asyncio.wait_for(ping_coro, timeout=2.0)  # type: ignore[arg-type]
         await client.aclose()
         return "ok"
     except Exception:

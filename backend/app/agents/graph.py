@@ -15,9 +15,11 @@ sprint-03: 신규 Copilot 서브-에이전트 노드 3종 추가
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from typing import Literal
 
 from langgraph.graph import END, StateGraph
+from langgraph.graph.state import CompiledStateGraph
 
 from app.agents.analyzers import get_analyzer
 from app.agents.analyzers.comparison import run_async as comparison_node
@@ -42,7 +44,7 @@ async def analyzer_node(state: AgentState) -> AgentState:
     return {**state, "analyzer_output": output}
 
 
-def _route_after_gate(gate_name: str) -> object:
+def _route_after_gate(gate_name: str) -> Callable[[AgentState], Literal["next", "end"]]:
     """게이트 이름을 받아 분기 함수를 반환하는 팩토리."""
 
     def _route(state: AgentState) -> Literal["next", "end"]:
@@ -53,9 +55,9 @@ def _route_after_gate(gate_name: str) -> object:
     return _route
 
 
-def build_graph() -> StateGraph:
+def build_graph() -> CompiledStateGraph:  # type: ignore[type-arg]
     """컴파일된 그래프를 반환. API 레이어에서 ainvoke(state) 로 호출."""
-    graph = StateGraph(AgentState)
+    graph: StateGraph[AgentState] = StateGraph(AgentState)
 
     graph.add_node("router", router_node)
     graph.add_node("analyzer", analyzer_node)

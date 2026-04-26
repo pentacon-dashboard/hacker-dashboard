@@ -61,7 +61,8 @@ def _load_analyzer(path: str) -> BaseAnalyzer:
 
     mod_name, cls_name = path.split(":")
     mod = importlib.import_module(mod_name)
-    return getattr(mod, cls_name)()
+    analyzer: BaseAnalyzer = getattr(mod, cls_name)()
+    return analyzer
 
 
 def _merge_sub_outputs(sub_outputs: dict[str, dict[str, Any]]) -> dict[str, Any]:

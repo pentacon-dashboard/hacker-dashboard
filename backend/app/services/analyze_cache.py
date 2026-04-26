@@ -49,7 +49,7 @@ async def _get_redis() -> aioredis.Redis | None:
                 socket_timeout=1,
                 decode_responses=True,
             )
-            await client.ping()
+            await client.ping()  # type: ignore[misc]
             _redis_client = client
             _redis_available = True
             logger.info("analyze_cache: Redis connected")
@@ -112,14 +112,16 @@ async def cache_get(key: str) -> dict[str, Any] | None:
         try:
             raw = await redis.get(f"analyze:{key}")
             if raw is not None:
-                return json.loads(raw)
+                result: dict[str, Any] = json.loads(raw)
+                return result
         except Exception as exc:
             logger.warning("analyze_cache: Redis GET failed — %s", exc)
             # Redis 오류 시 LRU 로 폴백
     # LRU 조회
     raw_lru = _lru_get(key)
     if raw_lru is not None:
-        return json.loads(raw_lru)
+        lru_result: dict[str, Any] = json.loads(raw_lru)
+        return lru_result
     return None
 
 

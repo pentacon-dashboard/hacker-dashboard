@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from datetime import date, datetime
 from decimal import Decimal
+from typing import Any
 
 from pgvector.sqlalchemy import Vector
 from sqlalchemy import (
@@ -82,9 +83,11 @@ class PortfolioSnapshot(Base):
     total_value_krw: Mapped[Decimal] = mapped_column(Numeric(24, 4), nullable=False)
     total_pnl_krw: Mapped[Decimal] = mapped_column(Numeric(24, 4), nullable=False)
     # {"crypto": 0.5, "stock_us": 0.3, "stock_kr": 0.2}
-    asset_class_breakdown: Mapped[dict] = mapped_column(JSONB, nullable=False, default=dict)
+    asset_class_breakdown: Mapped[dict[str, Any]] = mapped_column(
+        JSONB, nullable=False, default=dict
+    )
     # [{"market": "upbit", "code": "KRW-BTC", "value_krw": ..., "pnl_krw": ...}]
-    holdings_detail: Mapped[list] = mapped_column(JSONB, nullable=False, default=list)
+    holdings_detail: Mapped[list[Any]] = mapped_column(JSONB, nullable=False, default=list)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     __table_args__ = (UniqueConstraint("user_id", "snapshot_date", name="uq_snapshot_user_date"),)
@@ -172,12 +175,12 @@ class UserSettings(Base):
     language: Mapped[str] = mapped_column(String(8), nullable=False, default="ko")
     timezone: Mapped[str] = mapped_column(String(64), nullable=False, default="Asia/Seoul")
     # JSONB 컬럼 — dict 타입으로 매핑
-    theme: Mapped[dict] = mapped_column(
+    theme: Mapped[dict[str, Any]] = mapped_column(
         JSONB,
         nullable=False,
         default=lambda: {"mode": "system", "accent": "violet"},
     )
-    notifications: Mapped[dict] = mapped_column(
+    notifications: Mapped[dict[str, Any]] = mapped_column(
         JSONB,
         nullable=False,
         default=lambda: {
@@ -187,7 +190,7 @@ class UserSettings(Base):
             "daily_digest": True,
         },
     )
-    data: Mapped[dict] = mapped_column(
+    data: Mapped[dict[str, Any]] = mapped_column(
         JSONB,
         nullable=False,
         default=lambda: {
@@ -197,7 +200,7 @@ class UserSettings(Base):
             "cache_size_mb": 256,
         },
     )
-    connected_accounts: Mapped[list] = mapped_column(JSONB, nullable=False, default=list)
+    connected_accounts: Mapped[list[Any]] = mapped_column(JSONB, nullable=False, default=list)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         nullable=False,

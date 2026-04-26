@@ -96,9 +96,8 @@ contract:
 	@echo "=== Contract test (schemathesis) ==="
 	@echo "BE 서버가 localhost:8000 에서 실행 중이어야 합니다."
 	cd backend && uv run schemathesis run ../shared/openapi.json \
-		--base-url http://localhost:8000 \
-		--checks all \
-		--hypothesis-deadline=none
+		--url http://localhost:8000 \
+		--checks all
 
 # ── OpenAPI 내보내기 ─────────────────────────────────────────────────────────
 

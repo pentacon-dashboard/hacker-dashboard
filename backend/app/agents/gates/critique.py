@@ -15,7 +15,7 @@ Critique Gate — 별도 LLM 호출로 Analyzer 결론의 근거 진위 검증.
 from __future__ import annotations
 
 import json
-from typing import Any
+from typing import Any, cast
 
 from app.agents.llm import call_llm, extract_json
 from app.agents.state import AgentState
@@ -84,4 +84,4 @@ def _mark(state: AgentState, status: str, *, critique: dict[str, Any] | None = N
         out = state.get("analyzer_output") or {}
         if isinstance(out, dict):
             patch["analyzer_output"] = {**out, "_critique": critique}
-    return patch
+    return cast(AgentState, patch)

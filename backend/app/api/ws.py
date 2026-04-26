@@ -59,7 +59,7 @@ async def ws_ticks(websocket: WebSocket, markets: str = "") -> None:
         )
         symbol_list = symbol_list[:_MAX_SYMBOLS]
 
-    tasks: list[asyncio.Task] = []
+    tasks: list[asyncio.Task[None]] = []
     stop_event = asyncio.Event()
 
     async def _stream_upbit(sym: str) -> None:

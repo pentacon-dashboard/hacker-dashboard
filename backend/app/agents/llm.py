@@ -17,6 +17,7 @@ from pathlib import Path
 from typing import Any
 
 from openai import AsyncOpenAI
+from openai.types.chat import completion_create_params
 
 from app.core.config import settings
 
@@ -170,18 +171,23 @@ async def call_llm(
     client = get_client()
     system_text = load_prompt(system_prompt_name)
 
-    response_format: dict[str, str] | None = {"type": "json_object"} if expect_json else None
+    response_format: completion_create_params.ResponseFormat | None = (
+        {"type": "json_object"} if expect_json else None
+    )
 
-    resp = await client.chat.completions.create(
-        model=model,
-        messages=[
+    create_kwargs: dict[str, Any] = {
+        "model": model,
+        "messages": [
             {"role": "system", "content": system_text},
             {"role": "user", "content": user_content},
         ],
-        response_format=response_format,  # type: ignore[arg-type]
-        temperature=temperature,
-        max_tokens=max_tokens,
-    )
+        "temperature": temperature,
+        "max_tokens": max_tokens,
+    }
+    if response_format is not None:
+        create_kwargs["response_format"] = response_format
+
+    resp = await client.chat.completions.create(**create_kwargs)
 
     # usage 가 있으면 기록 (fake client 에서도 usage 를 심어 테스트 가능)
     _record_usage(resp)

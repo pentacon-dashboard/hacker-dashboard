@@ -128,7 +128,8 @@ class YahooAdapter(MarketAdapter):
 
 def _extract_chart(data: Any) -> dict[str, Any]:
     try:
-        return data["chart"]["result"][0]
+        result: dict[str, Any] = data["chart"]["result"][0]
+        return result
     except (KeyError, IndexError, TypeError) as exc:
         raise ValueError(f"Yahoo: unexpected response shape — {exc}") from exc
 
