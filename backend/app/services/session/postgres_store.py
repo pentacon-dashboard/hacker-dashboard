@@ -86,9 +86,9 @@ class PostgresSessionStore:
                             final_card=json.loads(row["final_card"]) if row["final_card"] else None,
                             citations=json.loads(row["citations"]) if row["citations"] else [],
                             created_at=row["created_at"].isoformat() if row["created_at"] else "",
-                            active_context=json.loads(row["active_context"])
-                            if row["active_context"]
-                            else None,
+                            active_context=(
+                                json.loads(row["active_context"]) if row["active_context"] else None
+                            ),
                         )
                     )
                 return turns

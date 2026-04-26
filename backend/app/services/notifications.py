@@ -120,9 +120,11 @@ async def _build_price_notifications(
                 severity=_SEVERITY_MAP.get(alert.direction, "info"),
                 category="price",
                 unread=_is_unread("price", nid_source),
-                created_at=alert.created_at.isoformat()
-                if isinstance(alert.created_at, datetime)
-                else str(alert.created_at),
+                created_at=(
+                    alert.created_at.isoformat()
+                    if isinstance(alert.created_at, datetime)
+                    else str(alert.created_at)
+                ),
             )
         )
     return notifications
@@ -174,9 +176,11 @@ async def _build_portfolio_notifications(
             severity=severity,
             category="portfolio",
             unread=_is_unread("portfolio", nid_source),
-            created_at=latest.created_at.isoformat()
-            if isinstance(latest.created_at, datetime)
-            else str(latest.created_at),
+            created_at=(
+                latest.created_at.isoformat()
+                if isinstance(latest.created_at, datetime)
+                else str(latest.created_at)
+            ),
         )
     )
     return notifications
@@ -209,9 +213,11 @@ async def _build_holding_notifications(
                 severity="info",
                 category="portfolio",
                 unread=_is_unread("holding", nid_source),
-                created_at=h.created_at.isoformat()
-                if isinstance(h.created_at, datetime)
-                else str(h.created_at),
+                created_at=(
+                    h.created_at.isoformat()
+                    if isinstance(h.created_at, datetime)
+                    else str(h.created_at)
+                ),
             )
         )
     return notifications

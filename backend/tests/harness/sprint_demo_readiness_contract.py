@@ -8,6 +8,7 @@ sprint-demo-readiness 회귀 가드 — integration-qa 위임 결과.
 - 리허설 문서가 언급한 엔드포인트가 openapi.json 에 정의
 - Q6 에서 naver_kr stub 사실 명시
 """
+
 import json
 import os
 import re
@@ -29,8 +30,14 @@ def test_demo_rehearsal_doc_exists_and_recent() -> None:
     text = DEMO_DOC.read_text(encoding="utf-8")
     # 8개 페이지 섹션 표지가 모두 등장 (마무리는 페이지 아닌 종료 섹션)
     for label in (
-        "대시보드", "포트폴리오", "워치리스트", "심볼", "시장 분석",
-        "코파일럿", "업로드", "마무리",
+        "대시보드",
+        "포트폴리오",
+        "워치리스트",
+        "심볼",
+        "시장 분석",
+        "코파일럿",
+        "업로드",
+        "마무리",
     ):
         assert label in text, f"리허설 §2 시연 라벨 누락: {label}"
     # Q&A 16건 (Q1..Q16)
@@ -81,7 +88,8 @@ def live_backend_with_seed():
         ["uv", "run", "uvicorn", "app.main:app", "--host", "127.0.0.1", "--port", "8766"],
         cwd=BACKEND_DIR,
         env=subprocess_env,
-        stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
     )
     base = "http://127.0.0.1:8766"
     try:
@@ -104,12 +112,21 @@ def live_backend_with_seed():
             raise RuntimeError(f"BE 기동 타임아웃. stderr tail:\n{err_tail}")
         # 시드 3종 holdings POST (리허설 §1.2 와 동일)
         for body in [
-            {"market": "upbit", "code": "KRW-BTC", "currency": "KRW",
-             "quantity": 0.05, "avg_cost": 95000000},
-            {"market": "yahoo", "code": "AAPL", "currency": "USD",
-             "quantity": 5, "avg_cost": 200},
-            {"market": "naver_kr", "code": "005930", "currency": "KRW",
-             "quantity": 10, "avg_cost": 75000},
+            {
+                "market": "upbit",
+                "code": "KRW-BTC",
+                "currency": "KRW",
+                "quantity": 0.05,
+                "avg_cost": 95000000,
+            },
+            {"market": "yahoo", "code": "AAPL", "currency": "USD", "quantity": 5, "avg_cost": 200},
+            {
+                "market": "naver_kr",
+                "code": "005930",
+                "currency": "KRW",
+                "quantity": 10,
+                "avg_cost": 75000,
+            },
         ]:
             req = urllib.request.Request(
                 f"{base}/portfolio/holdings",

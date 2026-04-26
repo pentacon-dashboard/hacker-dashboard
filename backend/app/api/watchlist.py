@@ -52,9 +52,9 @@ def _alert_to_response(a: WatchlistAlert) -> WatchlistAlertResponse:
         direction=a.direction,
         threshold=str(a.threshold),
         enabled=a.enabled,
-        created_at=a.created_at.isoformat()
-        if isinstance(a.created_at, datetime)
-        else str(a.created_at),
+        created_at=(
+            a.created_at.isoformat() if isinstance(a.created_at, datetime) else str(a.created_at)
+        ),
     )
 
 

@@ -146,9 +146,9 @@ async def _run_graph(
             "critique_gate": "pending",
         },
         "error": None,
-        "portfolio_context": portfolio_context.model_dump(mode="json")
-        if portfolio_context is not None
-        else None,
+        "portfolio_context": (
+            portfolio_context.model_dump(mode="json") if portfolio_context is not None else None
+        ),
     }
 
     t0 = time.monotonic()

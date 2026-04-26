@@ -64,12 +64,12 @@ def _holding_to_response(h: Holding) -> HoldingResponse:
         quantity=h.quantity,
         avg_cost=h.avg_cost,
         currency=h.currency,
-        created_at=h.created_at.isoformat()
-        if isinstance(h.created_at, datetime)
-        else str(h.created_at),
-        updated_at=h.updated_at.isoformat()
-        if isinstance(h.updated_at, datetime)
-        else str(h.updated_at),
+        created_at=(
+            h.created_at.isoformat() if isinstance(h.created_at, datetime) else str(h.created_at)
+        ),
+        updated_at=(
+            h.updated_at.isoformat() if isinstance(h.updated_at, datetime) else str(h.updated_at)
+        ),
     )
 
 
@@ -274,9 +274,11 @@ async def list_snapshots(
             total_pnl_krw=str(s.total_pnl_krw),
             asset_class_breakdown=s.asset_class_breakdown,
             holdings_detail=s.holdings_detail,
-            created_at=s.created_at.isoformat()
-            if isinstance(s.created_at, datetime)
-            else str(s.created_at),
+            created_at=(
+                s.created_at.isoformat()
+                if isinstance(s.created_at, datetime)
+                else str(s.created_at)
+            ),
         )
         for s in snapshots
     ]

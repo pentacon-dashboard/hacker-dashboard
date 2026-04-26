@@ -63,8 +63,8 @@ jobs:
       - name: Lint — ruff
         run: uv run ruff check app tests
 
-      - name: Format check — black
-        run: uv run black --check app tests
+      - name: Format check — ruff format
+        run: uv run ruff format --check app tests
 
       - name: Type check — mypy
         run: uv run mypy app
@@ -193,16 +193,15 @@ jobs:
           ANTHROPIC_API_KEY: placeholder-ci
         run: uv run python -m app.export_openapi > ../shared/openapi.json
 
-      - name: Run schemathesis
+      - name: Run schemathesis (v4 CLI)
         working-directory: backend
         run: |
           uv run schemathesis run ../shared/openapi.json \
-            --base-url http://localhost:8000 \
+            --url http://localhost:8000 \
             --checks all \
-            --hypothesis-deadline=none \
             --max-examples=50 \
-            --show-errors-tracebacks \
-            --junit-xml=../contract-results.xml
+            --report junit \
+            --report-junit-path ../contract-results.xml
 
       - name: Upload contract results
         uses: actions/upload-artifact@v4

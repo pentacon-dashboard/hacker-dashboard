@@ -27,7 +27,11 @@ def _run(
     cmd: list[str], cwd: Path = BACKEND_DIR, env: dict[str, str] | None = None
 ) -> subprocess.CompletedProcess[str]:
     return subprocess.run(
-        cmd, cwd=cwd, capture_output=True, text=True, check=False,
+        cmd,
+        cwd=cwd,
+        capture_output=True,
+        text=True,
+        check=False,
         env={**os.environ, **(env or {})},
     )
 
@@ -90,7 +94,8 @@ def live_backend():
         ["uv", "run", "uvicorn", "app.main:app", "--host", "127.0.0.1", "--port", str(port)],
         cwd=BACKEND_DIR,
         env={**os.environ, **env},
-        stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
     )
     base_url = f"http://127.0.0.1:{port}"
     try:
@@ -134,28 +139,32 @@ def test_schemathesis_coverage_meets_threshold(live_backend: str) -> None:
     # 문자(✅ 등)를 인코딩 실패 없이 파이프로 전달하기 위한 필수 설정.
     proc = _run(
         [
-            "uv", "run", "schemathesis", "run",
+            "uv",
+            "run",
+            "schemathesis",
+            "run",
             str(SHARED_OPENAPI),
-            "--url", live_backend,  # v4: --url (v3 의 --base-url 대체)
+            "--url",
+            live_backend,  # v4: --url (v3 의 --base-url 대체)
             # not_a_server_error: 2026-04-24 baseline 40/48 와 동등한 측정 수준.
             # --checks all 은 v4 에서 positive_data_acceptance/negative_data_rejection 이 추가되어
             # FastAPI 의 Pydantic coercion(int→bool), 확장 query param 허용 등 설계 선택을
             # "fail" 로 분류함 → baseline 범위 외 false positive. 운영 서버(PG DB) 에서는 40/52 달성 확인.
-            "--checks", "not_a_server_error",
+            "--checks",
+            "not_a_server_error",
             "--max-examples=20",
             "--request-timeout=15",  # 엔드포인트 응답 대기 최대 15초 (LLM stub 응답 느린 엔드포인트 타임아웃)
             # examples 단계만 실행: 격리 SQLite 환경에서 외부 API 호출 없이 30초 내 완료.
             # coverage/fuzzing/stateful 은 PG 서버 + Redis 환경에서 별도 수행.
             "--phases=examples",
             "--suppress-health-check=filter_too_much",  # 복잡한 path param 패턴 health check 억제
-            "--report", "junit",
+            "--report",
+            "junit",
             f"--report-junit-path={junit}",
         ],
         env={"PYTHONIOENCODING": "utf-8"},
     )
-    assert junit.exists(), (
-        f"junit 미생성:\n{proc.stdout[-2000:]}\n{proc.stderr[-1000:]}"
-    )
+    assert junit.exists(), f"junit 미생성:\n{proc.stdout[-2000:]}\n{proc.stderr[-1000:]}"
     text = junit.read_text(encoding="utf-8")
     # junit-xml 은 testsuite 속성을 알파벳순으로 출력: errors → failures → name → skipped → tests
     # 따라서 failures 가 tests 보다 앞에 위치한다. 각각 독립적으로 추출.
