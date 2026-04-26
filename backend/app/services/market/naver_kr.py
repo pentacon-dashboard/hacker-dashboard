@@ -4,11 +4,12 @@
 공모전 MVP 허용 범위 내에서 사용.
 네트워크/파싱 에러 시 빈 리스트 반환 (silent fail).
 
-fetch_quote / fetch_ohlc 는 심사 데모용 고정 시드 모드로 동작.
-실 네이버 크롤링은 이번 세션 밖 작업으로 TODO 처리.
+fetch_quote / fetch_ohlc: yfinance (.KS/.KQ) 로 실시간 데이터 조회.
+실패 시 _STUB_QUOTES 폴백.
 """
 from __future__ import annotations
 
+import asyncio
 import logging
 import random
 from datetime import UTC, datetime, timedelta
@@ -16,13 +17,14 @@ from typing import Any
 
 from app.schemas.market import OhlcBar, Quote, SymbolInfo
 from app.services.market.base import MarketAdapter
+from app.services.market.yf_cache import yf_cache_get, yf_cache_set
 
 logger = logging.getLogger(__name__)
 
 _SEARCH_URL = "https://m.stock.naver.com/api/search/all"
 
 # ─── 심사 데모용 고정 stub quote 데이터 ───────────────────────────────────────
-# 실 크롤링 전까지 이 값으로 대시보드 / 포트폴리오 / 섹터 히트맵에 노출됨.
+# yfinance 실패 시 이 값으로 폴백.
 # key: 6자리 종목코드 (문자열)
 _STUB_QUOTES: dict[str, dict[str, Any]] = {
     "005930": {"price": 72000.0, "change": 400.0, "change_pct": 0.56, "volume": 12345678, "name": "삼성전자"},
@@ -130,7 +132,6 @@ def _parse_section(items: list[dict[str, Any]]) -> list[SymbolInfo]:
                 x in market_raw for x in ("NYSE", "NASDAQ", "NAS", "AMEX", "NYSEMKT")
             ):
                 # 국내 종목 → Yahoo Finance(.KS/.KQ) 로 라우팅
-                # → 워치리스트 추가 후 Yahoo 어댑터를 통해 시세/OHLC 정상 조회 가능
                 yahoo_symbol = _kr_yahoo_symbol(item_code, item)
                 kr_exchange = _detect_kr_exchange(item)
                 results.append(
@@ -186,15 +187,41 @@ class NaverKrAdapter(MarketAdapter):
     market = "naver_kr"
 
     async def fetch_quote(self, symbol: str) -> Quote:
-        """심사 데모용 고정 stub 응답 반환.
+        """yfinance 로 실시간 시세 조회 (KS suffix 자동 부착).
 
-        _STUB_QUOTES 에 있는 종목은 실제 시세 근사값을 반환.
-        없는 종목은 _DEFAULT_STUB_PRICE + 0 변동으로 fallback.
-        TODO: 실 네이버 크롤링 연동 시 이 메서드를 교체.
+        yfinance 호출 실패 시 _STUB_QUOTES 폴백.
+        캐시 TTL: 10초.
         """
-        stub = _STUB_QUOTES.get(symbol)
+        cache_key = f"yf:quote:naver_kr:{symbol}"
+        cached = await yf_cache_get(cache_key)
+        if cached is not None:
+            return Quote(**cached)
+
         ts = datetime.now(UTC).isoformat()
 
+        try:
+            yf_symbol = f"{symbol}.KS"
+            live = await asyncio.get_event_loop().run_in_executor(
+                None, _fetch_yf_quote_sync, yf_symbol
+            )
+            if live is not None:
+                q = Quote(
+                    symbol=symbol,
+                    market=self.market,
+                    price=live["price"],
+                    change=live["change"],
+                    change_pct=live["change_pct"],
+                    volume=live["volume"],
+                    currency="KRW",
+                    timestamp=ts,
+                )
+                await yf_cache_set(cache_key, q.model_dump(), ttl=10)
+                return q
+        except Exception as exc:
+            logger.warning("yfinance quote 실패 (%s): %s — stub 폴백", symbol, exc)
+
+        # stub 폴백
+        stub = _STUB_QUOTES.get(symbol)
         if stub is not None:
             return Quote(
                 symbol=symbol,
@@ -207,7 +234,6 @@ class NaverKrAdapter(MarketAdapter):
                 timestamp=ts,
             )
 
-        # 알 수 없는 심볼 — fallback
         return Quote(
             symbol=symbol,
             market=self.market,
@@ -226,56 +252,28 @@ class NaverKrAdapter(MarketAdapter):
         interval: str = "1d",
         limit: int = 100,
     ) -> list[OhlcBar]:
-        """심사 데모용 stub OHLC 생성.
+        """yfinance 로 실시간 OHLC 조회 (KS suffix 자동 부착).
 
-        symbol 해시를 시드로 random.Random 을 초기화해
-        재현 가능한 ±2% 랜덤워크 100개 바를 반환.
-        TODO: 실 네이버 크롤링 연동 시 이 메서드를 교체.
+        yfinance 호출 실패 시 deterministic stub 폴백.
         """
-        stub = _STUB_QUOTES.get(symbol)
-        base_price = stub["price"] if stub is not None else _DEFAULT_STUB_PRICE
-        base_volume = float(stub["volume"]) if stub is not None else _DEFAULT_STUB_VOLUME
+        cache_key = f"yf:ohlc:naver_kr:{symbol}:{interval}:{limit}"
+        cached = await yf_cache_get(cache_key)
+        if cached is not None:
+            return [OhlcBar(**bar) for bar in cached]
 
-        rng = random.Random(hash(symbol))  # noqa: S311 — 보안 목적 아님
-
-        # 100거래일 역산. timedelta(days=i) 로 주말 skip 없이 근사.
-        # 실 거래일 정확도보다 데모 연속성 우선.
-        now = datetime.now(UTC)
-        trading_days: list[datetime] = []
-        offset = 0
-        while len(trading_days) < limit:
-            offset += 1
-            candidate = now - timedelta(days=offset)
-            # 토(5)/일(6) skip
-            if candidate.weekday() < 5:
-                trading_days.append(candidate)
-        # 오래된 날짜 → 최신 날짜 순 정렬
-        trading_days.reverse()
-
-        bars: list[OhlcBar] = []
-        prev_close = base_price
-        for day in trading_days:
-            # ±2% 랜덤워크
-            pct_change = rng.uniform(-0.02, 0.02)
-            close = round(prev_close * (1.0 + pct_change), 0)
-            open_ = round(prev_close * (1.0 + rng.uniform(-0.005, 0.005)), 0)
-            high = round(max(open_, close) * 1.01, 0)
-            low = round(min(open_, close) * 0.99, 0)
-            volume = round(base_volume * rng.uniform(0.7, 1.3), 0)
-
-            bars.append(
-                OhlcBar(
-                    ts=day.replace(hour=0, minute=0, second=0, microsecond=0).isoformat(),
-                    open=open_,
-                    high=high,
-                    low=low,
-                    close=close,
-                    volume=volume,
-                )
+        try:
+            yf_symbol = f"{symbol}.KS"
+            bars = await asyncio.get_event_loop().run_in_executor(
+                None, _fetch_yf_ohlc_sync, yf_symbol, interval, limit
             )
-            prev_close = close
+            if bars:
+                await yf_cache_set(cache_key, [b.model_dump() for b in bars], ttl=60)
+                return bars
+        except Exception as exc:
+            logger.warning("yfinance OHLC 실패 (%s): %s — stub 폴백", symbol, exc)
 
-        return bars
+        # stub 폴백 (deterministic random walk)
+        return _build_stub_ohlc(symbol, limit)
 
     async def search_symbols(self, query: str) -> list[SymbolInfo]:
         """네이버 통합 검색 API 호출. 실패 시 빈 리스트 반환."""
@@ -315,6 +313,47 @@ class NaverKrAdapter(MarketAdapter):
         return deduped
 
 
+def _build_stub_ohlc(symbol: str, limit: int) -> list[OhlcBar]:
+    """deterministic stub OHLC (폴백용). 원래 로직 보존."""
+    stub = _STUB_QUOTES.get(symbol)
+    base_price = stub["price"] if stub is not None else _DEFAULT_STUB_PRICE
+    base_volume = float(stub["volume"]) if stub is not None else _DEFAULT_STUB_VOLUME
+
+    rng = random.Random(hash(symbol))  # noqa: S311 — 보안 목적 아님
+
+    now = datetime.now(UTC)
+    trading_days: list[datetime] = []
+    offset = 0
+    while len(trading_days) < limit:
+        offset += 1
+        candidate = now - timedelta(days=offset)
+        if candidate.weekday() < 5:
+            trading_days.append(candidate)
+    trading_days.reverse()
+
+    bars: list[OhlcBar] = []
+    prev_close = base_price
+    for day in trading_days:
+        pct_change = rng.uniform(-0.02, 0.02)
+        close = round(prev_close * (1.0 + pct_change), 0)
+        open_ = round(prev_close * (1.0 + rng.uniform(-0.005, 0.005)), 0)
+        high = round(max(open_, close) * 1.01, 0)
+        low = round(min(open_, close) * 0.99, 0)
+        volume = round(base_volume * rng.uniform(0.7, 1.3), 0)
+        bars.append(
+            OhlcBar(
+                ts=day.replace(hour=0, minute=0, second=0, microsecond=0).isoformat(),
+                open=open_,
+                high=high,
+                low=low,
+                close=close,
+                volume=volume,
+            )
+        )
+        prev_close = close
+    return bars
+
+
 def _find_name(symbol: str) -> str:
     stub = _STUB_QUOTES.get(symbol)
     if stub is not None:
@@ -323,3 +362,63 @@ def _find_name(symbol: str) -> str:
         if item["symbol"] == symbol:
             return item["name"]
     return symbol
+
+
+# ─── yfinance 동기 헬퍼 (executor 에서 호출) ─────────────────────────────────
+
+def _fetch_yf_quote_sync(yf_symbol: str) -> dict[str, Any] | None:
+    """yfinance Ticker.info 에서 quote 데이터 추출. 실패 시 None 반환."""
+    import yfinance as yf
+
+    ticker = yf.Ticker(yf_symbol)
+    info = ticker.info
+    price = info.get("regularMarketPrice") or info.get("currentPrice")
+    if not price:
+        return None
+
+    prev_close = info.get("regularMarketPreviousClose") or info.get("previousClose") or price
+    change = float(price) - float(prev_close)
+    change_pct = (change / float(prev_close) * 100.0) if prev_close else 0.0
+    volume = info.get("regularMarketVolume") or info.get("volume")
+
+    return {
+        "price": float(price),
+        "change": round(change, 2),
+        "change_pct": round(change_pct, 4),
+        "volume": float(volume) if volume else 0.0,
+    }
+
+
+def _fetch_yf_ohlc_sync(yf_symbol: str, interval: str, limit: int) -> list[OhlcBar]:
+    """yfinance history() 로 OHLC 바 리스트 반환. 실패 시 빈 리스트."""
+    import yfinance as yf
+
+    # interval 매핑: '1d' → period/interval 결정
+    yf_interval = "1d" if interval == "1d" else "1m"
+    period = "6mo" if yf_interval == "1d" else "1d"
+
+    ticker = yf.Ticker(yf_symbol)
+    df = ticker.history(period=period, interval=yf_interval)
+    if df is None or df.empty:
+        return []
+
+    bars: list[OhlcBar] = []
+    rows = df.tail(limit)
+    for idx, row in rows.iterrows():
+        try:
+            ts_val: Any = idx
+            # pandas Timestamp → ISO string
+            ts_str = ts_val.isoformat() if hasattr(ts_val, "isoformat") else str(ts_val)
+            bars.append(
+                OhlcBar(
+                    ts=ts_str,
+                    open=float(row["Open"]),
+                    high=float(row["High"]),
+                    low=float(row["Low"]),
+                    close=float(row["Close"]),
+                    volume=float(row["Volume"]) if "Volume" in row else None,
+                )
+            )
+        except Exception:
+            continue
+    return bars

@@ -5,11 +5,26 @@ GET /market/indices
 GET /market/sectors
 GET /market/commodities
 GET /market/world-heatmap
+
+yfinance 실시간 경로를 None 반환으로 mock → stub 폴백 경로만 검증.
 """
 from __future__ import annotations
 
 import pytest
 from httpx import AsyncClient
+
+
+@pytest.fixture(autouse=True)
+def mock_yf_market(monkeypatch: pytest.MonkeyPatch) -> None:
+    """yf_market 서비스 함수를 None 반환으로 stub — stub 폴백 경로 강제."""
+    import app.services.market.yf_market as yf_mod
+
+    async def _none() -> None:
+        return None
+
+    monkeypatch.setattr(yf_mod, "get_indices", _none)
+    monkeypatch.setattr(yf_mod, "get_sectors", _none)
+    monkeypatch.setattr(yf_mod, "get_commodities", _none)
 
 
 @pytest.mark.asyncio

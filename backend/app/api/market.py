@@ -36,6 +36,7 @@ from app.services import market_fixtures as fixtures
 from app.services.market import get_adapter
 from app.services.market.aliases import lookup as alias_lookup
 from app.services.market.cache import cache_get, cache_set, ohlc_key, quote_key
+from app.services.market.yf_market import get_commodities, get_indices, get_sectors
 from app.services.watchlist import sparkline_7d
 
 router = APIRouter(prefix="/market", tags=["market"])
@@ -470,19 +471,39 @@ async def get_symbol_indicators(
 
 @router.get("/indices", response_model=list[IndexSnapshot])
 async def get_market_indices() -> list[IndexSnapshot]:
-    """KOSPI/KOSDAQ/S&P/NASDAQ/DOW/VIX/USD-KRW 7종 스냅샷 (stub)."""
+    """KOSPI/KOSDAQ/S&P/NASDAQ/DOW/VIX/USD-KRW 7종 스냅샷.
+
+    yfinance 실시간 조회 (캐시 TTL 60s). 실패 시 stub 폴백.
+    sparkline_7d 는 항상 7포인트 보장.
+    """
+    live = await get_indices()
+    if live is not None:
+        return [IndexSnapshot(**row) for row in live]
+    # yfinance 전체 실패 — stub 폴백
     return [IndexSnapshot(**row) for row in fixtures.INDEX_SNAPSHOTS]
 
 
 @router.get("/sectors", response_model=list[SectorKpi])
 async def get_market_sectors() -> list[SectorKpi]:
-    """11 GICS 섹터 KPI (stub)."""
+    """11 GICS 섹터 KPI.
+
+    SPDR ETF yfinance 실시간 조회 (캐시 TTL 60s). 실패 시 stub 폴백.
+    """
+    live = await get_sectors()
+    if live is not None:
+        return [SectorKpi(**row) for row in live]
     return [SectorKpi(**row) for row in fixtures.SECTOR_KPIS]
 
 
 @router.get("/commodities", response_model=list[CommodityItem])
 async def get_market_commodities() -> list[CommodityItem]:
-    """원유/금/은/구리/천연가스 5종 (stub)."""
+    """원자재 5종 (금/은/WTI/브렌트유/천연가스).
+
+    yfinance 실시간 조회 (캐시 TTL 60s). 실패 시 stub 폴백.
+    """
+    live = await get_commodities()
+    if live is not None:
+        return [CommodityItem(**row) for row in live]
     return [CommodityItem(**row) for row in fixtures.COMMODITIES]
 
 
