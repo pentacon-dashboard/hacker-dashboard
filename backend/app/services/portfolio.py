@@ -7,18 +7,20 @@ compute_summary(holdings) → PortfolioSummary:
   - 자산군 분포 계산
   - 전일 스냅샷 대비 일간 변동
 """
+
 from __future__ import annotations
 
 import logging
-from decimal import Decimal, ROUND_HALF_UP
+from decimal import ROUND_HALF_UP, Decimal
 from typing import Any
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.schemas.portfolio import HoldingDetail, PortfolioSummary
+from app.schemas.portfolio import DimensionItem, HoldingDetail, PortfolioSummary
 from app.services.fx import get_rate
 from app.services.market import get_adapter
+from app.services.portfolio_service import build_market_leaders, calc_win_rate
 
 logger = logging.getLogger(__name__)
 
@@ -26,7 +28,7 @@ logger = logging.getLogger(__name__)
 _MARKET_TO_ASSET_CLASS: dict[str, str] = {
     "upbit": "crypto",
     "binance": "crypto",
-    "yahoo": "stock_us",   # yahoo는 US 주식/ETF 중심
+    "yahoo": "stock_us",  # yahoo는 US 주식/ETF 중심
     "naver_kr": "stock_kr",
     "krx": "stock_kr",
     "nasdaq": "stock_us",
@@ -57,20 +59,28 @@ class HoldingInput:
         self.id: int = int(data.id) if hasattr(data, "id") else int(data["id"])
         self.market: str = data.market if hasattr(data, "market") else data["market"]
         self.code: str = data.code if hasattr(data, "code") else data["code"]
-        self.quantity: Decimal = _d(data.quantity if hasattr(data, "quantity") else data["quantity"])
-        self.avg_cost: Decimal = _d(data.avg_cost if hasattr(data, "avg_cost") else data["avg_cost"])
+        self.quantity: Decimal = _d(
+            data.quantity if hasattr(data, "quantity") else data["quantity"]
+        )
+        self.avg_cost: Decimal = _d(
+            data.avg_cost if hasattr(data, "avg_cost") else data["avg_cost"]
+        )
         self.currency: str = data.currency if hasattr(data, "currency") else data["currency"]
 
 
 async def compute_summary(
     holdings: list[Any],
     prev_snapshot: Any | None = None,
+    period_snapshot: Any | None = None,
+    period_days: int = 30,
 ) -> PortfolioSummary:
     """holdings 목록으로 포트폴리오 집계.
 
     Args:
         holdings: DB Holding 객체 또는 dict 목록
         prev_snapshot: 전일 PortfolioSnapshot (없으면 일간 변동 = 0)
+        period_snapshot: period_days 전 스냅샷 (없으면 period_change_pct = 0)
+        period_days: period_change_pct 계산에 쓰인 기간 (기본 30일)
     """
     items = [HoldingInput(h) for h in holdings]
 
@@ -87,7 +97,9 @@ async def compute_summary(
             current_price = _d(quote.price)
             price_currency = quote.currency.upper()
         except Exception as exc:
-            logger.warning("현재가 조회 실패 (%s/%s): %s — avg_cost 로 대체", item.market, item.code, exc)
+            logger.warning(
+                "현재가 조회 실패 (%s/%s): %s — avg_cost 로 대체", item.market, item.code, exc
+            )
             current_price = item.avg_cost
             price_currency = item.currency
 
@@ -146,7 +158,67 @@ async def compute_summary(
             else prev_snapshot["total_value_krw"]
         )
         daily_change_krw = total_value - prev_value
-        daily_change_pct = (daily_change_krw / prev_value * 100) if prev_value != 0 else Decimal("0")
+        daily_change_pct = (
+            (daily_change_krw / prev_value * 100) if prev_value != 0 else Decimal("0")
+        )
+
+    # 기간 변동 (N일 전 스냅샷 대비)
+    period_change_pct = Decimal("0")
+    if period_snapshot is not None:
+        period_value = _d(
+            period_snapshot.total_value_krw
+            if hasattr(period_snapshot, "total_value_krw")
+            else period_snapshot["total_value_krw"]
+        )
+        if period_value != 0:
+            period_change_pct = (total_value - period_value) / period_value * 100
+
+    # 최저 단일 종목 수익률
+    worst_asset_pct = Decimal("0")
+    if holding_details:
+        try:
+            worst_asset_pct = min(_d(hd.pnl_pct) for hd in holding_details)
+        except Exception:
+            worst_asset_pct = Decimal("0")
+
+    # HHI 기반 집중도 리스크 점수 (0~100)
+    # HHI = Σ(share_i)^2 ∈ [1/n, 1]. 단일자산 100%, 완전 분산 ≈ 1/n*100%.
+    risk_score = Decimal("0")
+    if asset_class_values and total_value != 0:
+        hhi = sum(
+            ((v / total_value) ** 2 for v in asset_class_values.values()),
+            start=Decimal("0"),
+        )
+        risk_score = hhi * 100
+
+    # 차원(자산군)별 바 차트용 집계 — asset_class 별 가중 pnl
+    class_totals: dict[str, Decimal] = {}
+    class_pnls: dict[str, Decimal] = {}
+    for detail in holding_details:
+        ac = _classify_asset(detail.market)
+        v = _d(detail.value_krw)
+        p = _d(detail.pnl_krw)
+        class_totals[ac] = class_totals.get(ac, Decimal("0")) + v
+        class_pnls[ac] = class_pnls.get(ac, Decimal("0")) + p
+
+    dimension_breakdown: list[DimensionItem] = []
+    for ac in sorted(class_totals.keys(), key=lambda k: class_totals[k], reverse=True):
+        v = class_totals[ac]
+        p = class_pnls.get(ac, Decimal("0"))
+        weight = (v / total_value * 100) if total_value != 0 else Decimal("0")
+        cost = v - p
+        class_pnl_pct = (p / cost * 100) if cost != 0 else Decimal("0")
+        dimension_breakdown.append(
+            DimensionItem(
+                label=ac,
+                weight_pct=_fmt(weight, 2),
+                pnl_pct=_fmt(class_pnl_pct, 2),
+            )
+        )
+
+    # sprint-08 B-1: win_rate_pct + market_leaders
+    win_rate_pct = calc_win_rate(holding_details)
+    market_leaders = build_market_leaders(holding_details)
 
     return PortfolioSummary(
         user_id="demo",
@@ -158,6 +230,14 @@ async def compute_summary(
         daily_change_pct=_fmt(daily_change_pct, 2),
         asset_class_breakdown=breakdown,
         holdings=holding_details,
+        holdings_count=len(holding_details),
+        worst_asset_pct=_fmt(worst_asset_pct, 2),
+        risk_score_pct=_fmt(risk_score, 2),
+        period_change_pct=_fmt(period_change_pct, 2),
+        period_days=period_days,
+        dimension_breakdown=dimension_breakdown,
+        win_rate_pct=win_rate_pct,
+        market_leaders=market_leaders,
     )
 
 
@@ -166,7 +246,7 @@ async def build_portfolio_context(
     user_id: str = "demo",
     target_market: str | None = None,
     target_code: str | None = None,
-) -> "Any | None":
+) -> Any | None:
     """DB에서 holdings + 최근 스냅샷을 읽어 PortfolioContext 구성.
 
     target_market/code가 주어지고 holdings에 일치하는 항목이 있으면 matched_holding 세팅.
@@ -178,9 +258,7 @@ async def build_portfolio_context(
     from app.schemas.analyze import PortfolioContext, PortfolioHolding
 
     try:
-        result = await db.execute(
-            select(Holding).where(Holding.user_id == user_id)
-        )
+        result = await db.execute(select(Holding).where(Holding.user_id == user_id))
         holdings_rows = list(result.scalars().all())
     except Exception as exc:
         logger.warning("build_portfolio_context: holdings 조회 실패 — %s", exc)
@@ -247,9 +325,7 @@ async def build_portfolio_context(
     # matched_holding 분리
     matched_holding: PortfolioHolding | None = None
     if target_market is not None and target_code is not None:
-        matched_holding = holding_map.get(
-            (target_market.lower(), target_code.lower())
-        )
+        matched_holding = holding_map.get((target_market.lower(), target_code.lower()))
 
     return PortfolioContext(
         holdings=portfolio_holdings,
@@ -261,8 +337,9 @@ async def build_portfolio_context(
 
 async def get_latest_snapshot(session: AsyncSession, user_id: str = "demo") -> Any | None:
     """가장 최근 포트폴리오 스냅샷 조회."""
-    from app.db.models import PortfolioSnapshot
     from sqlalchemy import desc
+
+    from app.db.models import PortfolioSnapshot
 
     result = await session.execute(
         select(PortfolioSnapshot)
@@ -277,8 +354,9 @@ async def get_prev_snapshot(session: AsyncSession, user_id: str = "demo") -> Any
     """전일(오늘 제외) 포트폴리오 스냅샷 조회 — 일간 변동 계산용."""
     from datetime import date
 
-    from app.db.models import PortfolioSnapshot
     from sqlalchemy import desc
+
+    from app.db.models import PortfolioSnapshot
 
     today = date.today()
     result = await session.execute(
@@ -286,6 +364,32 @@ async def get_prev_snapshot(session: AsyncSession, user_id: str = "demo") -> Any
         .where(
             PortfolioSnapshot.user_id == user_id,
             PortfolioSnapshot.snapshot_date < today,
+        )
+        .order_by(desc(PortfolioSnapshot.snapshot_date))
+        .limit(1)
+    )
+    return result.scalar_one_or_none()
+
+
+async def get_period_snapshot(
+    session: AsyncSession, user_id: str = "demo", period_days: int = 30
+) -> Any | None:
+    """N일 전 시점 이전의 가장 최근 스냅샷 조회 — period_change_pct 계산용.
+
+    정확히 N일 전 스냅샷이 없을 수 있으므로, (오늘 - N일) 이하 날짜 중 가장 최근을 선택.
+    """
+    from datetime import date, timedelta
+
+    from sqlalchemy import desc
+
+    from app.db.models import PortfolioSnapshot
+
+    anchor = date.today() - timedelta(days=period_days)
+    result = await session.execute(
+        select(PortfolioSnapshot)
+        .where(
+            PortfolioSnapshot.user_id == user_id,
+            PortfolioSnapshot.snapshot_date <= anchor,
         )
         .order_by(desc(PortfolioSnapshot.snapshot_date))
         .limit(1)

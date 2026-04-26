@@ -1,0 +1,5 @@
+date,market,code,quantity,avg_cost,currency,note
+2024-01-15,yahoo,AAPL,10,182.50,USD,정상
+2024-13-45,upbit,KRW-BTC,0.05,85000000,KRW,날짜 오류 (월 13)
+2024-06-10,naver_kr,005930,-100,72000,KRW,수량 음수
+2024-09-01,binance,ETHUSDT,2.5,3200,BTC,미지원 통화

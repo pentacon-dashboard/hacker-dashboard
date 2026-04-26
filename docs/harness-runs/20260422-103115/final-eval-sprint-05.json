@@ -1,0 +1,53 @@
+{
+  "run_id": "20260420-160548-competition-winner",
+  "sprint": "sprint-05",
+  "iter": 1,
+  "score": 9.0,
+  "max_score": 9.0,
+  "normalized_score": 10.0,
+  "breakdown": {
+    "typecheck": 2,
+    "lint": 1,
+    "unit": 2,
+    "contract": 2,
+    "golden": 2,
+    "e2e": "deferred"
+  },
+  "failures": [
+    {
+      "area": "lint",
+      "file": "frontend/tests/harness/sprint-02.test.tsx",
+      "specific": "line 25, 32: @typescript-eslint/no-explicit-any warning (errors: 0, warnings only — 감점 없음)"
+    },
+    {
+      "area": "link-check",
+      "file": "README.md",
+      "specific": "9 dead links — http://localhost:8000, https://github.com/your-org/hacker-dashboard/actions/workflows/*.yml (placeholder pre-existing; sprint-05 contract 범위 밖)"
+    },
+    {
+      "area": "link-check",
+      "file": "submission/README.md",
+      "specific": "1 dead link — http://localhost:8000 (pre-existing; sprint-05 contract 범위 밖)"
+    }
+  ],
+  "notes": [
+    "BE mypy: 53 source files, no issues",
+    "FE tsc: exit 0, no issues",
+    "BE ruff: All checks passed",
+    "FE eslint: 0 errors, 4 warnings (acceptable)",
+    "BE unit: 215 passed in 65.58s",
+    "FE vitest: 92 passed (12 test files) — sprint-05 harness stub 2 passed",
+    "Contract (ASGI in-process): 18 passed in 446s — schemathesis hypothesis 기반으로 시간 소요",
+    "Golden: 110 passed, _last_run.json N=0 차이 없음",
+    "sprint-05 contract stub (tests/harness/sprint_05_contract.py): 3 passed 직접 확인",
+    "docs/agents/router-decisions.md: 4448자, mermaid 1개 + 표 1개 — contract 통과",
+    "submission/architecture.md: mermaid 3개 (>=2), 키워드 Router/Analyzer/schema/domain/critique 모두 존재",
+    "docs/adr/0010-competition-submission-runbook.md: 존재, 상태=Proposed (제안) 확인",
+    "README ADR 링크: 5개 unique (>=3) 확인",
+    "submission/architecture.md 내부 링크: ../docs/agents/router-decisions.md, ../docs/adr/ 모두 valid",
+    "broken links(README, submission/README)는 sprint-03 이전 pre-existing placeholder — sprint-05 변경 아님"
+  ],
+  "suggest_direction_pivot": false,
+  "terminated_reason": null,
+  "attempt_summary_path": ".claude/harness/20260420-160548-competition-winner/attempt-summary-sprint-05-1.md"
+}

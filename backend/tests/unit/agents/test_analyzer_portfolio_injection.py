@@ -9,11 +9,12 @@
 
 LLM 실제 호출 없이 _call 을 patch 하여 payload JSON 만 검증.
 """
+
 from __future__ import annotations
 
 import json
 from typing import Any
-from unittest.mock import AsyncMock, patch
+from unittest.mock import patch
 
 import pytest
 
@@ -21,8 +22,8 @@ from app.agents.analyzers.base import BaseAnalyzer
 from app.agents.analyzers.mixed import MixedAnalyzer
 from app.agents.state import AgentState
 
-
 # ── 테스트용 최소 Analyzer 구현 ───────────────────────────────────────────────
+
 
 class _DummyAnalyzer(BaseAnalyzer):
     """테스트용 최소 analyzer — LLM 호출 없이 payload 를 캡처한다."""
@@ -43,17 +44,19 @@ class _DummyAnalyzer(BaseAnalyzer):
             payload["portfolio_context"] = portfolio_context
         # 테스트가 검증할 수 있도록 인스턴스에 저장
         self._last_payload = payload  # type: ignore[attr-defined]
-        return json.dumps({
-            "asset_class": "stock",
-            "headline": "test",
-            "narrative": "test narrative",
-            "summary": "test",
-            "highlights": [],
-            "metrics": {},
-            "signals": [],
-            "evidence": [],
-            "confidence": 0.5,
-        })
+        return json.dumps(
+            {
+                "asset_class": "stock",
+                "headline": "test",
+                "narrative": "test narrative",
+                "summary": "test",
+                "highlights": [],
+                "metrics": {},
+                "signals": [],
+                "evidence": [],
+                "confidence": 0.5,
+            }
+        )
 
 
 def _make_state(**kwargs: Any) -> AgentState:
@@ -75,6 +78,7 @@ def _make_state(**kwargs: Any) -> AgentState:
 
 # ── 1. portfolio_context=None → payload 에 키 없음 ───────────────────────────
 
+
 @pytest.mark.asyncio
 async def test_call_without_portfolio_context_excludes_key() -> None:
     """portfolio_context=None 이면 payload 에 'portfolio_context' 키가 없어야 함."""
@@ -91,6 +95,7 @@ async def test_call_without_portfolio_context_excludes_key() -> None:
 
 
 # ── 2. portfolio_context 값이 있으면 payload 에 포함 ─────────────────────────
+
 
 @pytest.mark.asyncio
 async def test_call_with_portfolio_context_includes_key() -> None:
@@ -115,6 +120,7 @@ async def test_call_with_portfolio_context_includes_key() -> None:
 
 
 # ── 3. BaseAnalyzer.run(state) → _call 에 portfolio_context 전달 ─────────────
+
 
 @pytest.mark.asyncio
 async def test_run_passes_portfolio_context_to_call() -> None:
@@ -173,6 +179,7 @@ async def test_run_passes_none_portfolio_context_when_absent() -> None:
 
 
 # ── 4. MixedAnalyzer.run 이 자식 state 에 portfolio_context 포함 ────────────
+
 
 @pytest.mark.asyncio
 async def test_mixed_analyzer_propagates_portfolio_context() -> None:

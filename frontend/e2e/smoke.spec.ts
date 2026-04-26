@@ -79,8 +79,8 @@ test("BE /health 엔드포인트가 200을 반환한다", async ({ request }) =>
   const contentType = response.headers()["content-type"] ?? "";
   if (contentType.includes("application/json")) {
     const body = await response.json();
-    // { "status": "ok" } 또는 { "status": "healthy" } 중 하나
-    expect(["ok", "healthy", "up"]).toContain(
+    // { "status": "ok" | "healthy" | "up" | "degraded" } — degraded 도 200 응답으로 인정 (downstream 미가용 시)
+    expect(["ok", "healthy", "up", "degraded"]).toContain(
       (body as { status?: string }).status
     );
   }

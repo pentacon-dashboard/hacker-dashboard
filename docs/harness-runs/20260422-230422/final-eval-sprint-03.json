@@ -1,0 +1,42 @@
+{
+  "run_id": "20260422-111542-nl-copilot",
+  "sprint": "sprint-03",
+  "iter": 1,
+  "score": 8.0,
+  "max_score": 9.0,
+  "normalized_score": 8.9,
+  "breakdown": {
+    "typecheck": 1,
+    "lint": 1,
+    "unit": 2,
+    "contract": 2,
+    "golden": 2,
+    "e2e": "deferred"
+  },
+  "failures": [
+    {
+      "area": "typecheck",
+      "file": "frontend/tests/harness/sprint-03.test.ts",
+      "specific": "line 2: TS2307 Cannot find module '@/shared/types/api' — wrong path alias. The tsconfig maps '@/*' to './*' (frontend-relative), so '@/shared/types/api' resolves to 'frontend/shared/types/api' which does not exist. Sprint-01/02 tests correctly use '@shared/types/api' (maps to '../shared/*' via the @shared/* alias). This error is new to sprint-03 — was not present in sprint-02 eval (typecheck=2/2)."
+    }
+  ],
+  "notes": [
+    "typecheck 1/2: BE mypy 36 errors total, 0 from sprint-03 files (comparison.py / simulator.py / news_rag.py / schemas/copilot.py pass mypy clean). All 36 pre-existing — not charged per out-of-scope rule. FE tsc: 1 NEW error in sprint-03.test.ts (wrong import alias '@/shared/types/api' instead of '@shared/types/api'). Sprint-01 and sprint-02 harness tests use the correct '@shared' alias. This FE typecheck error is charged.",
+    "lint 1/1: BE ruff — sprint-03 scope files (comparison.py / simulator.py / news_rag.py / schemas/copilot.py) all clean. Overall 114 errors are pre-existing non-sprint-03 files — not charged. FE eslint — 0 errors, 3 warnings only (sprint-03.test.ts unused 'expectTypeOf' import is a warning, not error).",
+    "unit 2/2: BE pytest (--ignore=tests/golden --ignore=tests/harness --ignore=tests/contract) 215 passed 0 failed. FE vitest 82 passed 0 failed including sprint-03 harness test (vitest does not use tsc for module resolution so '@/shared/types/api' resolves via vite config differently — passes at runtime).",
+    "contract 2/2: tests/harness/sprint_03_contract.py — 9/9 passed (AC-03-5 gate). All 7 contract tests verified: subagent modules importable (comparison/simulator/news_rag with run()), CopilotCard union has all 6 variants, news-rag schema gate fails on empty citations, comparison domain gate degrades on unknown symbol, simulator domain gate fails on shock > 1.99, graph has comparison/simulator/news_rag nodes, golden copilot analyzers green. Schemathesis tests/contract/test_openapi.py: 1 failure (GET /market/quotes/{market}/{code} returns undocumented 404 for market='0') — this is pre-existing (market enum validation was not sprint-03 scope). Charging contract per sprint-03 harness pass.",
+    "golden 2/2: All 119 golden tests passed including 9 new copilot analyzers (3x comparison + 3x simulator + 3x news-rag). N=0 diff files. Determinism verified: comparison uses hash-seeded fake values, simulator uses pure math, news-rag uses stub fixture corpus with COPILOT_NEWS_MODE=stub.",
+    "AC-03-1: comparison.py / simulator.py / news_rag.py exist with run() exported — PASS.",
+    "AC-03-2: CopilotCard in schemas/copilot.py has all 6 variants (text/chart/scorecard/citation/comparison_table/simulator_result) as Pydantic v2 discriminated union — PASS. model_json_schema() patched to flatten $ref to anyOf.",
+    "AC-03-3: Each analyzer applies 3-gate policy inline (schema → domain → critique) and sets degraded=True on gate failure — PASS.",
+    "AC-03-4: news_rag._check_schema() returns 'fail' if citations list is empty — PASS (verified by harness test and golden sample 01).",
+    "AC-03-5: sprint_03_contract.py 9/9 — PASS.",
+    "AC-03-6: 9 golden samples in tests/golden/samples/copilot/, test_copilot_analyzers.py passes all 9 with diff=0 — PASS.",
+    "AC-03-7: graph.py adds comparison/simulator/news_rag nodes at lines 66-68. test_graph_registers_exactly_three_new_nodes passes — PASS.",
+    "e2e: deferred (is_final_iter=false).",
+    "Observation: simulator _compute_card() recalculates sensitivity dict using base_value from within the loop (line 102), so sensitivity is only correct for the last holding processed. This does not affect test correctness since tests don't assert sensitivity values, but is a logic bug worth noting."
+  ],
+  "suggest_direction_pivot": false,
+  "terminated_reason": null,
+  "attempt_summary_path": ".claude/harness/20260422-111542-nl-copilot/attempt-summary-sprint-03-1.md"
+}

@@ -1,4 +1,4 @@
-const API_BASE =
+export const API_BASE =
   process.env["NEXT_PUBLIC_API_BASE"] ?? "http://localhost:8000";
 
 export const WS_BASE =
@@ -29,6 +29,10 @@ export async function apiFetch<T>(
 
   if (!res.ok) {
     throw new ApiError(res.status, `API error ${res.status}: ${path}`);
+  }
+
+  if (res.status === 204 || res.headers.get("content-length") === "0") {
+    return undefined as T;
   }
 
   return res.json() as Promise<T>;

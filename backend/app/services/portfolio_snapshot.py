@@ -5,19 +5,19 @@ CLI: python -m app.services.portfolio_snapshot
 
 데모용 더미 스냅샷 삽입 기능도 포함.
 """
+
 from __future__ import annotations
 
 import asyncio
 import logging
 from datetime import date, timedelta
 from decimal import Decimal
-from typing import Any
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.models import Holding, PortfolioSnapshot
-from app.services.portfolio import _d, _fmt, _classify_asset, compute_summary
+from app.services.portfolio import compute_summary
 
 logger = logging.getLogger(__name__)
 
@@ -30,9 +30,7 @@ async def take_snapshot(
     today = date.today()
 
     # holdings 조회
-    result = await session.execute(
-        select(Holding).where(Holding.user_id == user_id)
-    )
+    result = await session.execute(select(Holding).where(Holding.user_id == user_id))
     holdings = result.scalars().all()
 
     # 집계 — 현재가 조회 포함
@@ -72,7 +70,9 @@ async def take_snapshot(
 
     await session.commit()
     await session.refresh(snapshot)
-    logger.info("스냅샷 upsert 완료: user=%s date=%s value_krw=%s", user_id, today, summary.total_value_krw)
+    logger.info(
+        "스냅샷 upsert 완료: user=%s date=%s value_krw=%s", user_id, today, summary.total_value_krw
+    )
     return snapshot
 
 
@@ -129,13 +129,16 @@ async def seed_dummy_snapshots(
 async def _main() -> None:
     """CLI 진입점 — 오늘 날짜 스냅샷 upsert."""
     import logging as _logging
+
     _logging.basicConfig(level=_logging.INFO)
 
     from app.db.session import AsyncSessionLocal
 
     async with AsyncSessionLocal() as session:
         snap = await take_snapshot(session)
-        print(f"Snapshot saved: id={snap.id} date={snap.snapshot_date} value_krw={snap.total_value_krw}")
+        print(
+            f"Snapshot saved: id={snap.id} date={snap.snapshot_date} value_krw={snap.total_value_krw}"
+        )
 
 
 if __name__ == "__main__":

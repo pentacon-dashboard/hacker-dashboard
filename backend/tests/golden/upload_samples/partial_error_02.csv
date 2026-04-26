@@ -1,0 +1,4 @@
+date,market,code,quantity,avg_cost,currency,note
+2024-01-01,yahoo,AAPL,10,150.00,USD,정상
+not-a-date,yahoo,MSFT,5,300.00,USD,날짜 형식 오류
+2024-06-01,yahoo,TSLA,0,700.00,USD,수량 0 (음수 아님 엄밀히는 허용 안됨)

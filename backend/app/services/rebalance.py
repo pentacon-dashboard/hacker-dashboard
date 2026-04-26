@@ -7,10 +7,11 @@
 4. drift < 0 (부족): 해당 자산군 holdings를 비중 작은 순으로 매수
 5. min_trade_krw 미만 skip, max_single_weight 위반 시 매수 중단
 """
+
 from __future__ import annotations
 
 import logging
-from decimal import Decimal, ROUND_DOWN
+from decimal import ROUND_DOWN, Decimal
 from typing import Any
 
 from app.schemas.rebalance import (
@@ -98,10 +99,7 @@ def compute_drift(
 ) -> dict[str, float]:
     """drift = current - target. 양수=과도, 음수=부족."""
     all_keys = set(current) | set(target)
-    return {
-        k: round(current.get(k, 0.0) - target.get(k, 0.0), 6)
-        for k in all_keys
-    }
+    return {k: round(current.get(k, 0.0) - target.get(k, 0.0), 6) for k in all_keys}
 
 
 def calculate_rebalance_actions(
@@ -199,7 +197,7 @@ def calculate_rebalance_actions(
                         quantity=quantity,
                         estimated_value_krw=actual_value,
                         reason=(
-                            f"{ac} 비중 {current_w*100:.1f}% → 목표 {target_w*100:.1f}%. "
+                            f"{ac} 비중 {current_w * 100:.1f}% → 목표 {target_w * 100:.1f}%. "
                             f"가장 비중이 큰 {h.code}부터 일부 매도"
                         ),
                     )
@@ -230,7 +228,8 @@ def calculate_rebalance_actions(
                 if available_capacity <= _ZERO:
                     logger.debug(
                         "max_single_weight 초과 → %s/%s 매수 중단",
-                        h.market, h.code,
+                        h.market,
+                        h.code,
                     )
                     continue
 
@@ -258,7 +257,7 @@ def calculate_rebalance_actions(
                         quantity=quantity,
                         estimated_value_krw=actual_value,
                         reason=(
-                            f"{ac} 목표까지 +{abs(drift_val)*100:.1f}% 부족. "
+                            f"{ac} 목표까지 +{abs(drift_val) * 100:.1f}% 부족. "
                             f"기존 보유 종목 {h.code} 추가 매수로 다변화 유지"
                         ),
                     )
@@ -282,15 +281,9 @@ def build_expected_allocation(
     # holdings별 조정된 값 계산
     adjusted_values = {h_id: val for h_id, val in current_values_krw.items()}
 
-    # holding_id → (market, code) 매핑
-    id_to_holding = {int(h.id): h for h in holdings}
-
     for action in actions:
         # code + market으로 holding 찾기
-        matching = [
-            h for h in holdings
-            if h.code == action.code and h.market == action.market
-        ]
+        matching = [h for h in holdings if h.code == action.code and h.market == action.market]
         if not matching:
             continue
         h = matching[0]

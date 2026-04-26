@@ -3,7 +3,8 @@
 # Windows Git Bash 환경 지원. Docker / Node / Python(uv) 설치 전제.
 
 .PHONY: help dev up down logs test e2e ci-local seed seed-db lint fmt typecheck build \
-        healthcheck healthcheck-prod smoke-prod demo-ready validate-compose
+        healthcheck healthcheck-prod smoke-prod demo-ready validate-compose \
+        copilot-demo copilot-demo-live
 
 # 기본 타겟
 help:
@@ -61,6 +62,8 @@ e2e-report:
 # ── CI 로컬 시뮬레이션 ───────────────────────────────────────────────────────
 
 ci-local: lint typecheck test
+	@echo "=== Harness contract tests (sprint-01~06, --lf --ff) ==="
+	cd backend && uv run pytest --lf --ff tests/harness/ -q --tb=short
 	@echo "=== Build check ==="
 	cd frontend && npm run build
 	@echo "CI local simulation complete."
@@ -93,9 +96,8 @@ contract:
 	@echo "=== Contract test (schemathesis) ==="
 	@echo "BE 서버가 localhost:8000 에서 실행 중이어야 합니다."
 	cd backend && uv run schemathesis run ../shared/openapi.json \
-		--base-url http://localhost:8000 \
-		--checks all \
-		--hypothesis-deadline=none
+		--url http://localhost:8000 \
+		--checks all
 
 # ── OpenAPI 내보내기 ─────────────────────────────────────────────────────────
 
@@ -160,3 +162,37 @@ demo-ready: seed healthcheck
 	@echo "=== 데모 준비 완료 ==="
 	@echo "시나리오 파일: demo/scenario.md"
 	@echo "리허설 체크리스트를 확인하십시오."
+
+# ── Copilot 데모 ──────────────────────────────────────────────────────────────
+
+copilot-demo:
+	@echo "=== Copilot 데모 (stub 모드 — API 키 불필요) ==="
+	@echo "1. Docker Compose 전체 스택 기동..."
+	docker compose up --build -d
+	@echo "2. 시드 데이터 삽입..."
+	$(MAKE) seed-db || echo "seed-db skipped (already seeded)"
+	@echo "3. stub 모드 ingest (news fixture corpus)..."
+	cd backend && COPILOT_NEWS_MODE=stub uv run python -c \
+		"from app.services.news.ingest import load_fixture_corpus; load_fixture_corpus(); print('corpus loaded')" \
+		2>/dev/null || echo "stub corpus load skipped"
+	@echo "4. Copilot 데모 쿼리 확인 (stub SSE)..."
+	@curl -s -N -X POST http://localhost:8000/copilot/query \
+		-H "Content-Type: application/json" \
+		-d '{"query": "TSLA vs NVDA 비교"}' \
+		| head -20 || echo "BE not running — start with: make up"
+	@echo ""
+	@echo "=== 브라우저에서 http://localhost:3000/?copilot=1 을 여세요 ==="
+	@echo "=== Copilot 커맨드바가 자동으로 열립니다 ==="
+	@echo "=== stub 모드: NEXT_PUBLIC_COPILOT_MOCK=1 로 MSW mock SSE 사용 ==="
+	@echo "=== live 모드: make copilot-demo-live (COPILOT_NEWS_API_KEY 필요) ==="
+
+copilot-demo-live:
+	@echo "=== Copilot 데모 (live 모드 — COPILOT_NEWS_API_KEY 필요) ==="
+	@if [ -z "$$COPILOT_NEWS_API_KEY" ]; then \
+		echo "ERROR: COPILOT_NEWS_API_KEY 가 설정되지 않았습니다."; \
+		echo "  export COPILOT_NEWS_API_KEY=<your-key>"; \
+		exit 1; \
+	fi
+	COPILOT_NEWS_MODE=live docker compose up --build -d
+	$(MAKE) seed-db
+	@echo "live 모드 기동 완료. http://localhost:3000/?copilot=1"

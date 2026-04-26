@@ -3,6 +3,7 @@
 
 respx 로 외부 어댑터를 모킹. 한글 쿼리 3종 → 상위 결과 검증.
 """
+
 from __future__ import annotations
 
 import pytest
@@ -12,14 +13,16 @@ from httpx import AsyncClient, Response
 from app.services.market.base import set_http_client
 from app.services.market.cache import set_redis
 
-
 # ── 픽스처 ──────────────────────────────────────────────────────────────
+
 
 @pytest.fixture
 async def api_client():
     """FastAPI test client."""
-    from app.main import app
     from httpx import ASGITransport
+
+    from app.main import app
+
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
         yield ac
 
@@ -42,7 +45,11 @@ def _mock_upbit_all():
             200,
             json=[
                 {"market": "KRW-BTC", "korean_name": "비트코인", "english_name": "Bitcoin"},
-                {"market": "KRW-BCH", "korean_name": "비트코인 캐시", "english_name": "Bitcoin Cash"},
+                {
+                    "market": "KRW-BCH",
+                    "korean_name": "비트코인 캐시",
+                    "english_name": "Bitcoin Cash",
+                },
                 {"market": "KRW-ETH", "korean_name": "이더리움", "english_name": "Ethereum"},
                 {"market": "KRW-SOL", "korean_name": "솔라나", "english_name": "Solana"},
                 {"market": "KRW-XRP", "korean_name": "리플", "english_name": "Ripple"},
@@ -83,6 +90,7 @@ def _mock_yahoo_empty():
 
 
 # ── 테스트: 비트코인 ─────────────────────────────────────────────────────
+
 
 class TestSearchBitcoin:
     @respx.mock
@@ -136,6 +144,7 @@ class TestSearchBitcoin:
 
 # ── 테스트: 테슬라 ─────────────────────────────────────────────────────
 
+
 class TestSearchTesla:
     @respx.mock
     @pytest.mark.asyncio
@@ -172,6 +181,7 @@ class TestSearchTesla:
 
 
 # ── 테스트: 삼성전자 ───────────────────────────────────────────────────
+
 
 class TestSearchSamsung:
     @respx.mock
@@ -212,6 +222,7 @@ class TestSearchSamsung:
 
 # ── 테스트: 최대 50개 ─────────────────────────────────────────────────
 
+
 class TestSearchLimit:
     @respx.mock
     @pytest.mark.asyncio
@@ -219,7 +230,11 @@ class TestSearchLimit:
         """결과 최대 50개."""
         # 많은 결과 반환하도록 설정
         many_items = [
-            {"market": f"KRW-COIN{i}", "korean_name": f"테스트코인{i}", "english_name": f"TestCoin{i}"}
+            {
+                "market": f"KRW-COIN{i}",
+                "korean_name": f"테스트코인{i}",
+                "english_name": f"TestCoin{i}",
+            }
             for i in range(100)
         ]
         respx.get("https://api.upbit.com/v1/market/all").mock(

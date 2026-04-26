@@ -1,4 +1,5 @@
 """자산군별 Analyzer 서브그래프 모듈."""
+
 from __future__ import annotations
 
 from app.agents.analyzers.base import BaseAnalyzer

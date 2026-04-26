@@ -5,12 +5,13 @@
 - request_id 는 X-Request-ID 헤더를 그대로 쓰거나 UUID 자동 생성
 - 요청 컨텍스트(request_id, path)는 contextvars 로 전파 → 멀티 코루틴 충돌 없음
 """
+
 from __future__ import annotations
 
 import logging
 import sys
-import uuid
 from contextvars import ContextVar
+from typing import Any
 
 # 요청 컨텍스트 — 코루틴별 격리
 _request_id_var: ContextVar[str] = ContextVar("request_id", default="")
@@ -28,7 +29,7 @@ def configure_logging(debug: bool = False) -> None:
     level = logging.DEBUG if debug else logging.INFO
 
     try:
-        from pythonjsonlogger.jsonlogger import JsonFormatter  # type: ignore[import-untyped]
+        from pythonjsonlogger.jsonlogger import JsonFormatter  # type: ignore[attr-defined]
 
         handler = logging.StreamHandler(sys.stdout)
         fmt = JsonFormatter(
@@ -55,7 +56,7 @@ def configure_logging(debug: bool = False) -> None:
 logger = logging.getLogger("hacker_dashboard")
 
 
-def _compute_cache_hit_rate(cache_tokens: dict) -> float | None:
+def _compute_cache_hit_rate(cache_tokens: dict[str, Any]) -> float | None:
     """
     프롬프트 캐시 히트율. `read / (read + creation + input)`.
     총 토큰이 0 이면 (heuristic 결정 등 LLM 미호출) None 을 반환.
@@ -76,7 +77,7 @@ def log_analyze_event(
     request_id: str,
     asset_class: str,
     duration_ms: int,
-    cache_tokens: dict,
+    cache_tokens: dict[str, Any],
     cached: bool = False,
 ) -> None:
     """

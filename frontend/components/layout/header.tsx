@@ -4,6 +4,12 @@ import { useEffect, useState } from "react";
 import { useTheme } from "@/hooks/use-theme";
 import { Button } from "@/components/ui/button";
 import { getHealth } from "@/lib/api/health";
+import { useUiStore } from "@/stores/ui";
+import { DateRangePicker } from "@/components/layout/date-range-picker";
+import { NotificationBell } from "@/components/layout/notification-bell";
+import { CsvUploadButton } from "@/components/layout/csv-upload-button";
+import { Suspense } from "react";
+import { useLocale } from "@/lib/i18n/locale-provider";
 
 type HealthStatus = "ok" | "error" | "pending";
 
@@ -38,25 +44,57 @@ function useHealthPolling(intervalMs = 10000): HealthStatus {
 export function Header() {
   const { theme, setTheme, isDark, mounted } = useTheme();
   const healthStatus = useHealthPolling(10000);
+  const toggleMobileMenu = useUiStore((s) => s.toggleMobileMenu);
+  const { t } = useLocale();
 
   function handleToggle() {
     setTheme(isDark ? "light" : "dark");
   }
 
   return (
-    <header className="flex h-14 items-center justify-between border-b bg-background px-4">
+    <header className="flex h-14 shrink-0 items-center justify-between border-b border-border/50 bg-background px-4">
+      {/* 좌측: 모바일 햄버거 버튼만 (페이지 제목 제거 — 목업은 본문 H1) */}
       <div className="flex items-center gap-2">
-        <span className="text-sm font-semibold text-muted-foreground">
-          금융 대시보드
-        </span>
+        <button
+          onClick={toggleMobileMenu}
+          className="flex h-8 w-8 items-center justify-center rounded-lg hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring md:hidden"
+          aria-label="메뉴 열기"
+          type="button"
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="18"
+            height="18"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden="true"
+          >
+            <line x1="4" x2="20" y1="6" y2="6" />
+            <line x1="4" x2="20" y1="12" y2="12" />
+            <line x1="4" x2="20" y1="18" y2="18" />
+          </svg>
+        </button>
       </div>
 
-      <div className="flex items-center gap-3">
+      {/* 우측: DateRangePicker → NotificationBell → health dot → ENV 배지 → theme toggle → CsvUploadButton */}
+      <div className="ml-auto flex items-center gap-2">
+        {/* DateRangePicker — useSearchParams() 사용하므로 Suspense 경계 필요 */}
+        <Suspense fallback={<div className="h-8 w-32 animate-pulse rounded-lg bg-muted" />}>
+          <DateRangePicker />
+        </Suspense>
+
+        {/* 알림 벨 */}
+        <NotificationBell />
+
         {/* API Health dot */}
         <div
           className="flex items-center gap-1.5"
-          aria-label={`API 상태: ${healthStatus === "ok" ? "정상" : healthStatus === "error" ? "오류" : "확인 중"}`}
-          title={`API ${healthStatus === "ok" ? "정상" : healthStatus === "error" ? "오류" : "확인 중"}`}
+          aria-label={`${t("header.apiOk")}: ${healthStatus === "ok" ? t("settings.system.healthy") : healthStatus === "error" ? t("settings.system.error") : t("common.loading")}`}
+          title={`${t("header.apiOk")} ${healthStatus === "ok" ? t("settings.system.healthy") : healthStatus === "error" ? t("settings.system.error") : t("common.loading")}`}
         >
           <span
             className={`inline-block h-2 w-2 rounded-full ${
@@ -69,13 +107,13 @@ export function Header() {
             aria-hidden="true"
           />
           <span className="hidden text-xs text-muted-foreground sm:inline">
-            {healthStatus === "ok" ? "API 정상" : healthStatus === "error" ? "API 오류" : "확인 중"}
+            {healthStatus === "ok" ? t("header.apiOk") : healthStatus === "error" ? `${t("header.apiOk")} ${t("common.error")}` : t("common.loading")}
           </span>
         </div>
 
         {/* 환경 배지 */}
         <span
-          className={`rounded px-1.5 py-0.5 text-xs font-semibold ${
+          className={`rounded-lg px-1.5 py-0.5 text-xs font-semibold ${
             ENV === "prod"
               ? "bg-primary text-primary-foreground"
               : "bg-muted text-muted-foreground"
@@ -90,9 +128,10 @@ export function Header() {
           variant="ghost"
           size="icon"
           onClick={handleToggle}
-          aria-label={isDark ? "라이트 모드로 전환" : "다크 모드로 전환"}
+          aria-label={isDark ? t("header.lightMode") : t("header.darkMode")}
           data-testid="theme-toggle"
           suppressHydrationWarning
+          className="h-8 w-8"
         >
           {mounted && isDark ? (
             <svg
@@ -138,6 +177,9 @@ export function Header() {
         <span className="sr-only" suppressHydrationWarning>
           {mounted ? `현재 테마: ${theme}` : "현재 테마"}
         </span>
+
+        {/* CSV 업로드 버튼 */}
+        <CsvUploadButton />
       </div>
     </header>
   );

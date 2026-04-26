@@ -5,6 +5,7 @@ analyze_cache 서비스 단위 테스트.
 - TTL 만료 (time.monotonic 패치)
 - make_request_key / make_csv_key 해시 일관성
 """
+
 from __future__ import annotations
 
 import time
@@ -16,10 +17,24 @@ from app.services import analyze_cache
 
 
 @pytest.fixture(autouse=True)
-def reset_cache():
-    """각 테스트 전 캐시와 Redis 연결 상태를 초기화."""
+async def reset_cache():
+    """각 테스트 전 캐시와 Redis 연결 상태를 초기화.
+
+    LRU 단위 테스트(TTL·eviction)는 Redis 미사용 강제.
+    X-Cache 통합 테스트는 Redis FLUSHDB 로 이전 데이터를 제거하여 격리.
+    """
     analyze_cache.reset_for_testing()
+    # LRU 단위 테스트: Redis 미사용 강제 (기본값 — 개별 통합 테스트에서 재연결 가능)
+    analyze_cache._redis_available = False
     yield
+    # 이전 테스트가 Redis 를 활성화했을 수 있으므로 연결이 있으면 analyze:* 키 정리
+    if analyze_cache._redis_client is not None:
+        try:
+            keys = await analyze_cache._redis_client.keys("analyze:*")
+            if keys:
+                await analyze_cache._redis_client.delete(*keys)
+        except Exception:
+            pass
     analyze_cache.reset_for_testing()
 
 
@@ -158,15 +173,24 @@ def test_make_csv_key_different_files() -> None:
 async def test_analyze_endpoint_x_cache_miss_then_hit(fake_llm_client) -> None:
     """
     /analyze 엔드포인트: 첫 번째 요청 MISS, 두 번째 동일 요청 HIT.
+
+    Redis 가 실행 중이면 FLUSHDB 로 이전 데이터를 제거하고 LRU 폴백으로 테스트한다.
     """
+    import uuid
+
     from httpx import ASGITransport, AsyncClient
+
     from app.main import app
 
+    # Redis가 실행 중이더라도 LRU 경로로 강제하여 데이터 잔여 없이 격리
     analyze_cache.reset_for_testing()
+    analyze_cache._redis_available = False  # LRU 전용 모드
 
+    # 매 실행마다 고유한 query 로 캐시 충돌 방지
+    unique_query = f"cache_test_unique_xyz_{uuid.uuid4().hex}"
     payload = {
         "data": [{"symbol": "AAPL", "price": 180.0}],
-        "query": "cache_test_unique_query_xyz",
+        "query": unique_query,
         "asset_class_hint": "stock",
     }
 

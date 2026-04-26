@@ -4,6 +4,7 @@
 - OHLC: TTL 60s
 - Redis 미연결 시 passthrough (예외 삼키고 None 반환)
 """
+
 from __future__ import annotations
 
 import json
@@ -16,10 +17,10 @@ from app.core.config import settings
 
 logger = logging.getLogger(__name__)
 
-_redis_client: aioredis.Redis | None = None  # type: ignore[type-arg]
+_redis_client: aioredis.Redis | None = None
 
 
-def get_redis() -> aioredis.Redis | None:  # type: ignore[type-arg]
+def get_redis() -> aioredis.Redis | None:
     global _redis_client
     if _redis_client is None:
         try:
@@ -34,7 +35,7 @@ def get_redis() -> aioredis.Redis | None:  # type: ignore[type-arg]
     return _redis_client
 
 
-def set_redis(client: aioredis.Redis | None) -> None:  # type: ignore[type-arg]
+def set_redis(client: aioredis.Redis | None) -> None:
     """테스트 DI 주입."""
     global _redis_client
     _redis_client = client

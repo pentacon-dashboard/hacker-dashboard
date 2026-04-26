@@ -1,0 +1,38 @@
+{
+  "run_id": "20260426-155842-full-project-verification",
+  "sprint": "sprint-analyzer-quality",
+  "iter": 2,
+  "score": 9.0,
+  "max_score": 10.0,
+  "normalized_score": 9.0,
+  "breakdown": {
+    "typecheck": 2,
+    "lint": 1,
+    "unit": 2,
+    "contract": 2,
+    "golden": 2,
+    "e2e": "deferred"
+  },
+  "failures": [
+    {
+      "area": "contract",
+      "specific": "make contract (schemathesis v4 CLI) crashes on Windows Git Bash due to rich library legacy Windows console rendering error in _win32_console.py:write_styled — environmental issue, not code defect. In-process ASGI harness tests (13/13) validate contract correctness instead."
+    }
+  ],
+  "notes": [
+    "mypy: 0 errors across 94 source files (SUCCESS — down from 35 errors in iter 1; sprint-be-quality fixed all type errors including graph.py LangGraph generics and agents/gates/critique.py return type).",
+    "tsc --noEmit: 0 errors (unchanged from iter 1).",
+    "ruff check app tests: all checks passed. eslint: clean.",
+    "Backend non-golden unit tests: 9 passed. Frontend vitest: 278 passed, 1 skipped (39 test files).",
+    "Harness contract file sprint_analyzer_quality_contract.py: 13/13 passed in 46.39s. New test_copilot_schemathesis_isolated (13th test) confirmed present and passing — isolated schemathesis v4 from_asgi + include(path_regex=^/copilot/) + max_examples=20 + call_llm fake patch.",
+    "Golden regression: 129 passed in 6.40s — 0 diffs. All copilot e2e baselines stable.",
+    "REGEN_BASELINE CI guard confirmed: test_copilot_end_to_end.py lines 64-70 raise RuntimeError if REGEN_BASELINE=1 and CI=1 simultaneously — guard correctly implemented.",
+    "respx fixture confirmed: re.search(r'\\brespx\\b|respx_mock|httpx_mock', src) matches line 24 import respx — contract test_copilot_end_to_end_uses_respx_fixture passes.",
+    "schemathesis CLI (make contract) fails with Windows rich terminal rendering crash — pre-existing environmental limitation on this host. Not a code regression.",
+    "E2E deferred (is_final_iter=false).",
+    "suggest_direction_pivot: iter=2 < 3 threshold — condition not triggered."
+  ],
+  "suggest_direction_pivot": false,
+  "terminated_reason": null,
+  "attempt_summary_path": ".claude/harness/20260426-155842-full-project-verification/attempt-summary-sprint-analyzer-quality-2.md"
+}

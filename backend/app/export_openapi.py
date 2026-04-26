@@ -4,6 +4,7 @@ python -m app.export_openapi
 
 FE 가 openapi-typescript 로 타입을 자동 생성하기 위해 사용한다.
 """
+
 import json
 import sys
 from pathlib import Path
@@ -21,9 +22,7 @@ def main() -> None:
 
     print(f"OpenAPI spec exported to {output_path}", file=sys.stderr)
     # stdout 에도 출력 (파이프 연결 시 사용). Windows 콘솔 인코딩 안전을 위해 ensure_ascii=True
-    sys.stdout.buffer.write(
-        json.dumps(spec, ensure_ascii=True, indent=2).encode("utf-8")
-    )
+    sys.stdout.buffer.write(json.dumps(spec, ensure_ascii=True, indent=2).encode("utf-8"))
 
 
 if __name__ == "__main__":

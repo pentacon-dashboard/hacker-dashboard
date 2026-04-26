@@ -4,17 +4,14 @@ WebSocket /ws/ticks 엔드포인트 테스트.
 TestClient websocket_connect로 연결 후 단순 동작 검증.
 실제 업스트림(Upbit/Binance)은 모킹.
 """
-from __future__ import annotations
 
-import asyncio
-import json
+from __future__ import annotations
 
 import pytest
 from httpx import AsyncClient
 from starlette.testclient import TestClient
 
 from app.main import app
-from app.services.market.base import set_http_client
 
 
 @pytest.fixture
@@ -45,7 +42,7 @@ def test_ws_valid_market_format(sync_client: TestClient) -> None:
     # 실제 외부 호출을 막기 위해 respx는 사용하기 어려우므로
     # 그냥 연결 수립 후 즉시 닫아 정상 수락 여부만 확인
     try:
-        with sync_client.websocket_connect("/ws/ticks?markets=upbit:KRW-BTC") as ws:
+        with sync_client.websocket_connect("/ws/ticks?markets=upbit:KRW-BTC"):
             # 연결이 accept된 경우 여기까지 도달
             # warning 없으면 그냥 pass (스트리밍 태스크가 실행 중)
             pass

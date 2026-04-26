@@ -5,6 +5,7 @@
 - Redis 캐시 TTL 1h. Redis 미연결 시 in-memory LRU fallback
 - 네트워크 실패 시 하드코딩 폴백 테이블 반환 (데모 안정성)
 """
+
 from __future__ import annotations
 
 import logging
@@ -41,6 +42,7 @@ _API_URL = "https://api.exchangerate.host/convert"
 
 # ────────────── in-memory LRU fallback (Redis 미연결 시) ──────────────
 
+
 @lru_cache(maxsize=64)
 def _mem_cache_get(key: str) -> float | None:  # pragma: no cover
     """lru_cache 는 TTL 없음 — 단순 데모 캐시."""
@@ -53,14 +55,14 @@ _mem_store: dict[str, float] = {}
 class FxAdapter:
     """환율 어댑터 싱글턴."""
 
-    _instance: "FxAdapter | None" = None
+    _instance: FxAdapter | None = None
 
     def __init__(self, http_client: httpx.AsyncClient | None = None) -> None:
         self._client = http_client
         self._redis: Any | None = None  # aioredis.Redis — 지연 주입
 
     @classmethod
-    def get_instance(cls) -> "FxAdapter":
+    def get_instance(cls) -> FxAdapter:
         if cls._instance is None:
             cls._instance = cls()
         return cls._instance

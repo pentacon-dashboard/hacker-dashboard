@@ -1,4 +1,5 @@
 """3단 품질 게이트 모듈."""
+
 from __future__ import annotations
 
 from app.agents.gates.critique import critique_gate

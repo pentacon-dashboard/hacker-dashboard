@@ -3,10 +3,8 @@
 
 respx로 외부 HTTP 호출을 모킹 — 실 네트워크 없이 동작.
 """
-from __future__ import annotations
 
-import json
-from datetime import datetime, timezone
+from __future__ import annotations
 
 import pytest
 import respx
@@ -14,8 +12,7 @@ from httpx import AsyncClient, Response
 
 from app.services.market.base import set_http_client
 from app.services.market.binance import BinanceAdapter
-from app.services.market.cache import cache_get, cache_set, quote_key, set_redis
-from app.services.market.registry import get_adapter
+from app.services.market.cache import cache_get, cache_set, set_redis
 from app.services.market.upbit import UpbitAdapter
 from app.services.market.yahoo import YahooAdapter
 
@@ -38,6 +35,7 @@ def disable_redis():
 
 
 # ─────────────────────────── Upbit ────────────────────────────────────
+
 
 class TestUpbitAdapter:
     @respx.mock
@@ -126,6 +124,7 @@ class TestUpbitAdapter:
 
 
 # ─────────────────────────── Yahoo ────────────────────────────────────
+
 
 class TestYahooAdapter:
     @respx.mock
@@ -235,6 +234,7 @@ class TestYahooAdapter:
 
 # ─────────────────────────── Binance ──────────────────────────────────
 
+
 class TestBinanceAdapter:
     @respx.mock
     @pytest.mark.asyncio
@@ -269,8 +269,34 @@ class TestBinanceAdapter:
             return_value=Response(
                 200,
                 json=[
-                    [1704067200000, "44000", "46000", "43000", "45000", "1000", 1704153599999, "45000000", 5000, "500", "22500000", "0"],
-                    [1704153600000, "45000", "47000", "44500", "46500", "900", 1704239999999, "41850000", 4500, "450", "20925000", "0"],
+                    [
+                        1704067200000,
+                        "44000",
+                        "46000",
+                        "43000",
+                        "45000",
+                        "1000",
+                        1704153599999,
+                        "45000000",
+                        5000,
+                        "500",
+                        "22500000",
+                        "0",
+                    ],
+                    [
+                        1704153600000,
+                        "45000",
+                        "47000",
+                        "44500",
+                        "46500",
+                        "900",
+                        1704239999999,
+                        "41850000",
+                        4500,
+                        "450",
+                        "20925000",
+                        "0",
+                    ],
                 ],
             )
         )
@@ -308,6 +334,7 @@ class TestBinanceAdapter:
 
 # ─────────────────────────── 캐시 ─────────────────────────────────────
 
+
 class TestCachePassthrough:
     @pytest.mark.asyncio
     async def test_cache_get_returns_none_when_no_redis(self):
@@ -327,7 +354,6 @@ class TestCacheHit:
     @pytest.mark.asyncio
     async def test_cache_hit_with_fake_redis(self):
         """캐시 히트 시 저장된 값이 반환된다."""
-        import redis.asyncio as aioredis
 
         # fakeredis 대신 간단한 dict 기반 가짜 redis 구현
         class FakeRedis:

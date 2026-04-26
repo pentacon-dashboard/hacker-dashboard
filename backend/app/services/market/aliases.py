@@ -3,6 +3,7 @@
 한글명(소문자, 공백 제거)으로 SymbolInfo 를 즉시 반환한다.
 점수: 정확일치 2000, startswith 1500 — 어댑터 결과보다 항상 우선.
 """
+
 from __future__ import annotations
 
 from app.schemas.market import SymbolInfo

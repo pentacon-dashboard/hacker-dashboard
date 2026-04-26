@@ -2,76 +2,36 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState } from "react";
 import { cn } from "@/lib/utils";
 import { useUiStore } from "@/stores/ui";
 import { Sheet } from "@/components/ui/sheet";
+import { LogoBadge } from "@/components/layout/logo-badge";
+import { SidebarUserCard } from "@/components/layout/sidebar-user-card";
+import { MarketStatusCard } from "@/components/layout/market-status-card";
+import { useLocale } from "@/lib/i18n/locale-provider";
+
+import {
+  LayoutDashboard,
+  Briefcase,
+  Eye,
+  LineChart,
+  Globe,
+  Sparkles,
+  Upload,
+  Settings,
+} from "lucide-react";
+
+const ICON_CLASS = "h-[18px] w-[18px] shrink-0";
 
 const navItems = [
-  {
-    href: "/",
-    label: "대시보드",
-    icon: (
-      <svg
-        xmlns="http://www.w3.org/2000/svg"
-        width="18"
-        height="18"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        aria-hidden="true"
-      >
-        <rect width="7" height="9" x="3" y="3" rx="1" />
-        <rect width="7" height="5" x="14" y="3" rx="1" />
-        <rect width="7" height="9" x="14" y="12" rx="1" />
-        <rect width="7" height="5" x="3" y="16" rx="1" />
-      </svg>
-    ),
-  },
-  {
-    href: "/watchlist",
-    label: "워치리스트",
-    icon: (
-      <svg
-        xmlns="http://www.w3.org/2000/svg"
-        width="18"
-        height="18"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        aria-hidden="true"
-      >
-        <path d="M2.586 17.414A2 2 0 0 0 2 18.828V21a1 1 0 0 0 1 1h3a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h1a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h.172a2 2 0 0 0 1.414-.586l.814-.814a6.5 6.5 0 1 0-4-4z" />
-        <circle cx="16.5" cy="7.5" r=".5" fill="currentColor" />
-      </svg>
-    ),
-  },
-  {
-    href: "/portfolio",
-    label: "포트폴리오",
-    icon: (
-      <svg
-        xmlns="http://www.w3.org/2000/svg"
-        width="18"
-        height="18"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        aria-hidden="true"
-      >
-        <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" />
-      </svg>
-    ),
-  },
+  { href: "/", labelKey: "sidebar.dashboard", icon: <LayoutDashboard className={ICON_CLASS} aria-hidden="true" /> },
+  { href: "/portfolio", labelKey: "sidebar.portfolio", icon: <Briefcase className={ICON_CLASS} aria-hidden="true" /> },
+  { href: "/watchlist", labelKey: "sidebar.watchlist", icon: <Eye className={ICON_CLASS} aria-hidden="true" /> },
+  { href: "/symbol", labelKey: "sidebar.symbol", icon: <LineChart className={ICON_CLASS} aria-hidden="true" /> },
+  { href: "/market-analyze", labelKey: "sidebar.market", icon: <Globe className={ICON_CLASS} aria-hidden="true" /> },
+  { href: "/copilot", labelKey: "sidebar.copilot", icon: <Sparkles className={ICON_CLASS} aria-hidden="true" /> },
+  { href: "/upload", labelKey: "sidebar.upload", icon: <Upload className={ICON_CLASS} aria-hidden="true" /> },
+  { href: "/settings", labelKey: "sidebar.settings", icon: <Settings className={ICON_CLASS} aria-hidden="true" /> },
 ];
 
 function NavContent({
@@ -82,9 +42,10 @@ function NavContent({
   onLinkClick?: () => void;
 }) {
   const pathname = usePathname();
+  const { t } = useLocale();
 
   return (
-    <nav className="flex-1 space-y-1 px-2 py-2" aria-label="메인 내비게이션">
+    <nav className="flex-1 space-y-0.5 px-2 py-2" aria-label={t("sidebar.dashboard")}>
       {navItems.map((item) => {
         const isActive =
           item.href === "/"
@@ -96,16 +57,16 @@ function NavContent({
             href={item.href}
             onClick={onLinkClick}
             className={cn(
-              "flex items-center gap-3 rounded-md px-2 py-2 text-sm font-medium transition-colors",
+              "flex items-center gap-3 rounded-xl px-2.5 py-2 text-sm font-medium transition-colors",
               "hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
               isActive
-                ? "bg-accent text-accent-foreground"
-                : "text-muted-foreground",
+                ? "bg-primary/15 text-primary dark:bg-primary/20 dark:text-primary"
+                : "text-muted-foreground hover:text-foreground",
             )}
             aria-current={isActive ? "page" : undefined}
           >
             {item.icon}
-            {!collapsed && <span>{item.label}</span>}
+            {!collapsed && <span className="truncate">{t(item.labelKey)}</span>}
           </Link>
         );
       })}
@@ -114,50 +75,21 @@ function NavContent({
 }
 
 export function Sidebar() {
-  const { sidebarCollapsed, toggleSidebar } = useUiStore();
-  const [mobileOpen, setMobileOpen] = useState(false);
+  const { sidebarCollapsed, toggleSidebar, mobileMenuOpen, setMobileMenuOpen } =
+    useUiStore();
+  const { t } = useLocale();
 
   return (
     <>
-      {/* 모바일 햄버거 버튼 (md 미만) */}
-      <button
-        onClick={() => setMobileOpen(true)}
-        className={cn(
-          "fixed left-3 top-3.5 z-40 flex h-7 w-7 items-center justify-center rounded p-1",
-          "hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-          "md:hidden",
-        )}
-        aria-label="메뉴 열기"
-        type="button"
-      >
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          width="18"
-          height="18"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          aria-hidden="true"
-        >
-          <line x1="4" x2="20" y1="6" y2="6" />
-          <line x1="4" x2="20" y1="12" y2="12" />
-          <line x1="4" x2="20" y1="18" y2="18" />
-        </svg>
-      </button>
-
-      {/* 모바일 Drawer */}
-      <Sheet open={mobileOpen} onClose={() => setMobileOpen(false)} side="left">
+      {/* 모바일 Drawer (<md) — 햄버거 버튼은 Header 에 배치, 여기서는 Sheet 만 관리 */}
+      <Sheet open={mobileMenuOpen} onClose={() => setMobileMenuOpen(false)} side="left">
         <div className="flex h-full flex-col">
+          {/* 모바일 드로어 헤더 */}
           <div className="flex h-14 items-center justify-between px-3">
-            <span className="text-sm font-semibold tracking-tight">
-              Hacker Dashboard
-            </span>
+            <LogoBadge collapsed={false} />
             <button
-              onClick={() => setMobileOpen(false)}
-              className="rounded p-1 hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              onClick={() => setMobileMenuOpen(false)}
+              className="rounded-lg p-1.5 hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               aria-label="메뉴 닫기"
               type="button"
             >
@@ -178,28 +110,38 @@ export function Sidebar() {
               </svg>
             </button>
           </div>
-          <NavContent collapsed={false} onLinkClick={() => setMobileOpen(false)} />
+          <NavContent collapsed={false} onLinkClick={() => setMobileMenuOpen(false)} />
+          {/* 모바일 하단 카드 */}
+          <div className="px-2 pb-3 space-y-2">
+            <SidebarUserCard collapsed={false} />
+            <MarketStatusCard collapsed={false} />
+          </div>
         </div>
       </Sheet>
 
       {/* 데스크탑 사이드바 (md 이상) */}
       <aside
         className={cn(
-          "hidden h-full flex-col border-r bg-background transition-all duration-200 md:flex",
+          "hidden h-full flex-col border-r border-border/50 bg-background transition-all duration-200 md:flex",
           sidebarCollapsed ? "w-16" : "w-56",
         )}
         aria-label="메인 내비게이션"
       >
-        <div className="flex h-14 items-center justify-between px-3">
-          {!sidebarCollapsed && (
-            <span className="text-sm font-semibold tracking-tight">
-              Hacker Dashboard
-            </span>
+        {/* 로고 배지 영역 */}
+        <div
+          className={cn(
+            "flex h-14 items-center border-b border-border/50",
+            sidebarCollapsed ? "justify-center px-1" : "justify-between px-3",
           )}
+        >
+          <LogoBadge collapsed={sidebarCollapsed} />
           <button
             onClick={toggleSidebar}
-            className="ml-auto rounded p-1 hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            aria-label={sidebarCollapsed ? "사이드바 펼치기" : "사이드바 접기"}
+            className={cn(
+              "rounded-lg p-1 hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+              sidebarCollapsed && "hidden",
+            )}
+            aria-label={sidebarCollapsed ? t("sidebar.expand") : t("sidebar.collapse")}
             type="button"
           >
             <svg
@@ -214,16 +156,41 @@ export function Sidebar() {
               strokeLinejoin="round"
               aria-hidden="true"
             >
-              {sidebarCollapsed ? (
-                <path d="m9 18 6-6-6-6" />
-              ) : (
-                <path d="m15 18-6-6 6-6" />
-              )}
+              <path d="m15 18-6-6 6-6" />
             </svg>
           </button>
+          {sidebarCollapsed && (
+            <button
+              onClick={toggleSidebar}
+              className="rounded-lg p-1 hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              aria-label="사이드바 펼치기"
+              type="button"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden="true"
+              >
+                <path d="m9 18 6-6-6-6" />
+              </svg>
+            </button>
+          )}
         </div>
 
         <NavContent collapsed={sidebarCollapsed} />
+
+        {/* 사이드바 하단 — 유저카드 + 시장 상태 (mt-auto로 하단 고정) */}
+        <div className="mt-auto px-2 pb-3 space-y-2">
+          <SidebarUserCard collapsed={sidebarCollapsed} />
+          <MarketStatusCard collapsed={sidebarCollapsed} />
+        </div>
       </aside>
     </>
   );

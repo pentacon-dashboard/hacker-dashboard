@@ -1,5 +1,8 @@
 import type { components, paths } from "@shared/types/api";
 import { apiFetch } from "./client";
+import type { SectorHeatmapTile } from "@/components/portfolio/sector-heatmap";
+import type { MonthlyReturnCell } from "@/components/portfolio/monthly-return-calendar";
+import type { AiInsightResponse } from "@/components/portfolio/ai-insight-card";
 
 // --- 타입 재내보내기 (수동 선언 금지 — 생성 타입만 사용) ---
 export type HoldingResponse = components["schemas"]["HoldingResponse"];
@@ -55,8 +58,11 @@ export async function deleteHolding(id: number): Promise<void> {
   });
 }
 
-export async function getPortfolioSummary(): Promise<GetSummaryResponse> {
-  return apiFetch<GetSummaryResponse>("/portfolio/summary");
+export async function getPortfolioSummary(
+  periodDays?: number,
+): Promise<GetSummaryResponse> {
+  const qs = periodDays != null ? `?period_days=${periodDays}` : "";
+  return apiFetch<GetSummaryResponse>(`/portfolio/summary${qs}`);
 }
 
 export async function getSnapshots(
@@ -69,5 +75,44 @@ export async function getSnapshots(
   const qs = params.toString();
   return apiFetch<ListSnapshotsResponse>(
     `/portfolio/snapshots${qs ? `?${qs}` : ""}`,
+  );
+}
+
+// --- Sprint-08 B-α 신규 엔드포인트 (BE 미구현 시 MSW fallback) ---
+
+export async function getSectorHeatmap(): Promise<SectorHeatmapTile[]> {
+  return apiFetch<SectorHeatmapTile[]>("/portfolio/sectors/heatmap");
+}
+
+export async function getMonthlyReturns(year?: number): Promise<MonthlyReturnCell[]> {
+  const qs = year != null ? `?year=${year}` : "";
+  return apiFetch<MonthlyReturnCell[]>(`/portfolio/monthly-returns${qs}`);
+}
+
+export async function getAiInsight(): Promise<AiInsightResponse> {
+  return apiFetch<AiInsightResponse>("/portfolio/ai-insight");
+}
+
+// --- Phase 2: /portfolio/market-leaders ---
+
+/** BE /portfolio/market-leaders 응답 형태 */
+export interface MarketLeaderResponse {
+  rank: number;
+  ticker: string;
+  name: string;
+  market: string;
+  price: string;
+  change_pct: string;
+  currency: string;
+  logo_url: string | null;
+  price_display: string | null;
+  change_krw: string | null;
+}
+
+export async function getMarketLeaders(
+  limit = 5,
+): Promise<MarketLeaderResponse[]> {
+  return apiFetch<MarketLeaderResponse[]>(
+    `/portfolio/market-leaders?limit=${limit}`,
   );
 }

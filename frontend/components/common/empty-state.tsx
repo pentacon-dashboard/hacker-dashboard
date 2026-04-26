@@ -1,5 +1,8 @@
+"use client";
+
 import * as React from "react";
 import { cn } from "@/lib/utils";
+import { useLocale } from "@/lib/i18n/locale-provider";
 
 interface EmptyStateProps {
   title?: string;
@@ -9,11 +12,14 @@ interface EmptyStateProps {
 }
 
 export function EmptyState({
-  title = "데이터 없음",
-  description = "표시할 데이터가 아직 없습니다.",
+  title,
+  description,
   action,
   className,
 }: EmptyStateProps) {
+  const { t } = useLocale();
+  const resolvedTitle = title ?? t("common.emptyTitle");
+  const resolvedDesc = description ?? t("common.emptyDesc");
   return (
     <div
       className={cn(
@@ -21,7 +27,7 @@ export function EmptyState({
         className,
       )}
       role="status"
-      aria-label={title}
+      aria-label={resolvedTitle}
     >
       <div className="flex h-12 w-12 items-center justify-center rounded-full bg-muted">
         <svg
@@ -43,8 +49,8 @@ export function EmptyState({
         </svg>
       </div>
       <div className="space-y-1">
-        <h3 className="text-sm font-semibold">{title}</h3>
-        <p className="text-sm text-muted-foreground">{description}</p>
+        <h3 className="text-sm font-semibold">{resolvedTitle}</h3>
+        <p className="text-sm text-muted-foreground">{resolvedDesc}</p>
       </div>
       {action && <div>{action}</div>}
     </div>

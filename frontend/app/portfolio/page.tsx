@@ -1,111 +1,91 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Wallet, TrendingUp, BarChart3, Layers, Target } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/common/empty-state";
 import { ErrorState } from "@/components/common/error-state";
-import { Skeleton } from "@/components/ui/skeleton";
+import { KpiCard } from "@/components/dashboard/kpi-card";
+import { SectionCard } from "@/components/dashboard/section-card";
 import { AddHoldingDialog } from "@/components/portfolio/add-holding-dialog";
 import { AssetPieChart } from "@/components/portfolio/asset-pie-chart";
-import { NetworthChart } from "@/components/portfolio/networth-chart";
 import { HoldingsTable } from "@/components/portfolio/holdings-table";
-import { RebalancePanel } from "@/components/portfolio/rebalance-panel";
+import { SectorHeatmap } from "@/components/portfolio/sector-heatmap";
+import { MonthlyReturnCalendar } from "@/components/portfolio/monthly-return-calendar";
+import { AiInsightCard } from "@/components/portfolio/ai-insight-card";
+import { useLocale } from "@/lib/i18n/locale-provider";
+import { useDataSettings } from "@/lib/hooks/use-data-settings";
 import {
   getPortfolioSummary,
-  getSnapshots,
+  getSectorHeatmap,
+  getMonthlyReturns,
+  getAiInsight,
 } from "@/lib/api/portfolio";
-import { formatKRW, formatPct, formatSignedNumber, signedColorClass } from "@/lib/utils/format";
+import {
+  formatKRWCompact,
+  formatPct,
+  formatSignedNumber,
+  signedColorClass,
+} from "@/lib/utils/format";
 
 export const dynamic = "force-dynamic";
 
-/** 1개월 전 날짜를 YYYY-MM-DD 형식으로 반환 */
-function oneMonthAgo(): string {
-  const d = new Date();
-  d.setMonth(d.getMonth() - 1);
-  return d.toISOString().slice(0, 10);
-}
-
-function SummaryCardsSkeleton() {
-  return (
-    <div className="grid gap-4 sm:grid-cols-3">
-      {[...Array(3)].map((_, i) => (
-        <Card key={i}>
-          <CardHeader className="pb-2">
-            <Skeleton className="h-4 w-24" />
-          </CardHeader>
-          <CardContent className="space-y-2">
-            <Skeleton className="h-8 w-32" />
-            <Skeleton className="h-4 w-20" />
-          </CardContent>
-        </Card>
-      ))}
-    </div>
-  );
-}
-
-function ChartsSkeleton() {
-  return (
-    <div className="grid gap-4 lg:grid-cols-2">
-      {[...Array(2)].map((_, i) => (
-        <Card key={i}>
-          <CardHeader>
-            <Skeleton className="h-4 w-28" />
-          </CardHeader>
-          <CardContent>
-            <Skeleton className="h-56 w-full" />
-          </CardContent>
-        </Card>
-      ))}
-    </div>
-  );
-}
-
-function TableSkeleton() {
-  return (
-    <Card>
-      <CardHeader>
-        <Skeleton className="h-4 w-32" />
-      </CardHeader>
-      <CardContent className="space-y-2">
-        {[...Array(5)].map((_, i) => (
-          <Skeleton key={i} className="h-12 w-full" />
-        ))}
-      </CardContent>
-    </Card>
-  );
-}
-
 export default function PortfolioPage() {
+  const { t } = useLocale();
+  const { refreshIntervalMs, autoRefresh } = useDataSettings();
+
   const summaryQuery = useQuery({
     queryKey: ["portfolio", "summary"],
-    queryFn: getPortfolioSummary,
+    queryFn: () => getPortfolioSummary(),
     staleTime: 30_000,
+    refetchInterval: autoRefresh ? refreshIntervalMs : false,
   });
 
-  const snapshotsQuery = useQuery({
-    queryKey: ["portfolio", "snapshots"],
-    queryFn: () => getSnapshots(oneMonthAgo()),
+  const heatmapQuery = useQuery({
+    queryKey: ["portfolio", "sectors", "heatmap"],
+    queryFn: getSectorHeatmap,
     staleTime: 60_000,
+    refetchInterval: autoRefresh ? refreshIntervalMs : false,
   });
 
-  const isLoading = summaryQuery.isLoading || snapshotsQuery.isLoading;
-  const isError = summaryQuery.isError || snapshotsQuery.isError;
+  const calendarQuery = useQuery({
+    queryKey: ["portfolio", "monthly-returns"],
+    queryFn: () => getMonthlyReturns(new Date().getFullYear()),
+    staleTime: 300_000,
+  });
+
+  const insightQuery = useQuery({
+    queryKey: ["portfolio", "ai-insight"],
+    queryFn: getAiInsight,
+    staleTime: 300_000,
+  });
+
+  const isLoading = summaryQuery.isLoading;
+  const isError = summaryQuery.isError;
 
   function handleRetry() {
     void summaryQuery.refetch();
-    void snapshotsQuery.refetch();
+    void heatmapQuery.refetch();
+    void calendarQuery.refetch();
+    void insightQuery.refetch();
   }
 
   if (isLoading) {
     return (
       <div className="space-y-6">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">포트폴리오</h1>
-          <p className="text-sm text-muted-foreground">자산군별 보유 현황 및 분석</p>
+          <h1 className="text-2xl font-bold tracking-tight">{t("portfolio.title")}</h1>
+          <p className="text-sm text-muted-foreground">{t("portfolio.subtitle")}</p>
         </div>
-        <SummaryCardsSkeleton />
-        <ChartsSkeleton />
-        <TableSkeleton />
+        <div className="grid gap-4 sm:grid-cols-5">
+          {[...Array(5)].map((_, i) => (
+            <div key={i} className="rounded-xl border bg-card p-4 shadow-sm">
+              <Skeleton className="h-3 w-20" />
+              <Skeleton className="mt-3 h-6 w-24" />
+            </div>
+          ))}
+        </div>
+        <Skeleton className="h-64 w-full" />
       </div>
     );
   }
@@ -114,11 +94,11 @@ export default function PortfolioPage() {
     return (
       <div className="space-y-6">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">포트폴리오</h1>
+          <h1 className="text-2xl font-bold tracking-tight">{t("portfolio.title")}</h1>
         </div>
         <ErrorState
-          title="포트폴리오 로드 실패"
-          description="데이터를 불러오는 중 문제가 생겼습니다."
+          title={t("portfolio.loadError")}
+          description={t("portfolio.loadErrorDesc")}
           onRetry={handleRetry}
         />
       </div>
@@ -126,139 +106,185 @@ export default function PortfolioPage() {
   }
 
   const summary = summaryQuery.data;
-  const snapshots = snapshotsQuery.data ?? [];
 
-  // 보유 종목이 없는 빈 상태
   if (!summary || summary.holdings.length === 0) {
     return (
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold tracking-tight">포트폴리오</h1>
-            <p className="text-sm text-muted-foreground">자산군별 보유 현황 및 분석</p>
+            <h1 className="text-2xl font-bold tracking-tight">{t("portfolio.title")}</h1>
+            <p className="text-sm text-muted-foreground">{t("portfolio.subtitle")}</p>
           </div>
           <AddHoldingDialog />
         </div>
         <EmptyState
-          title="보유자산이 없습니다"
-          description="보유자산을 추가하면 포트폴리오 분석이 시작됩니다."
+          title={t("portfolio.emptyTitle")}
+          description={t("portfolio.emptyDesc")}
           action={<AddHoldingDialog />}
         />
       </div>
     );
   }
 
-  const totalPnlColor = signedColorClass(summary.total_pnl_krw);
-  const dailyChangeColor = signedColorClass(summary.daily_change_krw);
+  const totalPnlColorClass = signedColorClass(summary.total_pnl_krw);
+  const dailyColorClass = signedColorClass(summary.daily_change_krw);
+
+  // win_rate_pct: BE 가 추가하면 직접 사용, 없으면 holdings 에서 계산
+  const rawSummary = summary as typeof summary & { win_rate_pct?: string };
+  const winRatePct = rawSummary.win_rate_pct
+    ? Number(rawSummary.win_rate_pct)
+    : summary.holdings.filter((h: { pnl_pct: string | number }) => Number(h.pnl_pct) > 0).length /
+      Math.max(summary.holdings.length, 1) * 100;
 
   return (
     <div className="space-y-6">
       {/* 헤더 */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">포트폴리오</h1>
-          <p className="text-sm text-muted-foreground">자산군별 보유 현황 및 분석</p>
+          <h1 className="text-2xl font-bold tracking-tight">{t("portfolio.title")}</h1>
+          <p className="text-sm text-muted-foreground">{t("portfolio.subtitle")}</p>
         </div>
         <AddHoldingDialog />
       </div>
 
-      {/* 요약 카드 3개 */}
-      <div className="grid gap-4 sm:grid-cols-3">
-        {/* 총자산 */}
-        <Card data-testid="summary-card">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              총 자산
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold tabular-nums">
-              {formatKRW(summary.total_value_krw)}
+      {/* KPI 5개 */}
+      <section
+        aria-label={t("portfolio.kpiAria")}
+        className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5"
+      >
+        <KpiCard
+          label={t("portfolio.kpi.totalValue")}
+          value={formatKRWCompact(summary.total_value_krw)}
+          delta={t("portfolio.krwEquiv")}
+          icon={<Wallet className="h-4 w-4" />}
+          accent="blue"
+          testId="portfolio-kpi-total"
+        />
+        <KpiCard
+          label={t("portfolio.kpi.totalPnl")}
+          value={formatSignedNumber(summary.total_pnl_krw).replace(/[+-]/, (s) => s === "+" ? "+" : "-") + " KRW"}
+          delta={formatPct(summary.total_pnl_pct, { signed: true })}
+          deltaValue={Number(summary.total_pnl_pct)}
+          icon={<TrendingUp className="h-4 w-4" />}
+          accent={Number(summary.total_pnl_pct) >= 0 ? "green" : "rose"}
+          testId="portfolio-kpi-pnl"
+        />
+        <KpiCard
+          label={t("portfolio.kpi.dailyChange")}
+          value={formatPct(summary.daily_change_pct, { signed: true })}
+          delta={(() => {
+            const krw = Number(summary.daily_change_krw);
+            return (krw > 0 ? "+" : "") + formatKRWCompact(krw);
+          })()}
+          deltaValue={Number(summary.daily_change_pct)}
+          icon={<BarChart3 className="h-4 w-4" />}
+          accent="violet"
+          testId="portfolio-kpi-daily"
+        />
+        <KpiCard
+          label={t("portfolio.kpi.holdings")}
+          value={`${summary.holdings_count}`}
+          delta={t("dashboard.kpi.holdingsUnit")}
+          icon={<Layers className="h-4 w-4" />}
+          accent="slate"
+          testId="portfolio-kpi-holdings-count"
+        />
+        <KpiCard
+          label={t("portfolio.kpi.winRate")}
+          value={`${winRatePct.toFixed(1)}%`}
+          delta={winRatePct >= 60 ? t("portfolio.winRate.good") : winRatePct >= 40 ? t("portfolio.winRate.fair") : t("portfolio.winRate.poor")}
+          tone={winRatePct >= 60 ? "positive" : winRatePct >= 40 ? "neutral" : "negative"}
+          icon={<Target className="h-4 w-4" />}
+          accent="amber"
+          testId="portfolio-kpi-win-rate"
+        />
+      </section>
+
+      {/* 중단: 자산 구성 (도넛) + 보유 종목 테이블 */}
+      <section className="grid grid-cols-1 gap-4 lg:grid-cols-12">
+        <SectionCard
+          title={t("portfolio.allocation")}
+          className="lg:col-span-4"
+          testId="portfolio-section-allocation"
+        >
+          <AssetPieChart breakdown={summary.asset_class_breakdown} />
+          {/* 총 손익률 게이지 */}
+          <div className="mt-4 space-y-2 border-t pt-4">
+            <div className="flex items-center justify-between text-xs">
+              <span className="text-muted-foreground">{t("portfolio.totalReturn")}</span>
+              <span className={`font-bold tabular-nums ${totalPnlColorClass}`}>
+                {formatPct(summary.total_pnl_pct, { signed: true })}
+              </span>
             </div>
-            <p className="text-xs text-muted-foreground mt-1">KRW 환산</p>
-          </CardContent>
-        </Card>
-
-        {/* 총 평가손익 */}
-        <Card data-testid="summary-card">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              총 평가손익
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className={`text-2xl font-bold tabular-nums ${totalPnlColor}`}>
-              {formatSignedNumber(summary.total_pnl_krw)}
+            <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
+              <div
+                className={`h-full rounded-full ${
+                  Number(summary.total_pnl_pct) >= 0 ? "bg-emerald-500" : "bg-red-500"
+                }`}
+                style={{
+                  width: `${Math.min(Math.abs(Number(summary.total_pnl_pct)) * 5, 100)}%`,
+                }}
+              />
             </div>
-            <p className={`text-xs mt-1 ${totalPnlColor}`}>
-              {formatPct(summary.total_pnl_pct, { signed: true })}
-            </p>
-          </CardContent>
-        </Card>
-
-        {/* 일간 변동 */}
-        <Card data-testid="summary-card">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              일간 변동
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className={`text-2xl font-bold tabular-nums ${dailyChangeColor}`}>
-              {formatSignedNumber(summary.daily_change_krw)}
+            <div className="flex items-center justify-between text-xs">
+              <span className="text-muted-foreground">{t("portfolio.kpi.dailyChange")}</span>
+              <span className={`font-semibold tabular-nums ${dailyColorClass}`}>
+                {formatPct(summary.daily_change_pct, { signed: true })}
+              </span>
             </div>
-            <p className={`text-xs mt-1 ${dailyChangeColor}`}>
-              {formatPct(summary.daily_change_pct, { signed: true })}
-            </p>
-          </CardContent>
-        </Card>
-      </div>
+          </div>
+        </SectionCard>
 
-      {/* 차트 2열 그리드 */}
-      <div className="grid gap-4 lg:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-sm font-medium">자산군 비중</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <AssetPieChart breakdown={summary.asset_class_breakdown} />
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-sm font-medium">순자산 추이 (1개월)</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <NetworthChart snapshots={snapshots} />
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* 종목별 손익 테이블 */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-sm font-medium">종목별 손익</CardTitle>
-        </CardHeader>
-        <CardContent>
+        <SectionCard
+          title={t("portfolio.holdingsOverview")}
+          className="lg:col-span-8"
+          testId="portfolio-section-holdings"
+        >
           <HoldingsTable holdings={summary.holdings} />
-        </CardContent>
-      </Card>
+        </SectionCard>
+      </section>
 
-      {/* 리밸런싱 제안 섹션 */}
-      <section aria-labelledby="rebalance-heading">
-        <div className="mb-4">
-          <h2
-            id="rebalance-heading"
-            className="text-xl font-bold tracking-tight"
-          >
-            리밸런싱 제안
-          </h2>
-          <p className="text-sm text-muted-foreground mt-1">
-            목표 자산 비중을 설정하면 에이전트가 구체적인 매매 액션을 제안합니다.
-          </p>
-        </div>
-        <RebalancePanel />
+      {/* 하단: 섹터 히트맵 */}
+      <SectionCard
+        title={t("portfolio.sectorHeatmap")}
+        testId="portfolio-section-heatmap"
+      >
+        {heatmapQuery.isLoading ? (
+          <Skeleton className="h-32 w-full" />
+        ) : heatmapQuery.isError ? (
+          <p className="text-sm text-muted-foreground">{t("portfolio.sectorLoadFail")}</p>
+        ) : (
+          <SectorHeatmap tiles={heatmapQuery.data ?? []} />
+        )}
+      </SectionCard>
+
+      {/* 하단 2열: 월간 수익률 캘린더 + AI 인사이트 */}
+      <section className="grid grid-cols-1 gap-4 lg:grid-cols-12">
+        <SectionCard
+          title={t("portfolio.monthlyCalendar")}
+          className="lg:col-span-8"
+          testId="portfolio-section-calendar"
+        >
+          {calendarQuery.isLoading ? (
+            <Skeleton className="h-32 w-full" />
+          ) : (
+            <MonthlyReturnCalendar
+              cells={calendarQuery.data ?? []}
+              year={new Date().getFullYear()}
+            />
+          )}
+        </SectionCard>
+
+        <SectionCard
+          title={t("portfolio.aiInsight")}
+          className="lg:col-span-4"
+          testId="portfolio-section-insight"
+        >
+          <AiInsightCard
+            insight={insightQuery.data ?? null}
+            isLoading={insightQuery.isLoading}
+          />
+        </SectionCard>
       </section>
     </div>
   );

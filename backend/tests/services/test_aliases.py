@@ -3,9 +3,8 @@
 
 실 네트워크 없이 동작.
 """
-from __future__ import annotations
 
-import pytest
+from __future__ import annotations
 
 from app.services.market.aliases import ALIASES, lookup
 
@@ -116,23 +115,22 @@ class TestAliasCount:
 
     def test_foreign_stocks_30(self):
         """해외 주식 30개 이상."""
-        yahoo_stocks = [
-            v for v in ALIASES.values() if v[0] == "yahoo" and v[2] == "stock"
-        ]
+        yahoo_stocks = [v for v in ALIASES.values() if v[0] == "yahoo" and v[2] == "stock"]
         assert len(yahoo_stocks) >= 30
 
     def test_crypto_30(self):
         """코인 30개 이상."""
-        upbit_cryptos = [
-            v for v in ALIASES.values() if v[0] == "upbit" and v[2] == "crypto"
-        ]
+        upbit_cryptos = [v for v in ALIASES.values() if v[0] == "upbit" and v[2] == "crypto"]
         assert len(upbit_cryptos) >= 30
 
     def test_kr_stocks_20(self):
         """국내 주식 20개 이상. Yahoo .KS/.KQ 티커 형식."""
         kr_stocks = [
-            v for v in ALIASES.values()
-            if v[0] == "yahoo" and v[2] == "stock" and (v[1].endswith(".KS") or v[1].endswith(".KQ"))
+            v
+            for v in ALIASES.values()
+            if v[0] == "yahoo"
+            and v[2] == "stock"
+            and (v[1].endswith(".KS") or v[1].endswith(".KQ"))
         ]
         assert len(kr_stocks) >= 20
 

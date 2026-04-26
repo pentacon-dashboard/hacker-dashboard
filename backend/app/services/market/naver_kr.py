@@ -3,21 +3,108 @@
 비공식 API: GET https://m.stock.naver.com/api/search/all?keyword={q}
 공모전 MVP 허용 범위 내에서 사용.
 네트워크/파싱 에러 시 빈 리스트 반환 (silent fail).
+
+fetch_quote / fetch_ohlc: yfinance (.KS/.KQ) 로 실시간 데이터 조회.
+실패 시 _STUB_QUOTES 폴백.
 """
+
 from __future__ import annotations
 
+import asyncio
+import hashlib
 import logging
-from datetime import datetime, timezone
+import random
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from app.schemas.market import OhlcBar, Quote, SymbolInfo
 from app.services.market.base import MarketAdapter
+from app.services.market.yf_cache import yf_cache_get, yf_cache_set
 
 logger = logging.getLogger(__name__)
 
 _SEARCH_URL = "https://m.stock.naver.com/api/search/all"
 
-# 스텁 aliases — fetch_quote 용도로만 잔존. 검색은 실 API + aliases 모듈로 처리.
+# ─── 심사 데모용 고정 stub quote 데이터 ───────────────────────────────────────
+# yfinance 실패 시 이 값으로 폴백.
+# key: 6자리 종목코드 (문자열)
+_STUB_QUOTES: dict[str, dict[str, Any]] = {
+    "005930": {
+        "price": 72000.0,
+        "change": 400.0,
+        "change_pct": 0.56,
+        "volume": 12345678,
+        "name": "삼성전자",
+    },
+    "000660": {
+        "price": 231000.0,
+        "change": -2500.0,
+        "change_pct": -1.07,
+        "volume": 4567890,
+        "name": "SK하이닉스",
+    },
+    "035420": {
+        "price": 215500.0,
+        "change": 1500.0,
+        "change_pct": 0.70,
+        "volume": 1234567,
+        "name": "NAVER",
+    },
+    "035720": {
+        "price": 51800.0,
+        "change": -200.0,
+        "change_pct": -0.38,
+        "volume": 2345678,
+        "name": "카카오",
+    },
+    "005380": {
+        "price": 245000.0,
+        "change": 3500.0,
+        "change_pct": 1.45,
+        "volume": 987654,
+        "name": "현대차",
+    },
+    "051910": {
+        "price": 385000.0,
+        "change": -5000.0,
+        "change_pct": -1.28,
+        "volume": 543210,
+        "name": "LG화학",
+    },
+    "006400": {
+        "price": 165000.0,
+        "change": 2000.0,
+        "change_pct": 1.23,
+        "volume": 876543,
+        "name": "삼성SDI",
+    },
+    "207940": {
+        "price": 725000.0,
+        "change": 8000.0,
+        "change_pct": 1.12,
+        "volume": 234567,
+        "name": "삼성바이오로직스",
+    },
+    "005490": {
+        "price": 590000.0,
+        "change": -3000.0,
+        "change_pct": -0.51,
+        "volume": 345678,
+        "name": "POSCO홀딩스",
+    },
+    "028260": {
+        "price": 98000.0,
+        "change": 1200.0,
+        "change_pct": 1.24,
+        "volume": 654321,
+        "name": "삼성물산",
+    },
+}
+
+_DEFAULT_STUB_PRICE = 50000.0  # _STUB_QUOTES 에 없는 종목 fallback
+_DEFAULT_STUB_VOLUME = 500000.0
+
+# 스텁 aliases — search_symbols 용도. 검색은 실 API + aliases 모듈로 처리.
 _STUB_SYMBOLS: list[dict[str, str]] = [
     {"symbol": "005930", "name": "삼성전자"},
     {"symbol": "035720", "name": "카카오"},
@@ -84,18 +171,10 @@ def _parse_section(items: list[dict[str, Any]]) -> list[SymbolInfo]:
         try:
             # 종목 코드
             item_code: str = (
-                item.get("itemCode")
-                or item.get("reutersCode")
-                or item.get("symbol")
-                or ""
+                item.get("itemCode") or item.get("reutersCode") or item.get("symbol") or ""
             )
             # 종목명
-            name: str = (
-                item.get("stockName")
-                or item.get("name")
-                or item.get("itemName")
-                or ""
-            )
+            name: str = item.get("stockName") or item.get("name") or item.get("itemName") or ""
             if not item_code or not name:
                 continue
 
@@ -107,7 +186,6 @@ def _parse_section(items: list[dict[str, Any]]) -> list[SymbolInfo]:
                 x in market_raw for x in ("NYSE", "NASDAQ", "NAS", "AMEX", "NYSEMKT")
             ):
                 # 국내 종목 → Yahoo Finance(.KS/.KQ) 로 라우팅
-                # → 워치리스트 추가 후 Yahoo 어댑터를 통해 시세/OHLC 정상 조회 가능
                 yahoo_symbol = _kr_yahoo_symbol(item_code, item)
                 kr_exchange = _detect_kr_exchange(item)
                 results.append(
@@ -163,16 +241,60 @@ class NaverKrAdapter(MarketAdapter):
     market = "naver_kr"
 
     async def fetch_quote(self, symbol: str) -> Quote:
-        """스텁: 실 네트워크 없이 고정 응답 반환."""
-        name = _find_name(symbol)
-        ts = datetime.now(timezone.utc).isoformat()
+        """yfinance 로 실시간 시세 조회 (KS suffix 자동 부착).
+
+        yfinance 호출 실패 시 _STUB_QUOTES 폴백.
+        캐시 TTL: 10초.
+        """
+        cache_key = f"yf:quote:naver_kr:{symbol}"
+        cached = await yf_cache_get(cache_key)
+        if cached is not None:
+            return Quote(**cached)
+
+        ts = datetime.now(UTC).isoformat()
+
+        try:
+            yf_symbol = f"{symbol}.KS"
+            live = await asyncio.get_event_loop().run_in_executor(
+                None, _fetch_yf_quote_sync, yf_symbol
+            )
+            if live is not None:
+                q = Quote(
+                    symbol=symbol,
+                    market=self.market,
+                    price=live["price"],
+                    change=live["change"],
+                    change_pct=live["change_pct"],
+                    volume=live["volume"],
+                    currency="KRW",
+                    timestamp=ts,
+                )
+                await yf_cache_set(cache_key, q.model_dump(), ttl=10)
+                return q
+        except Exception as exc:
+            logger.warning("yfinance quote 실패 (%s): %s — stub 폴백", symbol, exc)
+
+        # stub 폴백
+        stub = _STUB_QUOTES.get(symbol)
+        if stub is not None:
+            return Quote(
+                symbol=symbol,
+                market=self.market,
+                price=stub["price"],
+                change=stub["change"],
+                change_pct=stub["change_pct"],
+                volume=float(stub["volume"]),
+                currency="KRW",
+                timestamp=ts,
+            )
+
         return Quote(
             symbol=symbol,
             market=self.market,
-            price=1.0,  # stub
+            price=_DEFAULT_STUB_PRICE,
             change=0.0,
             change_pct=0.0,
-            volume=None,
+            volume=_DEFAULT_STUB_VOLUME,
             currency="KRW",
             timestamp=ts,
         )
@@ -184,8 +306,28 @@ class NaverKrAdapter(MarketAdapter):
         interval: str = "1d",
         limit: int = 100,
     ) -> list[OhlcBar]:
-        """스텁: 빈 리스트 반환. TODO: 실 API 연동."""
-        return []
+        """yfinance 로 실시간 OHLC 조회 (KS suffix 자동 부착).
+
+        yfinance 호출 실패 시 deterministic stub 폴백.
+        """
+        cache_key = f"yf:ohlc:naver_kr:{symbol}:{interval}:{limit}"
+        cached = await yf_cache_get(cache_key)
+        if cached is not None:
+            return [OhlcBar(**bar) for bar in cached]
+
+        try:
+            yf_symbol = f"{symbol}.KS"
+            bars = await asyncio.get_event_loop().run_in_executor(
+                None, _fetch_yf_ohlc_sync, yf_symbol, interval, limit
+            )
+            if bars:
+                await yf_cache_set(cache_key, [b.model_dump() for b in bars], ttl=60)
+                return bars
+        except Exception as exc:
+            logger.warning("yfinance OHLC 실패 (%s): %s — stub 폴백", symbol, exc)
+
+        # stub 폴백 (deterministic random walk)
+        return _build_stub_ohlc(symbol, limit)
 
     async def search_symbols(self, query: str) -> list[SymbolInfo]:
         """네이버 통합 검색 API 호출. 실패 시 빈 리스트 반환."""
@@ -225,8 +367,114 @@ class NaverKrAdapter(MarketAdapter):
         return deduped
 
 
+def _build_stub_ohlc(symbol: str, limit: int) -> list[OhlcBar]:
+    """deterministic stub OHLC (폴백용). 원래 로직 보존."""
+    stub = _STUB_QUOTES.get(symbol)
+    base_price = stub["price"] if stub is not None else _DEFAULT_STUB_PRICE
+    base_volume = float(stub["volume"]) if stub is not None else _DEFAULT_STUB_VOLUME
+
+    seed = int(hashlib.md5(symbol.encode()).hexdigest()[:8], 16)
+    rng = random.Random(seed)  # noqa: S311 — 보안 목적 아님 (PYTHONHASHSEED 무관 결정론)
+
+    now = datetime.now(UTC)
+    trading_days: list[datetime] = []
+    offset = 0
+    while len(trading_days) < limit:
+        offset += 1
+        candidate = now - timedelta(days=offset)
+        if candidate.weekday() < 5:
+            trading_days.append(candidate)
+    trading_days.reverse()
+
+    bars: list[OhlcBar] = []
+    prev_close = base_price
+    for day in trading_days:
+        pct_change = rng.uniform(-0.02, 0.02)
+        close = round(prev_close * (1.0 + pct_change), 0)
+        open_ = round(prev_close * (1.0 + rng.uniform(-0.005, 0.005)), 0)
+        high = round(max(open_, close) * 1.01, 0)
+        low = round(min(open_, close) * 0.99, 0)
+        volume = round(base_volume * rng.uniform(0.7, 1.3), 0)
+        bars.append(
+            OhlcBar(
+                ts=day.replace(hour=0, minute=0, second=0, microsecond=0).isoformat(),
+                open=open_,
+                high=high,
+                low=low,
+                close=close,
+                volume=volume,
+            )
+        )
+        prev_close = close
+    return bars
+
+
 def _find_name(symbol: str) -> str:
+    stub = _STUB_QUOTES.get(symbol)
+    if stub is not None:
+        return str(stub["name"])
     for item in _STUB_SYMBOLS:
         if item["symbol"] == symbol:
             return item["name"]
     return symbol
+
+
+# ─── yfinance 동기 헬퍼 (executor 에서 호출) ─────────────────────────────────
+
+
+def _fetch_yf_quote_sync(yf_symbol: str) -> dict[str, Any] | None:
+    """yfinance Ticker.info 에서 quote 데이터 추출. 실패 시 None 반환."""
+    import yfinance as yf
+
+    ticker = yf.Ticker(yf_symbol)
+    info = ticker.info
+    price = info.get("regularMarketPrice") or info.get("currentPrice")
+    if not price:
+        return None
+
+    prev_close = info.get("regularMarketPreviousClose") or info.get("previousClose") or price
+    change = float(price) - float(prev_close)
+    change_pct = (change / float(prev_close) * 100.0) if prev_close else 0.0
+    volume = info.get("regularMarketVolume") or info.get("volume")
+
+    return {
+        "price": float(price),
+        "change": round(change, 2),
+        "change_pct": round(change_pct, 4),
+        "volume": float(volume) if volume else 0.0,
+    }
+
+
+def _fetch_yf_ohlc_sync(yf_symbol: str, interval: str, limit: int) -> list[OhlcBar]:
+    """yfinance history() 로 OHLC 바 리스트 반환. 실패 시 빈 리스트."""
+    import yfinance as yf
+
+    # interval 매핑: '1d' → period/interval 결정
+    yf_interval = "1d" if interval == "1d" else "1m"
+    period = "6mo" if yf_interval == "1d" else "1d"
+
+    ticker = yf.Ticker(yf_symbol)
+    df = ticker.history(period=period, interval=yf_interval)
+    if df is None or df.empty:
+        return []
+
+    bars: list[OhlcBar] = []
+    rows = df.tail(limit)
+    for idx, row in rows.iterrows():
+        try:
+            ts_val: Any = idx
+            # pandas Timestamp → ISO string
+            ts_str = ts_val.isoformat() if hasattr(ts_val, "isoformat") else str(ts_val)
+            bars.append(
+                OhlcBar(
+                    ts=ts_str,
+                    open=float(row["Open"]),
+                    high=float(row["High"]),
+                    low=float(row["Low"]),
+                    close=float(row["Close"]),
+                    volume=float(row["Volume"]) if "Volume" in row else None,
+                )
+            )
+        except Exception:
+            continue
+    return bars

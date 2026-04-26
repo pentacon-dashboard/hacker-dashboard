@@ -1,0 +1,28 @@
+{
+  "id": "copilot_simulator_02",
+  "agent": "simulator",
+  "description": "다중 종목 시나리오 — AAPL -20%, MSFT +30%",
+  "step": {
+    "step_id": "sim-02",
+    "agent": "simulator",
+    "inputs": {
+      "holdings": [
+        {"symbol": "AAPL", "quantity": 5, "avg_price": 200.0},
+        {"symbol": "MSFT", "quantity": 3, "avg_price": 300.0}
+      ],
+      "shocks": {"AAPL": 0.8, "MSFT": 1.3},
+      "base_prices": {"AAPL": 200.0, "MSFT": 300.0}
+    },
+    "depends_on": [],
+    "gate_policy": {"schema": true, "domain": true, "critique": true}
+  },
+  "expected_gate_results": {
+    "schema": "pass",
+    "domain": "pass",
+    "critique": "pass"
+  },
+  "expected_card_type": "simulator_result",
+  "expected_base_value": 1900.0,
+  "expected_shocked_value": 1970.0,
+  "expected_degraded": false
+}

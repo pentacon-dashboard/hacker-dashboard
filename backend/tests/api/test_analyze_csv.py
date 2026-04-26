@@ -8,13 +8,13 @@ POST /analyze/csv 엔드포인트 테스트.
   - 헤더 없음 → 400 CSV_INVALID
   - 빈 파일 → 400 CSV_INVALID
 """
+
 from __future__ import annotations
 
 import io
 
 import pytest
 from httpx import AsyncClient
-
 
 # ── 헬퍼 ──────────────────────────────────────────────────────────────────────
 
@@ -75,6 +75,7 @@ async def test_csv_stock_style(client: AsyncClient, fake_llm_client) -> None:
 async def test_csv_response_has_x_cache_header(client: AsyncClient, fake_llm_client) -> None:
     """첫 번째 요청은 X-Cache: MISS."""
     from app.services import analyze_cache
+
     analyze_cache.reset_for_testing()
 
     csv_text = "col1,col2\nval1,val2\n"
@@ -84,7 +85,9 @@ async def test_csv_response_has_x_cache_header(client: AsyncClient, fake_llm_cli
 
 
 @pytest.mark.asyncio
-async def test_csv_application_vnd_ms_excel_content_type(client: AsyncClient, fake_llm_client) -> None:
+async def test_csv_application_vnd_ms_excel_content_type(
+    client: AsyncClient, fake_llm_client
+) -> None:
     """application/vnd.ms-excel content-type 도 허용."""
     csv_text = "symbol,price\nAAPL,185.0\n"
     resp = await _csv_upload(

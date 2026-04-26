@@ -56,6 +56,20 @@ class GateRejectionError(AppError):
 
 
 async def app_error_handler(request: Request, exc: AppError) -> JSONResponse:
+    # 422 응답은 HTTPValidationError 스키마 (`detail` 배열) 와 호환되어야 schemathesis 통과
+    if exc.status_code == 422:
+        return JSONResponse(
+            status_code=exc.status_code,
+            content={
+                "detail": [
+                    {
+                        "msg": exc.message,
+                        "type": exc.code.lower(),
+                        "loc": ["body"],
+                    }
+                ]
+            },
+        )
     return JSONResponse(
         status_code=exc.status_code,
         content={"error": {"code": exc.code, "message": exc.message}},

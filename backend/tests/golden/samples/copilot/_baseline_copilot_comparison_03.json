@@ -1,0 +1,23 @@
+{
+  "id": "copilot_comparison_03",
+  "agent": "comparison",
+  "description": "존재하지 않는 심볼 포함 — domain gate fail, degraded",
+  "step": {
+    "step_id": "cmp-03",
+    "agent": "comparison",
+    "inputs": {
+      "symbols": ["AAPL", "DEFINITELY_NOT_A_SYMBOL_XYZ"],
+      "metrics": ["return_3m_pct", "volatility_pct"]
+    },
+    "depends_on": [],
+    "gate_policy": {"schema": true, "domain": true, "critique": true}
+  },
+  "expected_gate_results": {
+    "schema": "pass",
+    "domain": "fail",
+    "critique": "skip"
+  },
+  "expected_card_type": "comparison_table",
+  "expected_symbols": ["AAPL", "DEFINITELY_NOT_A_SYMBOL_XYZ"],
+  "expected_degraded": true
+}

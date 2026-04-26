@@ -1,0 +1,32 @@
+{
+  "run_id": "20260420-160548-competition-winner",
+  "sprint": "sprint-02",
+  "iter": 2,
+  "score": 7.0,
+  "max_score": 8.0,
+  "normalized_score": 8.8,
+  "breakdown": {
+    "typecheck": 2,
+    "lint": 1,
+    "unit": 2,
+    "contract": null,
+    "golden": 2,
+    "e2e": "deferred"
+  },
+  "failures": [],
+  "notes": [
+    "typecheck: BE mypy 'Success: no issues found in 53 source files'. FE tsc --noEmit clean (exit 0). 2/2.",
+    "lint: BE ruff 'All checks passed!'. FE eslint 0 errors, 4 warnings (use-realtime-ticker.ts:142 unused disable directive, sprint-02.test.tsx:25/32 no-explicit-any). warnings 허용 기준 1/1.",
+    "unit BE: 233 passed in 498s (--ignore=tests/golden --ignore=tests/harness). sprint-01 baseline 유지. 2pt.",
+    "unit FE: 82/82 passed. sprint-02.test.tsx 2/2: '3게이트 배지 3개가 모두 pass 상태로 렌더된다' + 'Router 근거 문단이 홈 결과 패널에 항상 노출된다'. iter-1 실패 원인(fixture status 누락 + useTypewriter sync 미노출) 양쪽 모두 해소 확인.",
+    "contract: BE server not running (curl exit 7). schemathesis live run deferred. max_score adjusted to 8.",
+    "golden: 110 passed in 3.77s. _last_run drift=0. 2/2.",
+    "e2e: deferred (is_final_iter=false).",
+    "useTypewriter 패치 검증: analyzer-result-panel.tsx line 50에 useState(text) 초기값 전체 텍스트로 설정됨. prevTextRef 로 첫 mount skip 로직 확인. UX 트레이드오프(첫 렌더 타이핑 애니메이션 생략)는 gen-sprint-02-2.md 에 명시 — 허용 범위.",
+    "fixture 패치 검증: sprint-02.test.tsx line 10에 status: 'ok' 추가 확인. 계약 stub 텍스트 assertion 변경 없음 확인.",
+    "suggest_direction_pivot: iter=2 < 3 조건 미충족. false."
+  ],
+  "suggest_direction_pivot": false,
+  "terminated_reason": null,
+  "attempt_summary_path": ".claude/harness/20260420-160548-competition-winner/attempt-summary-sprint-02-2.md"
+}

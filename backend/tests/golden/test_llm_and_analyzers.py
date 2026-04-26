@@ -4,6 +4,7 @@ llm.py 와 Analyzer base 의 동작 보조 테스트.
 - API 키 미설정 시 LLMUnavailableError
 - Analyzer 가 파싱 실패를 _parse_error 로 전달
 """
+
 from __future__ import annotations
 
 from typing import Any
@@ -43,7 +44,7 @@ def test_extract_json_empty_raises() -> None:
 async def test_call_llm_raises_without_key(monkeypatch: pytest.MonkeyPatch) -> None:
     """API 키가 없고 DI 클라이언트도 없으면 LLMUnavailableError."""
     llm_module.set_client(None)
-    monkeypatch.setattr(llm_module.settings, "anthropic_api_key", "your-key-here")
+    monkeypatch.setattr(llm_module.settings, "openai_api_key", "")
     with pytest.raises(LLMUnavailableError):
         await call_llm(system_prompt_name="router_system", user_content="test")
 
@@ -108,7 +109,7 @@ async def test_critique_gate_swallows_llm_error(monkeypatch: pytest.MonkeyPatch)
     from app.agents.gates.critique import critique_gate
 
     llm_module.set_client(None)
-    monkeypatch.setattr(llm_module.settings, "anthropic_api_key", "your-key-here")
+    monkeypatch.setattr(llm_module.settings, "openai_api_key", "")
     state: dict[str, Any] = {
         "input_data": [{"close": 100}],
         "query": None,

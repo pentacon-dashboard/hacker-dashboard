@@ -1,0 +1,31 @@
+{
+  "run_id": "20260420-160548-competition-winner",
+  "sprint": "sprint-04",
+  "iter": 4,
+  "score": 9.0,
+  "max_score": 10.0,
+  "normalized_score": 9.0,
+  "breakdown": {
+    "typecheck": 2,
+    "lint": 1,
+    "unit": 2,
+    "contract": 2,
+    "golden": 2,
+    "e2e": "deferred"
+  },
+  "failures": [],
+  "notes": [
+    "BE mypy: Success (53 files, 0 issues). FE tsc: 0 errors (exit 0). typecheck 2점 달성.",
+    "BE ruff: All checks passed. FE eslint: 0 errors, 4 warnings (warning only). lint 1점 달성.",
+    "BE pytest --ignore=tests/golden: 233 passed in 469s. FE vitest: 90/90 passed (sprint-01 harness 3/3 all green 포함). unit 2점 달성.",
+    "contract: pytest tests/contract/ 개정 규칙 적용. ASGI in-memory SQLite + respx 완전 격리. 18 passed in ~425s (exit code 0). contract 2점 달성.",
+    "iter-3 contract 0점은 구 규칙(live schemathesis --base-url) 기준이었음. commit c803324 이후 개정 규칙(pytest tests/contract/)으로 재채점 — 18 tests 전부 통과 확인.",
+    "golden: pytest tests/golden/: 110 passed in 3.32s. N=0 차이. golden 2점 달성.",
+    "e2e: is_final_iter=false → deferred.",
+    "score 9.0 — threshold 8.0 초과 달성. 잔여 손실 1점은 e2e deferred(최종 이터에서만 실행).",
+    "suggest_direction_pivot: iter>=3이나 score(4)-score(3)=9.0-7.0=2.0 > 0.5 → false."
+  ],
+  "suggest_direction_pivot": false,
+  "terminated_reason": null,
+  "attempt_summary_path": ".claude/harness/20260420-160548-competition-winner/attempt-summary-sprint-04-4.md"
+}

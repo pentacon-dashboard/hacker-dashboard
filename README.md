@@ -178,9 +178,51 @@ make contract  # schemathesis (서버 기동 중 필요)
 
 ---
 
+## 자연어 Copilot
+
+헤더 커맨드바에 자연어를 입력하면 Router가 멀티스텝 에이전트 플랜을 수립해 기존 Analyzer에
+신규 서브-에이전트(comparison/simulator/news-rag)를 체인 실행하고, 결과를 SSE 스트리밍으로
+progressive하게 렌더합니다.
+
+**주요 기능:**
+- 단일 턴: `"TSLA vs NVDA 비교"` → comparison_table + chart 카드
+- follow-up: `"그럼 엔비디아 -30% 시 내 포트폴리오?"` → simulator_result (세션 메모리 carry-over)
+- news-rag: 뉴스/공시 pgvector 검색 + Claude citations 인용 강제
+- 3단 게이트: 서브-스텝 레벨 + 최종 통합 레벨 양쪽 적용
+
+**스크린샷:**
+
+| 화면 | 미리보기 |
+|------|---------|
+| Copilot 쿼리 입력 | `docs/screenshots/copilot-query.png` |
+| 최종 카드 렌더 | `docs/screenshots/copilot-final-card.png` |
+
+- Playwright E2E: `npm run test:e2e` (3종: single-turn / follow-up / degraded)
+- 골든 샘플 10건: `backend/tests/golden/samples/copilot/`
+- 데모 스크립트: [demo-rehearsal-2026-04-22.md](docs/qa/demo-rehearsal-2026-04-22.md)
+
+**stub 모드 실행 (API 키 불필요):**
+```bash
+# NEXT_PUBLIC_COPILOT_MOCK=1 환경에서 MSW SSE mock 사용
+NEXT_PUBLIC_COPILOT_MOCK=1 npm run dev  # FE
+# 또는 make copilot-demo (docker compose + stub mode)
+```
+
+---
+
+## Copilot (자연어 질의)
+
+> 상세 내용은 위 "자연어 Copilot" 섹션 참조.
+
+---
+
 ## ADR (아키텍처 결정 로그)
 
 - [0001 — 기술 스택 선택](docs/adr/0001-stack-selection.md)
+- [0007 — 포트폴리오 컨텍스트 주입](docs/adr/0007-portfolio-context-injection.md)
+- [0008 — 리밸런싱 제안 설계](docs/adr/0008-rebalance-proposal.md)
+- [0011 — Copilot SSE + 멀티스텝 오케스트레이션](docs/adr/0011-copilot-sse-and-multistep-orchestration.md)
+- [0012 — 뉴스 RAG pgvector 벡터 스토어](docs/adr/0012-news-rag-vector-store.md)
 
 ---
 

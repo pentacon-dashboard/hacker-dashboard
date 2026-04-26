@@ -7,15 +7,24 @@ LangGraph 오케스트레이션.
   domain_gate  → pass → critique_gate / fail → END
   critique_gate → END (언제나)
 
+sprint-03: 신규 Copilot 서브-에이전트 노드 3종 추가
+  comparison, simulator, news_rag (독립 노드, 기존 분기 변경 없음)
+
 노드 본체는 analyzer-designer 구현. 엣지 구조는 backend-engineer 가 소유.
 """
+
 from __future__ import annotations
 
+from collections.abc import Callable
 from typing import Literal
 
 from langgraph.graph import END, StateGraph
+from langgraph.graph.state import CompiledStateGraph
 
 from app.agents.analyzers import get_analyzer
+from app.agents.analyzers.comparison import run_async as comparison_node
+from app.agents.analyzers.news_rag import run_async as news_rag_node
+from app.agents.analyzers.simulator import run_async as simulator_node
 from app.agents.gates import critique_gate, domain_gate, schema_gate
 from app.agents.router import router_node
 from app.agents.state import AgentState
@@ -35,7 +44,7 @@ async def analyzer_node(state: AgentState) -> AgentState:
     return {**state, "analyzer_output": output}
 
 
-def _route_after_gate(gate_name: str) -> object:
+def _route_after_gate(gate_name: str) -> Callable[[AgentState], Literal["next", "end"]]:
     """게이트 이름을 받아 분기 함수를 반환하는 팩토리."""
 
     def _route(state: AgentState) -> Literal["next", "end"]:
@@ -46,15 +55,23 @@ def _route_after_gate(gate_name: str) -> object:
     return _route
 
 
-def build_graph() -> StateGraph:
+def build_graph() -> CompiledStateGraph:  # type: ignore[type-arg]
     """컴파일된 그래프를 반환. API 레이어에서 ainvoke(state) 로 호출."""
-    graph = StateGraph(AgentState)
+    graph: StateGraph[AgentState] = StateGraph(AgentState)
 
     graph.add_node("router", router_node)
     graph.add_node("analyzer", analyzer_node)
     graph.add_node("schema_gate", schema_gate)
     graph.add_node("domain_gate", domain_gate)
     graph.add_node("critique_gate", critique_gate)
+
+    # ── sprint-03: Copilot 서브-에이전트 노드 3종 (기존 엣지 변경 없음) ──────
+    graph.add_node("comparison", comparison_node)
+    graph.add_node("simulator", simulator_node)
+    graph.add_node("news_rag", news_rag_node)
+    # 서브-에이전트 노드는 copilot subgraph 에서 독립 호출됨.
+    # 기존 pipeline 흐름(router → analyzer → gates)은 그대로 유지.
+    # ─────────────────────────────────────────────────────────────────────────
 
     graph.set_entry_point("router")
     graph.add_edge("router", "analyzer")

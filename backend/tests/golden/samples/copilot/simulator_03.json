@@ -1,0 +1,24 @@
+{
+  "id": "copilot_simulator_03",
+  "agent": "simulator",
+  "description": "비정상 shock (+500%) — domain gate fail",
+  "step": {
+    "step_id": "sim-03",
+    "agent": "simulator",
+    "inputs": {
+      "holdings": [
+        {"symbol": "AAPL", "quantity": 10, "avg_price": 180.0}
+      ],
+      "shocks": {"AAPL": 5.0}
+    },
+    "depends_on": [],
+    "gate_policy": {"schema": true, "domain": true, "critique": true}
+  },
+  "expected_gate_results": {
+    "schema": "skip",
+    "domain": "fail",
+    "critique": "skip"
+  },
+  "expected_card_type": "simulator_result",
+  "expected_degraded": true
+}

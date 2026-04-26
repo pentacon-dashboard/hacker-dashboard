@@ -27,8 +27,39 @@ build/
 # Frontend tooling
 frontend/.vercel/
 frontend/playwright-report/
+frontend/e2e/playwright-report/
+frontend/e2e/playwright-results.xml
 frontend/test-results/
 frontend/coverage/
+
+# Local IDE / MCP 설정 — 사용자별이라 공유 금지
+.mcp.json
+.claude/settings.local.json
+
+# Playwright MCP 브라우저 검증 산물 — 로컬 디버깅용 스냅샷/콘솔 로그
+.playwright-mcp/
+# 루트에 임시로 떨어지는 비교용 캡처 (방지용 이중 가드)
+/compare-*.png
+/current-*.png
+
+# schemathesis CLI 결과물 (로컬 실행 아티팩트)
+/schemathesis-results.*
+backend/contract-results*.xml
+backend/schema-test*.xml
+
+# 하네스 격리 sqlite + 디버깅 sqlite (로컬 fixture 산출물)
+backend/_harness_*.sqlite
+backend/test_*.sqlite
+/test_*.sqlite
+
+# 검증·디버깅용 임시 스크린샷 (커밋 금지)
+/probe-*.png
+/diag-*.png
+/verify-*.png
+/accent-*.png
+/pw-capture.*
+/pw-verify.*
+/nul
 
 # Env & secrets
 .env

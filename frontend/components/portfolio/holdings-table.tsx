@@ -20,11 +20,10 @@ import {
   formatSignedNumber,
   signedColorClass,
 } from "@/lib/utils/format";
+import { useLocale } from "@/lib/i18n/locale-provider";
 
 type SortKey = "pnl_pct" | "value_krw";
-
-const CURRENCY_OPTIONS = ["전체", "KRW", "USD", "USDT"] as const;
-type CurrencyFilter = (typeof CURRENCY_OPTIONS)[number];
+type CurrencyFilter = "ALL" | "KRW" | "USD" | "USDT";
 
 interface HoldingsTableProps {
   holdings: HoldingDetail[];
@@ -32,9 +31,16 @@ interface HoldingsTableProps {
 
 export function HoldingsTable({ holdings }: HoldingsTableProps) {
   const queryClient = useQueryClient();
+  const { locale, t } = useLocale();
   const [sortKey, setSortKey] = useState<SortKey>("value_krw");
-  const [currencyFilter, setCurrencyFilter] =
-    useState<CurrencyFilter>("전체");
+  const [currencyFilter, setCurrencyFilter] = useState<CurrencyFilter>("ALL");
+
+  const CURRENCY_OPTIONS: Array<{ key: CurrencyFilter; label: string }> = [
+    { key: "ALL", label: t("portfolio.filterAll") },
+    { key: "KRW", label: "KRW" },
+    { key: "USD", label: "USD" },
+    { key: "USDT", label: "USDT" },
+  ];
 
   const deleteMutation = useMutation({
     mutationFn: (id: number) => deleteHolding(id),
@@ -47,7 +53,7 @@ export function HoldingsTable({ holdings }: HoldingsTableProps) {
   });
 
   const filtered =
-    currencyFilter === "전체"
+    currencyFilter === "ALL"
       ? holdings
       : holdings.filter((h) => h.currency === currencyFilter);
 
@@ -57,24 +63,26 @@ export function HoldingsTable({ holdings }: HoldingsTableProps) {
     return bVal - aVal;
   });
 
+  const numberLocale = locale === "en" ? "en-US" : "ko-KR";
+
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap items-center gap-2">
-        <span className="text-xs text-muted-foreground">통화 필터:</span>
+        <span className="text-xs text-muted-foreground">{t("portfolio.currencyFilter")}:</span>
         {CURRENCY_OPTIONS.map((opt) => (
           <button
-            key={opt}
-            onClick={() => setCurrencyFilter(opt)}
+            key={opt.key}
+            onClick={() => setCurrencyFilter(opt.key)}
             className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
-              currencyFilter === opt
+              currencyFilter === opt.key
                 ? "bg-primary text-primary-foreground"
                 : "bg-muted text-muted-foreground hover:bg-muted/80"
             }`}
           >
-            {opt}
+            {opt.label}
           </button>
         ))}
-        <span className="ml-auto text-xs text-muted-foreground">정렬:</span>
+        <span className="ml-auto text-xs text-muted-foreground">{t("portfolio.sortBy")}:</span>
         <button
           onClick={() => setSortKey("value_krw")}
           className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
@@ -83,7 +91,7 @@ export function HoldingsTable({ holdings }: HoldingsTableProps) {
               : "bg-muted text-muted-foreground hover:bg-muted/80"
           }`}
         >
-          평가금액
+          {t("portfolio.sortByValue")}
         </button>
         <button
           onClick={() => setSortKey("pnl_pct")}
@@ -93,7 +101,7 @@ export function HoldingsTable({ holdings }: HoldingsTableProps) {
               : "bg-muted text-muted-foreground hover:bg-muted/80"
           }`}
         >
-          손익률
+          {t("portfolio.sortByReturn")}
         </button>
       </div>
 
@@ -101,13 +109,13 @@ export function HoldingsTable({ holdings }: HoldingsTableProps) {
         <Table data-testid="holdings-table">
           <TableHeader>
             <TableRow>
-              <TableHead>심볼</TableHead>
-              <TableHead>수량</TableHead>
-              <TableHead className="text-right">평단가</TableHead>
-              <TableHead className="text-right">현재가</TableHead>
-              <TableHead className="text-right">평가금액(KRW)</TableHead>
-              <TableHead className="text-right">손익(KRW)</TableHead>
-              <TableHead className="text-right">손익률</TableHead>
+              <TableHead>{t("table.symbol")}</TableHead>
+              <TableHead>{t("table.quantity")}</TableHead>
+              <TableHead className="text-right">{t("symbol.metric.avgCost")}</TableHead>
+              <TableHead className="text-right">{t("table.currentPrice")}</TableHead>
+              <TableHead className="text-right">{t("table.valueKrw")}</TableHead>
+              <TableHead className="text-right">{t("table.pnlKrw")}</TableHead>
+              <TableHead className="text-right">{t("portfolio.sortByReturn")}</TableHead>
               <TableHead />
             </TableRow>
           </TableHeader>
@@ -130,18 +138,18 @@ export function HoldingsTable({ holdings }: HoldingsTableProps) {
                     </div>
                   </TableCell>
                   <TableCell className="tabular-nums">
-                    {Number(holding.quantity).toLocaleString("ko-KR", {
+                    {Number(holding.quantity).toLocaleString(numberLocale, {
                       maximumFractionDigits: 8,
                     })}
                   </TableCell>
                   <TableCell className="text-right tabular-nums text-sm">
-                    {Number(holding.avg_cost).toLocaleString("ko-KR")}
+                    {Number(holding.avg_cost).toLocaleString(numberLocale)}
                     <span className="ml-1 text-xs text-muted-foreground">
                       {holding.currency}
                     </span>
                   </TableCell>
                   <TableCell className="text-right tabular-nums text-sm">
-                    {Number(holding.current_price).toLocaleString("ko-KR")}
+                    {Number(holding.current_price).toLocaleString(numberLocale)}
                     <span className="ml-1 text-xs text-muted-foreground">
                       {holding.currency}
                     </span>
@@ -160,7 +168,7 @@ export function HoldingsTable({ holdings }: HoldingsTableProps) {
                       variant="ghost"
                       size="icon"
                       className="h-8 w-8 text-muted-foreground hover:text-destructive"
-                      aria-label={`${holding.code} 삭제`}
+                      aria-label={`${holding.code} ${t("table.delete")}`}
                       disabled={deleteMutation.isPending}
                       onClick={() => deleteMutation.mutate(holding.id)}
                     >

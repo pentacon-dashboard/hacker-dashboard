@@ -2,37 +2,66 @@
 Market 엔드포인트.
 
 Week-2: 시장 데이터 어댑터 + 심볼 검색 + Watchlist CRUD 연동.
+Sprint-08 B-3/B-4: Symbol indicators + Market analysis 엔드포인트.
 """
+
 from __future__ import annotations
 
 import asyncio
+import math
+from datetime import UTC, datetime, timedelta
+from typing import Any
 
 from fastapi import APIRouter, HTTPException, Query
 
 from app.schemas.market import (
+    BollingerBands,
+    CommodityItem,
+    IndexSnapshot,
+    IndicatorBundle,
+    IndicatorMetrics,
+    IndicatorPoint,
+    MacdPoint,
     OhlcBar,
     Quote,
+    SectorKpi,
+    StochasticPoint,
     Symbol,
     SymbolInfo,
     WatchlistItemCreate,
     WatchlistItemResponse,
+    WorldHeatmapRegion,
 )
+from app.services import indicators as ind_svc
+from app.services import market_fixtures as fixtures
 from app.services.market import get_adapter
 from app.services.market.aliases import lookup as alias_lookup
 from app.services.market.cache import cache_get, cache_set, ohlc_key, quote_key
+from app.services.market.yf_market import get_commodities, get_indices, get_sectors
+from app.services.watchlist import sparkline_7d
 
 router = APIRouter(prefix="/market", tags=["market"])
 
 # 워치리스트 in-memory 스토어 (demo 고정 user_id="demo")
 # 실제 DB 연결 시 SQLAlchemy session으로 교체
-_watchlist: dict[int, dict] = {}
+_watchlist: dict[int, dict[str, Any]] = {}
 _next_id: int = 1
 
 _SAMPLE_SYMBOLS: list[Symbol] = [
-    Symbol(symbol="AAPL", name="Apple Inc.", asset_class="stock", exchange="NASDAQ", market="yahoo"),
+    Symbol(
+        symbol="AAPL", name="Apple Inc.", asset_class="stock", exchange="NASDAQ", market="yahoo"
+    ),
     Symbol(symbol="BTC-USD", name="Bitcoin", asset_class="crypto", exchange=None, market="yahoo"),
-    Symbol(symbol="KRW-BTC", name="Bitcoin/KRW", asset_class="crypto", exchange="Upbit", market="upbit"),
-    Symbol(symbol="BTCUSDT", name="Bitcoin/USDT", asset_class="crypto", exchange="Binance", market="binance"),
+    Symbol(
+        symbol="KRW-BTC", name="Bitcoin/KRW", asset_class="crypto", exchange="Upbit", market="upbit"
+    ),
+    Symbol(
+        symbol="BTCUSDT",
+        name="Bitcoin/USDT",
+        asset_class="crypto",
+        exchange="Binance",
+        market="binance",
+    ),
     Symbol(symbol="USD-KRW", name="USD/KRW", asset_class="fx", exchange=None, market="yahoo"),
 ]
 
@@ -62,7 +91,6 @@ async def search_symbols(
         except Exception:
             return []
 
-    # 병렬 호출: 3개 어댑터 + alias lookup (alias는 동기 → 코루틴으로 래핑)
     async def _alias_search() -> list[tuple[SymbolInfo, int]]:
         return alias_lookup(q)
 
@@ -75,13 +103,10 @@ async def search_symbols(
         upbit_task, yahoo_task, naver_task, alias_task
     )
 
-    # 점수 할당 — 어댑터 결과는 순서 기반 점수 부여 (랭킹 없는 경우 기본 10)
-    # upbit 어댑터는 이미 내부 score 없음 → 순서 기반 200~1 할당
     def _assign_adapter_scores(items: list[SymbolInfo], base: int) -> list[tuple[SymbolInfo, int]]:
         scored = []
         total = len(items)
         for i, item in enumerate(items):
-            # 위에 있을수록 높은 점수. base에서 순위에 비례해 감소
             rank_score = base - int((i / max(total, 1)) * (base // 2))
             scored.append((item, rank_score))
         return scored
@@ -90,23 +115,19 @@ async def search_symbols(
     all_scored.extend(_assign_adapter_scores(upbit_res, 200))
     all_scored.extend(_assign_adapter_scores(yahoo_res, 200))
     all_scored.extend(_assign_adapter_scores(naver_res, 200))
-    all_scored.extend(alias_res)  # alias는 이미 (SymbolInfo, score) 형태
+    all_scored.extend(alias_res)
 
-    # dedupe: (market, symbol) 기준, 높은 score 유지
     best: dict[tuple[str, str], tuple[SymbolInfo, int]] = {}
     for item, score in all_scored:
         key = (item.market, item.symbol)
         if key not in best or score > best[key][1]:
             best[key] = (item, score)
 
-    # score 내림차순 정렬
     ranked = sorted(best.values(), key=lambda x: x[1], reverse=True)
 
-    # score 필드는 SymbolInfo.score 가 exclude=True 이므로 응답 직렬화 시 자동 제외
-    # 내부 score 를 SymbolInfo 에 임시 주입 (응답 모델이 exclude 처리)
     result: list[SymbolInfo] = []
     for item, _score in ranked[:50]:
-        item.score = _score  # type: ignore[assignment]
+        item.score = _score
         result.append(item)
 
     return result
@@ -114,8 +135,7 @@ async def search_symbols(
 
 @router.get("/quotes/{symbol}", response_model=Quote)
 async def get_quote(symbol: str) -> Quote:
-    """단일 심볼 시세 조회 (stub — legacy 호환)"""
-    from datetime import datetime, timezone
+    """단일 심볼 시세 조회 (stub -- legacy 호환)"""
     return Quote(
         symbol=symbol,
         market="unknown",
@@ -124,11 +144,15 @@ async def get_quote(symbol: str) -> Quote:
         change_pct=0.0,
         volume=None,
         currency="USD",
-        timestamp=datetime.now(timezone.utc).isoformat(),
+        timestamp=datetime.now(UTC).isoformat(),
     )
 
 
-@router.get("/quotes/{market}/{code}", response_model=Quote)
+@router.get(
+    "/quotes/{market}/{code}",
+    response_model=Quote,
+    responses={404: {"description": "market 또는 code 를 찾을 수 없음"}},
+)
 async def get_market_quote(market: str, code: str) -> Quote:
     """market별 단일 심볼 현재가 조회. Redis 캐시(TTL 5s) 적용."""
     cache_k = quote_key(market, code)
@@ -153,7 +177,11 @@ async def get_market_quote(market: str, code: str) -> Quote:
     return quote
 
 
-@router.get("/ohlc/{market}/{code}", response_model=list[OhlcBar])
+@router.get(
+    "/ohlc/{market}/{code}",
+    response_model=list[OhlcBar],
+    responses={404: {"description": "market 또는 code 를 찾을 수 없음"}},
+)
 async def get_ohlc(
     market: str,
     code: str,
@@ -185,31 +213,40 @@ async def get_ohlc(
 
 # ─────────────────────── Watchlist CRUD ───────────────────────────────
 
+
 @router.get("/watchlist/items", response_model=list[WatchlistItemResponse])
 async def list_watchlist() -> list[WatchlistItemResponse]:
-    """워치리스트 조회 (user_id='demo' 고정)."""
-    return [
-        WatchlistItemResponse(**item)
-        for item in _watchlist.values()
-    ]
+    """워치리스트 조회 (user_id='demo' 고정). pnl_7d 스파크라인 포함."""
+    result = []
+    for item in _watchlist.values():
+        pnl = sparkline_7d(str(item["market"]), str(item["code"]))
+        result.append(WatchlistItemResponse(**item, pnl_7d=pnl))
+    return result
 
 
-@router.post("/watchlist/items", response_model=WatchlistItemResponse, status_code=201)
+@router.post(
+    "/watchlist/items",
+    response_model=WatchlistItemResponse,
+    status_code=201,
+    responses={400: {"description": "JSON 파싱 실패"}},
+)
 async def add_watchlist(body: WatchlistItemCreate) -> WatchlistItemResponse:
     """워치리스트에 심볼 추가."""
     global _next_id
-    from datetime import datetime, timezone
 
     # market 유효성 확인
     try:
         get_adapter(body.market)
     except ValueError as exc:
-        raise HTTPException(status_code=422, detail=str(exc)) from exc
+        raise HTTPException(
+            status_code=422,
+            detail=[{"msg": str(exc), "type": "value_error", "loc": ["body", "market"]}],
+        ) from exc
 
     item_id = _next_id
     _next_id += 1
-    ts = datetime.now(timezone.utc).isoformat()
-    record = {
+    ts = datetime.now(UTC).isoformat()
+    record: dict[str, Any] = {
         "id": item_id,
         "market": body.market,
         "code": body.code,
@@ -220,9 +257,269 @@ async def add_watchlist(body: WatchlistItemCreate) -> WatchlistItemResponse:
     return WatchlistItemResponse(**record)
 
 
-@router.delete("/watchlist/items/{item_id}", status_code=204)
+@router.delete(
+    "/watchlist/items/{item_id}",
+    status_code=204,
+    responses={404: {"description": "워치리스트 항목을 찾을 수 없음"}},
+)
 async def delete_watchlist(item_id: int) -> None:
     """워치리스트 항목 삭제."""
     if item_id not in _watchlist:
         raise HTTPException(status_code=404, detail=f"watchlist item {item_id} not found")
     del _watchlist[item_id]
+
+
+# ─────────────────── Symbol Indicators (B-3) ───────────────────────────────
+
+_VALID_INTERVALS = {"1m", "5m", "15m", "60m", "day", "week", "month"}
+
+_INTERVAL_TO_OHLC_LIMIT: dict[str, int] = {
+    "1m": 60,
+    "5m": 60,
+    "15m": 60,
+    "60m": 60,
+    "day": 120,
+    "week": 52,
+    "month": 24,
+}
+
+_INTERVAL_DELTA: dict[str, timedelta] = {
+    "1m": timedelta(minutes=1),
+    "5m": timedelta(minutes=5),
+    "15m": timedelta(minutes=15),
+    "60m": timedelta(hours=1),
+    "day": timedelta(days=1),
+    "week": timedelta(weeks=1),
+    "month": timedelta(days=30),
+}
+
+
+def _generate_stub_ohlc(market: str, code: str, interval: str, n: int) -> list[OhlcBar]:
+    """deterministic stub OHLC 생성."""
+    seed = sum(ord(c) for c in (market + code + interval))
+    base = 100.0 + (seed % 400)
+    delta = _INTERVAL_DELTA.get(interval, timedelta(days=1))
+    now = datetime(2026, 4, 23, 9, 0, 0, tzinfo=UTC)
+    bars = []
+    price = base
+    for i in range(n):
+        ts = now - delta * (n - i)
+        chg = (
+            math.sin(i * 0.3 + seed * 0.05) * base * 0.02
+            + ((seed * (i + 1)) % 11 - 5) * base * 0.003
+        )
+        close = max(price + chg, base * 0.3)
+        high = close * (1 + abs(math.sin(i * 0.7)) * 0.01)
+        low = close * (1 - abs(math.cos(i * 0.7)) * 0.01)
+        open_ = price
+        price = close
+        bars.append(
+            OhlcBar(
+                ts=ts.isoformat(),
+                open=round(open_, 4),
+                high=round(high, 4),
+                low=round(low, 4),
+                close=round(close, 4),
+                volume=round(1_000_000 + (seed * i % 500_000), 0),
+            )
+        )
+    return bars
+
+
+@router.get(
+    "/symbol/{market}/{code}/indicators",
+    response_model=IndicatorBundle,
+    responses={400: {"description": "interval 값이 유효하지 않음"}},
+)
+async def get_symbol_indicators(
+    market: str,
+    code: str,
+    interval: str = Query(default="day", description="1m|5m|15m|60m|day|week|month"),
+    period: int = Query(default=60, ge=10, le=500),
+) -> IndicatorBundle:
+    """심볼 기술 지표 (RSI-14, MACD, 볼린저, 스토캐스틱).
+
+    실제 OHLC 어댑터 시도 후 실패하면 stub 데이터로 폴백.
+    """
+    if interval not in _VALID_INTERVALS:
+        raise HTTPException(
+            status_code=400,
+            detail=f"interval '{interval}' is not valid. Use one of {sorted(_VALID_INTERVALS)}",
+        )
+
+    n = max(period + 40, _INTERVAL_TO_OHLC_LIMIT.get(interval, 120))
+    try:
+        adapter = get_adapter(market)
+        ohlc_interval = "1d" if interval == "day" else "1m"
+        bars = await adapter.fetch_ohlc(code, interval=ohlc_interval, limit=n)
+    except Exception:
+        bars = _generate_stub_ohlc(market, code, interval, n)
+
+    closes = [b.close for b in bars]
+    highs = [b.high for b in bars]
+    lows = [b.low for b in bars]
+    timestamps = [b.ts for b in bars]
+
+    # RSI
+    rsi_vals = ind_svc.calc_rsi(closes, period=14)
+    rsi_ts_offset = len(closes) - len(rsi_vals)
+    rsi_14 = [
+        IndicatorPoint(t=timestamps[rsi_ts_offset + i], v=round(v, 2))
+        for i, v in enumerate(rsi_vals)
+    ]
+
+    # MACD
+    macd_line, signal_line, histogram = ind_svc.calc_macd(closes)
+    macd_ts_offset = len(closes) - len(macd_line)
+    macd_points = [
+        MacdPoint(
+            t=timestamps[macd_ts_offset + i],
+            macd=round(macd_line[i], 4),
+            signal=round(signal_line[i], 4),
+            histogram=round(histogram[i], 4),
+        )
+        for i in range(len(macd_line))
+    ]
+
+    # 볼린저 밴드
+    bb_upper, bb_mid, bb_lower = ind_svc.calc_bollinger(closes)
+    bb_ts_offset = len(closes) - len(bb_mid)
+    bollinger = BollingerBands(
+        upper=[
+            IndicatorPoint(t=timestamps[bb_ts_offset + i], v=round(v, 4))
+            for i, v in enumerate(bb_upper)
+        ],
+        mid=[
+            IndicatorPoint(t=timestamps[bb_ts_offset + i], v=round(v, 4))
+            for i, v in enumerate(bb_mid)
+        ],
+        lower=[
+            IndicatorPoint(t=timestamps[bb_ts_offset + i], v=round(v, 4))
+            for i, v in enumerate(bb_lower)
+        ],
+    )
+
+    # 스토캐스틱
+    k_vals, d_vals = ind_svc.calc_stochastic(highs, lows, closes)
+    stoch_ts_offset = len(closes) - len(k_vals)
+    stochastic = [
+        StochasticPoint(
+            t=timestamps[stoch_ts_offset + i],
+            k=round(k_vals[i], 2),
+            d=round(d_vals[i], 2),
+        )
+        for i in range(len(k_vals))
+    ]
+
+    # metrics
+    rsi_latest = rsi_14[-1].v if rsi_14 else 50.0
+    macd_latest = macd_points[-1].macd if macd_points else 0.0
+    macd_signal_str = "neutral"
+    if len(macd_points) >= 2:
+        prev_hist = macd_points[-2].histogram
+        curr_hist = macd_points[-1].histogram
+        if prev_hist < 0 < curr_hist:
+            macd_signal_str = "golden_cross"
+        elif prev_hist > 0 > curr_hist:
+            macd_signal_str = "dead_cross"
+
+    close_latest = closes[-1] if closes else 0.0
+    bb_pos = "mid"
+    if bollinger.upper and bollinger.lower:
+        upper_val = bollinger.upper[-1].v
+        lower_val = bollinger.lower[-1].v
+        if close_latest >= upper_val:
+            bb_pos = "upper"
+        elif close_latest <= lower_val:
+            bb_pos = "lower"
+
+    overall_signal = "hold"
+    if rsi_latest < 30 and macd_signal_str == "golden_cross":
+        overall_signal = "buy"
+    elif rsi_latest > 70 and macd_signal_str == "dead_cross":
+        overall_signal = "sell"
+
+    # MA20 / MA60
+    ma20_vals = ind_svc.calc_ma(closes, period=20)
+    ma20_ts_offset = len(closes) - len(ma20_vals)
+    ma20_series = [
+        IndicatorPoint(t=timestamps[ma20_ts_offset + i], v=round(v, 4))
+        for i, v in enumerate(ma20_vals)
+    ]
+
+    ma60_vals = ind_svc.calc_ma(closes, period=60)
+    ma60_ts_offset = len(closes) - len(ma60_vals)
+    ma60_series = [
+        IndicatorPoint(t=timestamps[ma60_ts_offset + i], v=round(v, 4))
+        for i, v in enumerate(ma60_vals)
+    ]
+
+    ma20_latest: float | None = round(ma20_vals[-1], 4) if ma20_vals else None
+    ma60_latest: float | None = round(ma60_vals[-1], 4) if ma60_vals else None
+
+    return IndicatorBundle(
+        interval=interval,
+        period=period,
+        rsi_14=rsi_14,
+        macd=macd_points,
+        bollinger=bollinger,
+        stochastic=stochastic,
+        ma20=ma20_series,
+        ma60=ma60_series,
+        metrics=IndicatorMetrics(
+            rsi_latest=round(rsi_latest, 2),
+            macd_latest=round(macd_latest, 6),
+            macd_signal=macd_signal_str,
+            bollinger_position=bb_pos,
+            ma20_latest=ma20_latest,
+            ma60_latest=ma60_latest,
+        ),
+        signal=overall_signal,
+    )
+
+
+# ─────────────────── Market Analysis (B-4) ───────────────────────────────
+
+
+@router.get("/indices", response_model=list[IndexSnapshot])
+async def get_market_indices() -> list[IndexSnapshot]:
+    """KOSPI/KOSDAQ/S&P/NASDAQ/DOW/VIX/USD-KRW 7종 스냅샷.
+
+    yfinance 실시간 조회 (캐시 TTL 60s). 실패 시 stub 폴백.
+    sparkline_7d 는 항상 7포인트 보장.
+    """
+    live = await get_indices()
+    if live is not None:
+        return [IndexSnapshot(**row) for row in live]
+    # yfinance 전체 실패 — stub 폴백
+    return [IndexSnapshot(**row) for row in fixtures.INDEX_SNAPSHOTS]
+
+
+@router.get("/sectors", response_model=list[SectorKpi])
+async def get_market_sectors() -> list[SectorKpi]:
+    """11 GICS 섹터 KPI.
+
+    SPDR ETF yfinance 실시간 조회 (캐시 TTL 60s). 실패 시 stub 폴백.
+    """
+    live = await get_sectors()
+    if live is not None:
+        return [SectorKpi(**row) for row in live]
+    return [SectorKpi(**row) for row in fixtures.SECTOR_KPIS]
+
+
+@router.get("/commodities", response_model=list[CommodityItem])
+async def get_market_commodities() -> list[CommodityItem]:
+    """원자재 5종 (금/은/WTI/브렌트유/천연가스).
+
+    yfinance 실시간 조회 (캐시 TTL 60s). 실패 시 stub 폴백.
+    """
+    live = await get_commodities()
+    if live is not None:
+        return [CommodityItem(**row) for row in live]
+    return [CommodityItem(**row) for row in fixtures.COMMODITIES]
+
+
+@router.get("/world-heatmap", response_model=list[WorldHeatmapRegion])
+async def get_world_heatmap() -> list[WorldHeatmapRegion]:
+    """20개국 세계 히트맵 (stub)."""
+    return [WorldHeatmapRegion(**row) for row in fixtures.WORLD_HEATMAP]

@@ -1,6 +1,9 @@
+"use client";
+
 import * as React from "react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { useLocale } from "@/lib/i18n/locale-provider";
 
 interface ErrorStateProps {
   title?: string;
@@ -10,11 +13,14 @@ interface ErrorStateProps {
 }
 
 export function ErrorState({
-  title = "오류가 발생했습니다",
-  description = "데이터를 불러오는 중 문제가 생겼습니다. 다시 시도해 주세요.",
+  title,
+  description,
   onRetry,
   className,
 }: ErrorStateProps) {
+  const { t } = useLocale();
+  const resolvedTitle = title ?? t("common.errorTitle");
+  const resolvedDesc = description ?? t("common.errorDesc");
   return (
     <div
       className={cn(
@@ -43,12 +49,12 @@ export function ErrorState({
         </svg>
       </div>
       <div className="space-y-1">
-        <h3 className="text-sm font-semibold">{title}</h3>
-        <p className="text-sm text-muted-foreground">{description}</p>
+        <h3 className="text-sm font-semibold">{resolvedTitle}</h3>
+        <p className="text-sm text-muted-foreground">{resolvedDesc}</p>
       </div>
       {onRetry && (
         <Button variant="outline" size="sm" onClick={onRetry}>
-          다시 시도
+          {t("common.retry")}
         </Button>
       )}
     </div>

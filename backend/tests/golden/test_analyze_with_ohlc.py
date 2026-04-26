@@ -7,9 +7,9 @@ Week-2 OHLC 컨텍스트 주입 테스트.
 - fake_llm_client 로 Anthropic 호출을 고정하고, usage 에 cache_read_input_tokens 를
   심어 meta.cache 가 올바르게 전파되는지 검증.
 """
+
 from __future__ import annotations
 
-import json
 from typing import Any
 
 import pytest
@@ -19,7 +19,6 @@ from httpx import AsyncClient, Response
 from app.agents import llm as llm_module
 from app.agents.analyzers.base import compute_indicators
 from tests.golden.conftest import FakeAnthropicClient, _Usage
-
 
 # ───────────────────────── 테스트용 OHLC 생성기 ────────────────────────
 
@@ -52,7 +51,6 @@ def _upbit_candles(n: int = 90, base: float = 50_000_000.0) -> list[dict[str, An
 
 def _yahoo_chart(n: int = 90, base: float = 170.0) -> dict[str, Any]:
     """Yahoo /v8/finance/chart 응답 형식. 오름차순 타임스탬프."""
-    import time as _time
 
     now_ts = 1_700_000_000
     day = 86_400
@@ -107,19 +105,13 @@ def ohlc_llm_client():
                     "volatility_pct": 0.6,
                     "quote_currency": "KRW",
                 },
-                "signals": [
-                    {"kind": "trend", "strength": "medium", "rationale": "MA20 > MA60"}
-                ],
-                "evidence": [
-                    {"claim": "첫 종가와 마지막 종가 차이", "rows": [0, 89]}
-                ],
+                "signals": [{"kind": "trend", "strength": "medium", "rationale": "MA20 > MA60"}],
+                "evidence": [{"claim": "첫 종가와 마지막 종가 차이", "rows": [0, 89]}],
                 "confidence": 0.8,
             },
             "critique": {
                 "verdict": "pass",
-                "per_claim": [
-                    {"claim": "첫 종가와 마지막 종가 차이", "status": "supported"}
-                ],
+                "per_claim": [{"claim": "첫 종가와 마지막 종가 차이", "status": "supported"}],
                 "reason": "all claims supported",
             },
         },
@@ -148,9 +140,7 @@ def ohlc_llm_client():
 
 @pytest.mark.asyncio
 @respx.mock(assert_all_called=False)
-async def test_analyze_with_crypto_ohlc_symbol(
-    client: AsyncClient, ohlc_llm_client
-) -> None:
+async def test_analyze_with_crypto_ohlc_symbol(client: AsyncClient, ohlc_llm_client) -> None:
     """KRW-BTC 심볼만 주면 어댑터가 OHLC 90일 을 프리패치하여 analyzer 에 주입한다."""
     respx.get("https://api.upbit.com/v1/candles/days").mock(
         return_value=Response(200, json=_upbit_candles(90))
@@ -190,9 +180,7 @@ async def test_analyze_with_crypto_ohlc_symbol(
 
 @pytest.mark.asyncio
 @respx.mock(assert_all_called=False)
-async def test_analyze_with_stock_ohlc_symbol(
-    client: AsyncClient, ohlc_llm_client
-) -> None:
+async def test_analyze_with_stock_ohlc_symbol(client: AsyncClient, ohlc_llm_client) -> None:
     """TSLA 심볼 → yahoo 어댑터 → 주식 analyzer 파이프라인."""
     respx.get("https://query1.finance.yahoo.com/v8/finance/chart/TSLA").mock(
         return_value=Response(200, json=_yahoo_chart(90))
@@ -210,9 +198,7 @@ async def test_analyze_with_stock_ohlc_symbol(
             "period_return_pct": 13.1,
             "volatility_pct": 0.4,
         },
-        "signals": [
-            {"kind": "trend", "strength": "medium", "rationale": "MA20 > MA60"}
-        ],
+        "signals": [{"kind": "trend", "strength": "medium", "rationale": "MA20 > MA60"}],
         "evidence": [{"claim": "첫 종가 170.0 → 마지막 종가 192.25", "rows": [0, 89]}],
         "confidence": 0.75,
     }
@@ -235,13 +221,11 @@ async def test_analyze_with_stock_ohlc_symbol(
 
 
 @pytest.mark.asyncio
-async def test_analyze_with_inline_context_ohlc(
-    client: AsyncClient, ohlc_llm_client
-) -> None:
+async def test_analyze_with_inline_context_ohlc(client: AsyncClient, ohlc_llm_client) -> None:
     """클라이언트가 context.ohlc 로 직접 넘기면 어댑터 호출 없이 분석."""
     bars = [
         {
-            "ts": f"2024-01-{i+1:02d}T00:00:00Z",
+            "ts": f"2024-01-{i + 1:02d}T00:00:00Z",
             "open": 100.0 + i,
             "high": 102.0 + i,
             "low": 99.0 + i,

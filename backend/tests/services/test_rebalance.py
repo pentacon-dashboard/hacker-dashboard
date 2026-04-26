@@ -2,14 +2,15 @@
 
 결정적 계산이므로 LLM/DB/외부 API 의존 없음.
 """
+
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from decimal import Decimal
 
 import pytest
 
-from app.schemas.rebalance import RebalanceConstraints, RebalanceAction, TargetAllocation
+from app.schemas.rebalance import RebalanceAction, RebalanceConstraints, TargetAllocation
 from app.services.rebalance import (
     build_expected_allocation,
     build_summary,
@@ -18,7 +19,6 @@ from app.services.rebalance import (
     compute_drift,
     infer_asset_class,
 )
-
 
 # ──────────── 테스트용 Holding 스텁 ────────────
 
@@ -134,9 +134,9 @@ def test_compute_drift_basic():
     current = {"crypto": 0.74, "stock_us": 0.19, "stock_kr": 0.07, "cash": 0.0, "fx": 0.0}
     target = {"stock_kr": 0.2, "stock_us": 0.4, "crypto": 0.3, "cash": 0.1, "fx": 0.0}
     drift = compute_drift(current, target)
-    assert abs(drift["crypto"] - 0.44) < 1e-5   # 과도
+    assert abs(drift["crypto"] - 0.44) < 1e-5  # 과도
     assert abs(drift["stock_us"] - (-0.21)) < 1e-5  # 부족
-    assert abs(drift["cash"] - (-0.10)) < 1e-5   # 부족
+    assert abs(drift["cash"] - (-0.10)) < 1e-5  # 부족
 
 
 def test_compute_drift_balanced():
@@ -161,9 +161,7 @@ def test_already_balanced_no_actions():
     target = _target(crypto=0.5, stock_us=0.5)
     constraints = _default_constraints(min_trade_krw=Decimal("1000"))
 
-    actions = calculate_rebalance_actions(
-        holdings, values, prices, target, constraints, total
-    )
+    actions = calculate_rebalance_actions(holdings, values, prices, target, constraints, total)
     assert actions == []
 
 
@@ -180,9 +178,7 @@ def test_crypto_heavy_to_mixed():
     target = _target(crypto=0.5, stock_us=0.5)
     constraints = _default_constraints(min_trade_krw=Decimal("100000"))
 
-    actions = calculate_rebalance_actions(
-        holdings, values, prices, target, constraints, total
-    )
+    actions = calculate_rebalance_actions(holdings, values, prices, target, constraints, total)
 
     sell_actions = [a for a in actions if a.action == "sell"]
     buy_actions = [a for a in actions if a.action == "buy"]
@@ -206,9 +202,7 @@ def test_min_trade_krw_filters_small_actions():
     # min_trade_krw를 높게 설정 → 작은 drift는 필터링됨
     constraints = _default_constraints(min_trade_krw=Decimal("1000000"))
 
-    actions = calculate_rebalance_actions(
-        holdings, values, prices, target, constraints, total
-    )
+    actions = calculate_rebalance_actions(holdings, values, prices, target, constraints, total)
     assert actions == [], f"min_trade_krw 필터 후 빈 배열이어야 함. got: {actions}"
 
 
@@ -228,9 +222,7 @@ def test_max_single_weight_blocks_large_buy():
         min_trade_krw=Decimal("100000"),
     )
 
-    actions = calculate_rebalance_actions(
-        holdings, values, prices, target, constraints, total
-    )
+    actions = calculate_rebalance_actions(holdings, values, prices, target, constraints, total)
 
     buy_actions = [a for a in actions if a.action == "buy" and a.code == "AAPL"]
     if buy_actions:
@@ -253,9 +245,7 @@ def test_no_holdings_for_target_asset_class():
     target = _target(crypto=0.5, stock_kr=0.5)
     constraints = _default_constraints()
 
-    actions = calculate_rebalance_actions(
-        holdings, values, prices, target, constraints, total
-    )
+    actions = calculate_rebalance_actions(holdings, values, prices, target, constraints, total)
 
     # stock_kr 매수 액션 없음 (신규 종목 추천 스코프 외)
     stock_kr_buys = [a for a in actions if a.asset_class == "stock_kr"]
@@ -271,9 +261,7 @@ def test_no_negative_quantity():
     target = _target(crypto=0.5, cash=0.5)
     constraints = _default_constraints()
 
-    actions = calculate_rebalance_actions(
-        holdings, values, prices, target, constraints, total
-    )
+    actions = calculate_rebalance_actions(holdings, values, prices, target, constraints, total)
     for a in actions:
         assert a.quantity > Decimal("0"), "음수/0 수량 액션이 있으면 안 됨"
 
@@ -291,9 +279,7 @@ def test_allow_fractional_false_rounds_down():
         min_trade_krw=Decimal("100000"),
     )
 
-    actions = calculate_rebalance_actions(
-        holdings, values, prices, target, constraints, total
-    )
+    actions = calculate_rebalance_actions(holdings, values, prices, target, constraints, total)
 
     for a in actions:
         if a.action == "buy" and a.code == "AAPL":
@@ -402,5 +388,6 @@ def test_target_allocation_sum_tolerance():
 
 def test_target_allocation_invalid_sum():
     from pydantic import ValidationError
+
     with pytest.raises(ValidationError, match="합계는 1.0"):
         TargetAllocation(stock_kr=0.5, stock_us=0.5, crypto=0.5, cash=0.0, fx=0.0)

@@ -23,6 +23,7 @@ Week-3 신규 analyzer. 입력 특징:
 숫자 근거를 검증하며, highlights/evidence 의 수치는 compute_portfolio_metrics 가 미리 계산해서
 사실 검증이 가능하도록 _indicators 에 노출된다.
 """
+
 from __future__ import annotations
 
 import json
@@ -32,7 +33,6 @@ from typing import Any
 from app.agents.analyzers.base import BaseAnalyzer
 from app.agents.llm import call_llm, extract_json, select_model
 from app.agents.state import AgentState
-
 
 # ──────────────────────── Pure metric helpers ────────────────────────
 
@@ -81,7 +81,11 @@ def _holding_value(h: dict[str, Any]) -> float | None:
         if v is not None and v > 0:
             return v
     q = _as_float(h.get("quantity"))
-    p = _as_float(h.get("current_price_krw")) or _as_float(h.get("current_price")) or _as_float(h.get("avg_cost"))
+    p = (
+        _as_float(h.get("current_price_krw"))
+        or _as_float(h.get("current_price"))
+        or _as_float(h.get("avg_cost"))
+    )
     if q is not None and p is not None and q > 0 and p > 0:
         return q * p
     return None
@@ -328,9 +332,9 @@ def compute_portfolio_metrics(
         key=lambda s: str(s.get("snapshot_date") or ""),
     )
     for s in sorted_snaps:
-        v = _as_float(s.get("total_value_krw"))
-        if v is not None and v > 0:
-            snap_values.append(v)
+        sv: float | None = _as_float(s.get("total_value_krw"))
+        if sv is not None and sv > 0:
+            snap_values.append(sv)
 
     mdd_pct = compute_mdd(snap_values) if snap_values else None
     volatility_pct = compute_volatility(snap_values) if snap_values else None
@@ -385,8 +389,8 @@ class PortfolioAnalyzer(BaseAnalyzer):
     async def run(self, state: AgentState) -> dict[str, Any]:
         rows = state.get("input_data") or []
         query = state.get("query")
-        snapshots = state.get("snapshots") if isinstance(state, dict) else None  # type: ignore[arg-type]
-        portfolio_context = state.get("portfolio_context") if isinstance(state, dict) else None  # type: ignore[arg-type]
+        snapshots = state.get("snapshots") if isinstance(state, dict) else None
+        portfolio_context = state.get("portfolio_context") if isinstance(state, dict) else None
         metrics = compute_portfolio_metrics(rows, snapshots=snapshots)
 
         raw = await self._call(

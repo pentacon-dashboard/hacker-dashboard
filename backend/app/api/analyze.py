@@ -11,6 +11,7 @@
   - X-Request-ID 헤더 자동 전파
   - 구조화 분석 이벤트 로그
 """
+
 from __future__ import annotations
 
 import csv
@@ -22,7 +23,6 @@ import uuid
 from typing import Any
 
 from fastapi import APIRouter, Depends, File, Form, Request, Response, UploadFile
-from fastapi.responses import JSONResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.agents import llm as llm_module
@@ -146,11 +146,13 @@ async def _run_graph(
             "critique_gate": "pending",
         },
         "error": None,
-        "portfolio_context": portfolio_context.model_dump(mode="json") if portfolio_context is not None else None,
+        "portfolio_context": (
+            portfolio_context.model_dump(mode="json") if portfolio_context is not None else None
+        ),
     }
 
     t0 = time.monotonic()
-    final_state: AgentState = await _graph.ainvoke(initial_state)
+    final_state: AgentState = await _graph.ainvoke(initial_state)  # type: ignore[assignment]
     latency_ms = int((time.monotonic() - t0) * 1000)
 
     output = final_state.get("analyzer_output")
@@ -224,7 +226,11 @@ def _parse_csv_bytes(raw_bytes: bytes) -> list[dict[str, Any]]:
 # ── 엔드포인트 ────────────────────────────────────────────────────────────────
 
 
-@router.post("", response_model=AnalyzeResponse)
+@router.post(
+    "",
+    response_model=AnalyzeResponse,
+    responses={400: {"description": "JSON 파싱 실패"}},
+)
 async def analyze(
     req: AnalyzeRequest,
     http_request: Request,
@@ -284,7 +290,9 @@ async def analyze(
         extra = await _prefetch_ohlc_rows(req)
         rows = rows + extra
 
-    result = await _run_graph(rows, req.query, req.asset_class_hint, request_id, portfolio_context=pctx)
+    result = await _run_graph(
+        rows, req.query, req.asset_class_hint, request_id, portfolio_context=pctx
+    )
 
     # 캐시 저장
     await analyze_cache.cache_set(cache_key, result.model_dump())
@@ -300,7 +308,16 @@ async def analyze(
     return result
 
 
-@router.post("/csv", response_model=AnalyzeResponse)
+@router.post(
+    "/csv",
+    response_model=AnalyzeResponse,
+    responses={
+        400: {"description": "CSV 파싱 실패 또는 빈 파일"},
+        413: {"description": "파일 크기 10MB 초과"},
+        415: {"description": "지원하지 않는 Content-Type"},
+        422: {"description": "요청 파라미터 검증 실패"},
+    },
+)
 async def analyze_csv(
     http_request: Request,
     http_response: Response,
@@ -397,7 +414,9 @@ async def analyze_csv(
 
     http_response.headers["X-Cache"] = "MISS"
 
-    result = await _run_graph(input_data, query, asset_class_hint, request_id, portfolio_context=pctx_csv)
+    result = await _run_graph(
+        input_data, query, asset_class_hint, request_id, portfolio_context=pctx_csv
+    )
 
     # 캐시 저장
     await analyze_cache.cache_set(cache_key, result.model_dump())

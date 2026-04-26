@@ -16,6 +16,7 @@ Week-4 확장:
 
 router_reason 은 한국어 한 문장. 데모 UI 에 그대로 노출된다.
 """
+
 from __future__ import annotations
 
 import json
@@ -29,17 +30,17 @@ from app.agents.state import AgentState
 # 티커 패턴 — 가장 강한 신호부터
 _CRYPTO_PATTERNS = [
     re.compile(r"^(KRW|BTC|ETH|USDT|USDC|BUSD)-[A-Z0-9]{2,10}$"),  # KRW-BTC
-    re.compile(r"^[A-Z0-9]{2,10}-(KRW|USDT|USD|USDC|BUSD)$"),       # BTC-USD
-    re.compile(r"^[A-Z0-9]{2,10}/(USDT|USD|BTC|ETH|KRW)$"),         # BTC/USDT
+    re.compile(r"^[A-Z0-9]{2,10}-(KRW|USDT|USD|USDC|BUSD)$"),  # BTC-USD
+    re.compile(r"^[A-Z0-9]{2,10}/(USDT|USD|BTC|ETH|KRW)$"),  # BTC/USDT
 ]
 _STOCK_PATTERNS = [
-    re.compile(r"^\d{6}\.(KS|KQ)$"),                                # 005930.KS
-    re.compile(r"^[A-Z]{1,5}$"),                                    # AAPL, TSLA
+    re.compile(r"^\d{6}\.(KS|KQ)$"),  # 005930.KS
+    re.compile(r"^[A-Z]{1,5}$"),  # AAPL, TSLA
 ]
 _FX_PATTERNS = [
-    re.compile(r"^[A-Z]{3}[A-Z]{3}=X$"),                            # USDKRW=X
-    re.compile(r"^[A-Z]{3}=X$"),                                    # JPY=X
-    re.compile(r"^[A-Z]{3}/[A-Z]{3}$"),                             # USD/KRW
+    re.compile(r"^[A-Z]{3}[A-Z]{3}=X$"),  # USDKRW=X
+    re.compile(r"^[A-Z]{3}=X$"),  # JPY=X
+    re.compile(r"^[A-Z]{3}/[A-Z]{3}$"),  # USD/KRW
 ]
 _MACRO_COLUMNS = {"cpi", "gdp", "unemployment", "yield_10y", "fed_rate", "ppi"}
 # Week-4: CSV 헤더 기반 macro 감지 확장 (대소문자 무관)
@@ -59,7 +60,16 @@ _PORTFOLIO_HINT_KEYS = {"market", "code", "quantity", "avg_cost"}
 _PORTFOLIO_CSV_REQUIRED = {"quantity", "avg_cost"}
 _PORTFOLIO_CSV_SYMBOL_KEYS = {"code", "symbol"}
 # macro 질의 키워드 (query 에서 탐지)
-_MACRO_QUERY_KEYWORDS = ("cpi", "소비자물가", "물가지수", "gdp", "금리", "실업률", "yield", "인플레이션")
+_MACRO_QUERY_KEYWORDS = (
+    "cpi",
+    "소비자물가",
+    "물가지수",
+    "gdp",
+    "금리",
+    "실업률",
+    "yield",
+    "인플레이션",
+)
 
 # CSV 업로드 시 값 기반 crypto/stock/fx 패턴 (컬럼·셀값 스캔)
 _CRYPTO_TOKEN_HINTS = (

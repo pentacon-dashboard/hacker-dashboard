@@ -10,12 +10,12 @@ GET /ws/ticks?markets=upbit:KRW-BTC,binance:BTCUSDT
 클라이언트 연결 종료 시 업스트림 close.
 한 연결당 최대 10 심볼. 초과 시 rate limit 경고만 (연결은 유지).
 """
+
 from __future__ import annotations
 
 import asyncio
-import json
 import logging
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 
@@ -52,18 +52,21 @@ async def ws_ticks(websocket: WebSocket, markets: str = "") -> None:
         return
 
     if len(symbol_list) > _MAX_SYMBOLS:
-        await websocket.send_json({
-            "warning": f"최대 {_MAX_SYMBOLS}개 심볼 지원. {len(symbol_list)}개 요청됨. 앞 {_MAX_SYMBOLS}개만 구독.",
-        })
+        await websocket.send_json(
+            {
+                "warning": f"최대 {_MAX_SYMBOLS}개 심볼 지원. {len(symbol_list)}개 요청됨. 앞 {_MAX_SYMBOLS}개만 구독.",
+            }
+        )
         symbol_list = symbol_list[:_MAX_SYMBOLS]
 
-    tasks: list[asyncio.Task] = []
+    tasks: list[asyncio.Task[None]] = []
     stop_event = asyncio.Event()
 
     async def _stream_upbit(sym: str) -> None:
         """Upbit WS 연결 → 정규화 → 클라이언트로 전달."""
         try:
             import httpx
+
             # Upbit WS는 httpx-ws 또는 websockets 필요. 여기서는 Polling fallback
             # TODO: pip install websockets 후 실 연결로 교체
             while not stop_event.is_set():
@@ -71,7 +74,7 @@ async def ws_ticks(websocket: WebSocket, markets: str = "") -> None:
                 try:
                     async with httpx.AsyncClient(timeout=3.0) as client:
                         resp = await client.get(
-                            f"https://api.upbit.com/v1/ticker",
+                            "https://api.upbit.com/v1/ticker",
                             params={"markets": sym},
                         )
                         data = resp.json()
@@ -83,7 +86,7 @@ async def ws_ticks(websocket: WebSocket, markets: str = "") -> None:
                                 "price": float(t.get("trade_price", 0)),
                                 "change_pct": float(t.get("signed_change_rate", 0)) * 100,
                                 "volume": float(t.get("acc_trade_volume_24h", 0)),
-                                "ts": datetime.now(timezone.utc).isoformat(),
+                                "ts": datetime.now(UTC).isoformat(),
                             }
                             await websocket.send_json(tick)
                 except Exception as exc:
@@ -96,12 +99,13 @@ async def ws_ticks(websocket: WebSocket, markets: str = "") -> None:
         """Binance WS 연결 → 정규화 → 클라이언트로 전달."""
         try:
             import httpx
+
             # TODO: pip install websockets 후 wss://stream.binance.com:9443/ws/<sym>@miniTicker 교체
             while not stop_event.is_set():
                 try:
                     async with httpx.AsyncClient(timeout=3.0) as client:
                         resp = await client.get(
-                            f"https://api.binance.com/api/v3/ticker/24hr",
+                            "https://api.binance.com/api/v3/ticker/24hr",
                             params={"symbol": sym},
                         )
                         data = resp.json()
@@ -111,7 +115,7 @@ async def ws_ticks(websocket: WebSocket, markets: str = "") -> None:
                             "price": float(data.get("lastPrice", 0)),
                             "change_pct": float(data.get("priceChangePercent", 0)),
                             "volume": float(data.get("volume", 0)),
-                            "ts": datetime.now(timezone.utc).isoformat(),
+                            "ts": datetime.now(UTC).isoformat(),
                         }
                         await websocket.send_json(tick)
                 except Exception as exc:
@@ -136,7 +140,7 @@ async def ws_ticks(websocket: WebSocket, markets: str = "") -> None:
         while True:
             try:
                 await asyncio.wait_for(websocket.receive_text(), timeout=30)
-            except asyncio.TimeoutError:
+            except TimeoutError:
                 # keepalive ping
                 await websocket.send_json({"type": "ping"})
     except (WebSocketDisconnect, Exception):

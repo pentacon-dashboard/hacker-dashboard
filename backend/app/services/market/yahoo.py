@@ -4,9 +4,10 @@ API:
   - GET https://query1.finance.yahoo.com/v8/finance/chart/{symbol}?interval=1d&range=3mo
   - GET https://query1.finance.yahoo.com/v1/finance/search?q={query}&quotesCount=10
 """
+
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 from app.schemas.market import OhlcBar, Quote, SymbolInfo
@@ -84,11 +85,25 @@ class YahooAdapter(MarketAdapter):
             bars.append(
                 OhlcBar(
                     ts=_epoch_to_iso(ts_epoch),
-                    open=float(opens[i]) if i < len(opens) and opens[i] is not None else float(closes[i]),
-                    high=float(highs[i]) if i < len(highs) and highs[i] is not None else float(closes[i]),
-                    low=float(lows[i]) if i < len(lows) and lows[i] is not None else float(closes[i]),
+                    open=(
+                        float(opens[i])
+                        if i < len(opens) and opens[i] is not None
+                        else float(closes[i])
+                    ),
+                    high=(
+                        float(highs[i])
+                        if i < len(highs) and highs[i] is not None
+                        else float(closes[i])
+                    ),
+                    low=(
+                        float(lows[i])
+                        if i < len(lows) and lows[i] is not None
+                        else float(closes[i])
+                    ),
                     close=float(closes[i]),
-                    volume=float(volumes[i]) if i < len(volumes) and volumes[i] is not None else None,
+                    volume=(
+                        float(volumes[i]) if i < len(volumes) and volumes[i] is not None else None
+                    ),
                 )
             )
         return bars
@@ -119,16 +134,17 @@ class YahooAdapter(MarketAdapter):
 
 def _extract_chart(data: Any) -> dict[str, Any]:
     try:
-        return data["chart"]["result"][0]
+        result: dict[str, Any] = data["chart"]["result"][0]
+        return result
     except (KeyError, IndexError, TypeError) as exc:
         raise ValueError(f"Yahoo: unexpected response shape — {exc}") from exc
 
 
 def _epoch_to_iso(epoch: int) -> str:
     try:
-        return datetime.fromtimestamp(epoch, tz=timezone.utc).isoformat()
+        return datetime.fromtimestamp(epoch, tz=UTC).isoformat()
     except (ValueError, OSError):
-        return datetime.now(timezone.utc).isoformat()
+        return datetime.now(UTC).isoformat()
 
 
 def _map_asset_class(qtype: str) -> str:

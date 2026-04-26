@@ -6,9 +6,10 @@ API 문서: https://binance-docs.github.io/apidocs/spot/en/
   - GET https://api.binance.com/api/v3/klines?symbol=BTCUSDT&interval=1d&limit=100
   - GET https://api.binance.com/api/v3/exchangeInfo  (심볼 목록)
 """
+
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 from app.schemas.market import OhlcBar, Quote, SymbolInfo
@@ -102,9 +103,9 @@ class BinanceAdapter(MarketAdapter):
 def _ms_to_iso(ms: int) -> str:
     """밀리초 epoch → ISO-8601 UTC."""
     try:
-        return datetime.fromtimestamp(ms / 1000, tz=timezone.utc).isoformat()
+        return datetime.fromtimestamp(ms / 1000, tz=UTC).isoformat()
     except (ValueError, OSError):
-        return datetime.now(timezone.utc).isoformat()
+        return datetime.now(UTC).isoformat()
 
 
 def _infer_currency(symbol: str) -> str:

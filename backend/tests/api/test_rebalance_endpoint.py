@@ -1,21 +1,31 @@
 """리밸런싱 엔드포인트 통합 테스트 — in-memory SQLite + DI override."""
+
 from __future__ import annotations
 
-from datetime import datetime, timezone
-from decimal import Decimal
-from typing import Any, AsyncGenerator
-from unittest.mock import AsyncMock, patch, MagicMock
+from collections.abc import AsyncGenerator
+from datetime import UTC, datetime
+from typing import Any
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from httpx import ASGITransport, AsyncClient
-from sqlalchemy import Column, Date, DateTime, Integer, JSON, Numeric, String, UniqueConstraint
-from sqlalchemy import MetaData, Table
+from sqlalchemy import (
+    JSON,
+    Column,
+    Date,
+    DateTime,
+    Integer,
+    MetaData,
+    Numeric,
+    String,
+    Table,
+    UniqueConstraint,
+)
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
-from app.main import app
 from app.db.session import get_db
+from app.main import app
 from app.schemas.market import Quote
-
 
 # ──────────── DB fixtures ────────────
 
@@ -81,7 +91,7 @@ def _make_quote(market: str, symbol: str, price: float, currency: str = "KRW") -
         change=0.0,
         change_pct=0.0,
         currency=currency,
-        timestamp=datetime.now(timezone.utc).isoformat(),
+        timestamp=datetime.now(UTC).isoformat(),
     )
 
 
@@ -186,7 +196,10 @@ async def test_rebalance_normal_with_holdings(rebalance_client: AsyncClient) -> 
 
     with (
         patch("app.services.portfolio.get_adapter", side_effect=mock_adapter_factory),
-        patch("app.services.portfolio.get_rate", side_effect=lambda src, dst: 1350.0 if src == "USD" else 1.0),
+        patch(
+            "app.services.portfolio.get_rate",
+            side_effect=lambda src, dst: 1350.0 if src == "USD" else 1.0,
+        ),
     ):
         resp = await rebalance_client.post("/portfolio/rebalance", json=_TARGET_STOCK_CRYPTO)
 
@@ -233,11 +246,9 @@ async def test_rebalance_crypto_heavy_actions(rebalance_client: AsyncClient) -> 
     actions = body["actions"]
 
     sell_codes = {a["code"] for a in actions if a["action"] == "sell"}
-    buy_codes = {a["code"] for a in actions if a["action"] == "buy"}
+    # buy_codes = {a["code"] for a in actions if a["action"] == "buy"}  # unused
     # crypto 비중이 높으므로 BTC 매도가 있어야 함
-    assert "KRW-BTC" in sell_codes or len(actions) == 0, (
-        "crypto heavy인데 BTC 매도가 없음"
-    )
+    assert "KRW-BTC" in sell_codes or len(actions) == 0, "crypto heavy인데 BTC 매도가 없음"
 
 
 @pytest.mark.asyncio

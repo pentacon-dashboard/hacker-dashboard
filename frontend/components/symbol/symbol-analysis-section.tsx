@@ -48,10 +48,9 @@ export function SymbolAnalysisSection({ market, code }: SymbolAnalysisSectionPro
     [market, code],
   );
 
-  // 마운트 시 최초 분석 실행
+  // 마운트 시 최초 분석 실행 (의도적 빈 deps — 마운트 1회만 실행)
   useEffect(() => {
     void runAnalysis(includePortfolio);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   function handleToggle(checked: boolean) {

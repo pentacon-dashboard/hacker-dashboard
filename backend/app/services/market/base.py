@@ -1,4 +1,5 @@
 """MarketAdapter 추상 기반 클래스."""
+
 from __future__ import annotations
 
 import abc

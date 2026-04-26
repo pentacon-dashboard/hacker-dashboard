@@ -1,0 +1,23 @@
+{
+  "id": "copilot_comparison_01",
+  "agent": "comparison",
+  "description": "AAPL vs MSFT 기본 비교 — 두 종목 모두 known symbol",
+  "step": {
+    "step_id": "cmp-01",
+    "agent": "comparison",
+    "inputs": {
+      "symbols": ["AAPL", "MSFT"],
+      "metrics": ["return_3m_pct", "volatility_pct", "pe_ratio"]
+    },
+    "depends_on": [],
+    "gate_policy": {"schema": true, "domain": true, "critique": true}
+  },
+  "expected_gate_results": {
+    "schema": "pass",
+    "domain": "pass",
+    "critique": "pass"
+  },
+  "expected_card_type": "comparison_table",
+  "expected_symbols": ["AAPL", "MSFT"],
+  "expected_degraded": false
+}

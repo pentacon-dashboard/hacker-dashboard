@@ -26,6 +26,7 @@ import { useRealtimeTicker } from "@/lib/realtime/use-realtime-ticker";
 import { type SymbolInfo } from "@/lib/api/symbols";
 import { SymbolSearch } from "@/components/watchlist/symbol-search";
 import { listHoldings } from "@/lib/api/portfolio";
+import { useLocale } from "@/lib/i18n/locale-provider";
 
 const ASSET_CLASS_MAP: Record<string, string> = {
   upbit: "crypto",
@@ -62,6 +63,7 @@ function formatVolume(volume: number | undefined) {
 }
 
 export function WatchlistTable() {
+  const { t } = useLocale();
   const queryClient = useQueryClient();
 
   const { data, isLoading, isError } = useQuery({
@@ -128,7 +130,7 @@ export function WatchlistTable() {
         role="alert"
         className="rounded-lg border border-destructive/50 bg-destructive/10 p-4 text-sm text-destructive"
       >
-        워치리스트를 불러오는 중 오류가 발생했습니다.
+        {t("watchlist.error")}
       </div>
     );
   }
@@ -138,29 +140,29 @@ export function WatchlistTable() {
       <div className="flex items-center gap-3">
         <SymbolSearch onSelect={handleAddSymbol} />
         {addMutation.isPending && (
-          <span className="text-xs text-muted-foreground">추가 중...</span>
+          <span className="text-xs text-muted-foreground">{t("watchlist.adding")}</span>
         )}
         {addMutation.isError && (
-          <span className="text-xs text-destructive">추가 실패</span>
+          <span className="text-xs text-destructive">{t("watchlist.addFailed")}</span>
         )}
       </div>
 
       {!data || data.length === 0 ? (
         <EmptyState
-          title="워치리스트가 비어 있습니다"
-          description="관심 종목을 검색해서 추가하면 실시간 시세를 확인할 수 있습니다."
+          title={t("watchlist.empty.title")}
+          description={t("watchlist.empty.desc")}
         />
       ) : (
         <div className="overflow-x-auto rounded-lg border">
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>심볼</TableHead>
-                <TableHead>자산군</TableHead>
-                <TableHead className="text-right">현재가</TableHead>
-                <TableHead className="text-right">등락률</TableHead>
-                <TableHead className="text-right">거래량</TableHead>
-                <TableHead>스파크라인</TableHead>
+                <TableHead>{t("watchlist.col.symbol")}</TableHead>
+                <TableHead>{t("watchlist.col.assetClass")}</TableHead>
+                <TableHead className="text-right">{t("watchlist.col.price")}</TableHead>
+                <TableHead className="text-right">{t("watchlist.col.change")}</TableHead>
+                <TableHead className="text-right">{t("watchlist.col.volume")}</TableHead>
+                <TableHead>{t("watchlist.col.sparkline")}</TableHead>
                 <TableHead />
               </TableRow>
             </TableHeader>
@@ -199,7 +201,7 @@ export function WatchlistTable() {
                               variant="secondary"
                               className="text-[10px] px-1.5 py-0"
                             >
-                              보유 중
+                              {t("watchlist.holding")}
                             </Badge>
                           )}
                         </div>
@@ -267,7 +269,7 @@ export function WatchlistTable() {
                         size="icon"
                         data-testid="watchlist-delete"
                         className="h-8 w-8 text-muted-foreground hover:text-destructive"
-                        aria-label={`${item.code} 삭제`}
+                        aria-label={`${item.code} ${t("table.delete")}`}
                         disabled={deleteMutation.isPending}
                         onClick={() => deleteMutation.mutate(item.id)}
                       >

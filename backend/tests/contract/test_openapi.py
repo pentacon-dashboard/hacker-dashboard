@@ -34,17 +34,16 @@ CLI 동등 명령 (shared/openapi.json 1583라인 기준):
     GET  /portfolio/summary
     GET  /portfolio/snapshots
 """
+
 import os
 
 import pytest
 import schemathesis
-from schemathesis.config import SchemathesisConfig, ProjectConfig, ProjectsConfig
+from schemathesis.config import ProjectConfig, ProjectsConfig, SchemathesisConfig
 
 # 환경변수로 base URL 오버라이드 가능. 기본값은 로컬 개발 서버
 BASE_URL = os.getenv("CONTRACT_BASE_URL", "http://localhost:8000")
-SCHEMA_PATH = os.path.join(
-    os.path.dirname(__file__), "..", "..", "..", "shared", "openapi.json"
-)
+SCHEMA_PATH = os.path.join(os.path.dirname(__file__), "..", "..", "..", "shared", "openapi.json")
 
 # openapi.json 이 아직 없으면 테스트 스킵 (스켈레톤 단계)
 if not os.path.exists(SCHEMA_PATH):

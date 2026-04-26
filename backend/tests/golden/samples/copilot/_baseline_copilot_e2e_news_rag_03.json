@@ -1,0 +1,184 @@
+[
+  {
+    "type": "plan.ready",
+    "plan": {
+      "session_id": "s-fake",
+      "steps": [
+        {
+          "step_id": "a",
+          "agent": "portfolio",
+          "inputs": {
+            "symbol": "NVDA"
+          },
+          "depends_on": [],
+          "gate_policy": {
+            "schema_check": true,
+            "domain": true,
+            "critique": true
+          }
+        },
+        {
+          "step_id": "b",
+          "agent": "comparison",
+          "inputs": {
+            "symbols": [
+              "NVDA",
+              "MSFT"
+            ]
+          },
+          "depends_on": [],
+          "gate_policy": {
+            "schema_check": true,
+            "domain": true,
+            "critique": true
+          }
+        }
+      ],
+      "gate_results": {
+        "schema": "pass",
+        "domain": "pass",
+        "critique": "pass"
+      }
+    }
+  },
+  {
+    "type": "step.start",
+    "step_id": "a"
+  },
+  {
+    "type": "step.token",
+    "step_id": "a",
+    "text": "portfolio 분석 중..."
+  },
+  {
+    "type": "step.start",
+    "step_id": "b"
+  },
+  {
+    "type": "step.token",
+    "step_id": "b",
+    "text": "comparison 분석 중..."
+  },
+  {
+    "type": "step.gate",
+    "step_id": "a",
+    "gate": "schema",
+    "status": "pass",
+    "reason": null
+  },
+  {
+    "type": "step.gate",
+    "step_id": "a",
+    "gate": "domain",
+    "status": "pass",
+    "reason": null
+  },
+  {
+    "type": "step.gate",
+    "step_id": "a",
+    "gate": "critique",
+    "status": "pass",
+    "reason": null
+  },
+  {
+    "type": "step.result",
+    "step_id": "a",
+    "card": {
+      "type": "text",
+      "content": "포트폴리오 분석 결과 (sync fallback): NVDA 블랙웰 출시 뉴스 — schema gate pass with citations",
+      "degraded": false
+    }
+  },
+  {
+    "type": "step.gate",
+    "step_id": "b",
+    "gate": "schema",
+    "status": "pass",
+    "reason": null
+  },
+  {
+    "type": "step.gate",
+    "step_id": "b",
+    "gate": "domain",
+    "status": "pass",
+    "reason": null
+  },
+  {
+    "type": "step.gate",
+    "step_id": "b",
+    "gate": "critique",
+    "status": "pass",
+    "reason": null
+  },
+  {
+    "type": "step.result",
+    "step_id": "b",
+    "card": {
+      "type": "comparison_table",
+      "symbols": [
+        "NVDA",
+        "MSFT"
+      ],
+      "metrics": [
+        "return_3m_pct",
+        "volatility_pct",
+        "pe_ratio",
+        "market_cap_usd"
+      ],
+      "rows": [
+        {
+          "symbol": "NVDA",
+          "metrics": {
+            "return_3m_pct": 37,
+            "volatility_pct": 37,
+            "pe_ratio": 32,
+            "market_cap_usd": 8000000000
+          }
+        },
+        {
+          "symbol": "MSFT",
+          "metrics": {
+            "return_3m_pct": 4,
+            "volatility_pct": 24,
+            "pe_ratio": null,
+            "market_cap_usd": 5000000000
+          }
+        }
+      ],
+      "summary": "Comparison of NVDA, MSFT across return, volatility, and valuation metrics."
+    }
+  },
+  {
+    "type": "step.gate",
+    "step_id": "final",
+    "gate": "schema",
+    "status": "pass",
+    "reason": null
+  },
+  {
+    "type": "step.gate",
+    "step_id": "final",
+    "gate": "domain",
+    "status": "pass",
+    "reason": null
+  },
+  {
+    "type": "step.gate",
+    "step_id": "final",
+    "gate": "critique",
+    "status": "pass",
+    "reason": null
+  },
+  {
+    "type": "final.card",
+    "card": {
+      "type": "text",
+      "content": "[a] 포트폴리오 분석 결과 (sync fallback): NVDA 블랙웰 출시 뉴스 — schema gate pass with citations\n\n[b] {'type': 'comparison_table', 'symbols': ['NVDA', 'MSFT'], 'metrics': ['return_3m_pct', 'volatility_pct', 'pe_ratio', 'market_cap_usd'], 'rows': [{'symbol': 'NVDA', 'metrics': {'return_3m_pct': 37, 'volatility_pct': 37, 'pe_ratio': 32, 'market_cap_usd': 8000000000}}, {'symbol': 'MSFT', 'metrics': {'return_3m_pct': 4, 'volatility_pct': 24, 'pe_ratio': None, 'market_cap_usd': 5000000000}}], 'summary': 'Comparison of NVDA, MSFT across return, volatility, and valuation metrics.'}",
+      "degraded": false
+    }
+  },
+  {
+    "type": "done",
+    "session_id": "golden-news_rag_03"
+  }
+]
