@@ -44,6 +44,22 @@ frontend/coverage/
 
 # schemathesis CLI 결과물 (로컬 실행 아티팩트)
 /schemathesis-results.*
+backend/contract-results*.xml
+backend/schema-test*.xml
+
+# 하네스 격리 sqlite + 디버깅 sqlite (로컬 fixture 산출물)
+backend/_harness_*.sqlite
+backend/test_*.sqlite
+/test_*.sqlite
+
+# 검증·디버깅용 임시 스크린샷 (커밋 금지)
+/probe-*.png
+/diag-*.png
+/verify-*.png
+/accent-*.png
+/pw-capture.*
+/pw-verify.*
+/nul
 
 # Env & secrets
 .env
