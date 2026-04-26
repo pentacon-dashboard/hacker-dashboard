@@ -30,13 +30,22 @@ interface MappedNewsItem {
   sentiment?: "positive" | "negative" | "neutral";
 }
 
+function safeHostname(rawUrl: string | null | undefined): string {
+  if (!rawUrl) return "";
+  try {
+    return new URL(rawUrl).hostname.replace(/^www\./, "");
+  } catch {
+    return rawUrl.slice(0, 32);
+  }
+}
+
 function mapNewsItem(item: NewsItem): MappedNewsItem {
   return {
     id: String(item.chunk_id),
     title: item.title,
-    source: new URL(item.source_url).hostname.replace("www.", ""),
+    source: safeHostname(item.source_url),
     published_at: item.published_at,
-    url: item.source_url,
+    url: item.source_url ?? "#",
   };
 }
 
