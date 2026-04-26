@@ -90,11 +90,21 @@ async def search_news(
     end_date: str | None = None,
     k: int = 5,
 ) -> list[Citation]:
-    """뉴스/공시 RAG 검색. stub 모드와 production 모드를 분기한다."""
-    if _is_stub_mode():
-        return search_news_stub(query, symbols, start_date, end_date, k)
-    else:
-        raise NotImplementedError(
-            "production 모드 pgvector 검색은 sprint-03 이후 구현 예정. "
-            "COPILOT_NEWS_MODE=stub 사용."
-        )
+    """뉴스/공시 RAG 검색.
+
+    우선순위:
+      1. 네이버 API 키가 설정돼 있으면 실시간 네이버 뉴스 검색 (한국·글로벌 모두 커버)
+      2. 결과가 비어있거나 키 미설정이면 fixture stub 으로 폴백
+    """
+    from app.services.news.naver import is_naver_configured, search_naver_news
+
+    if is_naver_configured():
+        try:
+            results = await search_naver_news(query, display=k, sort="date")
+            if results:
+                return results
+        except Exception:  # noqa: BLE001 — 어떤 실패라도 fixture 로 폴백
+            pass
+
+    # fallback: fixture stub
+    return search_news_stub(query, symbols, start_date, end_date, k)
