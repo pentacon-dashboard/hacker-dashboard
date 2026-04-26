@@ -24,7 +24,7 @@ jobs:
 
     services:
       postgres:
-        image: postgres:16-alpine
+        image: pgvector/pgvector:pg16
         env:
           POSTGRES_USER: hacker
           POSTGRES_PASSWORD: hacker
@@ -135,7 +135,7 @@ jobs:
           CI: "true"
           E2E_BASE: http://localhost:3000
           BE_BASE: http://localhost:8000
-        run: npx playwright test --project=chromium
+        run: npx playwright test --config=e2e/playwright.config.ts --project=chromium
 
       # ── 아티팩트 업로드 ─────────────────────────────────────────────────────
       - name: Upload Playwright report
