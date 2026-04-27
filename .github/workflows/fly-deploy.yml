@@ -1,6 +1,7 @@
 name: Fly.io BE Deploy
 
-# main 머지 시 자동 배포 + workflow_dispatch 로 수동 트리거.
+# main merge 시 자동 배포 + workflow_dispatch 로 수동 트리거.
+# Codex deploy trigger: 2026-04-28T02:38+09:00
 # **사전 조건:** GitHub repo Settings → Secrets → Actions 에 FLY_API_TOKEN 추가.
 # 토큰 발급: `fly tokens create deploy -x 999999h` (로컬에서 1회).
 
