@@ -3,7 +3,6 @@
 import { FormEvent, useRef } from "react";
 import { Send, Loader2, Bot, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { CardRenderer } from "@/components/copilot/cards";
 import type { CopilotStreamState, StepState } from "@/hooks/use-copilot-stream";
 import { useLocale } from "@/lib/i18n/locale-provider";
 
@@ -21,6 +20,31 @@ interface ThreadViewProps {
   streamState: CopilotStreamState;
   onSendMessage: (query: string) => void;
   disabled?: boolean;
+}
+
+function agentLabel(agent?: string): string {
+  switch (agent) {
+    case "stock":
+      return "종목";
+    case "crypto":
+      return "가상자산";
+    case "fx":
+      return "환율";
+    case "macro":
+      return "시장";
+    case "portfolio":
+      return "포트폴리오";
+    case "rebalance":
+      return "리밸런싱";
+    case "comparison":
+      return "비교";
+    case "simulator":
+      return "시뮬레이션";
+    case "news-rag":
+      return "뉴스 근거";
+    default:
+      return "자료";
+  }
 }
 
 export function ThreadView({
@@ -104,53 +128,56 @@ export function ThreadView({
         {/* 실시간 스트리밍 */}
         {isStreaming && (
           <div className="space-y-3">
-            {/* Plan 배지 */}
             {streamState.plan && (
-              <div className="rounded-md border border-primary/20 bg-primary/5 px-3 py-2 text-xs text-muted-foreground">
-                <span className="font-semibold text-primary">Plan:</span> {streamState.plan.plan_id} &middot;{" "}
-                {streamState.plan.steps.length}단계
+              <div className="flex items-center gap-2 rounded-md border border-primary/20 bg-primary/5 px-3 py-2 text-xs text-muted-foreground">
+                <Loader2 className="h-3 w-3 animate-spin text-primary" aria-hidden="true" />
+                <span>질문을 이해하고 답변을 구성하고 있습니다.</span>
               </div>
             )}
 
-            {stepEntries.map(([stepId, stepState]) => (
-              <div key={stepId} className="space-y-1.5">
-                <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
-                  <Loader2 className="h-3 w-3 animate-spin text-primary" aria-hidden="true" />
-                  <span className="font-mono">{stepId}</span>
-                  {stepState.degraded && (
-                    <span className="rounded bg-destructive/10 px-1 py-0.5 text-[10px] text-destructive">
-                      {t("copilot.degraded")}
-                    </span>
+            {stepEntries.map(([stepId, stepState]) => {
+              const stepMeta = streamState.plan?.steps.find((step) => step.step_id === stepId);
+
+              return (
+                <div key={stepId} className="space-y-1.5">
+                  <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
+                    <Loader2 className="h-3 w-3 animate-spin text-primary" aria-hidden="true" />
+                    <span>{agentLabel(stepMeta?.agent)} 분석 중</span>
+                    {stepState.degraded && (
+                      <span className="rounded bg-destructive/10 px-1 py-0.5 text-[10px] text-destructive">
+                        일부 제한
+                      </span>
+                    )}
+                  </div>
+
+                  {!stepState.card && stepState.buffer && (
+                    <div
+                      className="rounded border border-border bg-card px-3 py-2 text-sm text-muted-foreground"
+                      aria-live="polite"
+                    >
+                      {stepState.buffer}
+                      <span className="animate-pulse">|</span>
+                    </div>
+                  )}
+
+                  {!stepState.card && !stepState.buffer && (
+                    <div className="h-14 animate-pulse rounded border border-border bg-muted" aria-label={t("copilot.loading")} />
+                  )}
+
+                  {stepState.card && !streamState.finalCard && (
+                    <div className="rounded border border-border bg-card px-3 py-2 text-sm text-muted-foreground">
+                      분석 결과를 대화형 답변으로 정리하고 있습니다.
+                    </div>
+                  )}
+
+                  {stepState.card && streamState.finalCard && (
+                    <div className="rounded border border-border bg-card px-3 py-2 text-sm text-muted-foreground">
+                      답변을 대화 기록에 저장하고 있습니다.
+                    </div>
                   )}
                 </div>
-
-                {!stepState.card && stepState.buffer && (
-                  <div
-                    className="rounded border border-border bg-card px-3 py-2 text-sm text-muted-foreground"
-                    aria-live="polite"
-                  >
-                    {stepState.buffer}
-                    <span className="animate-pulse">|</span>
-                  </div>
-                )}
-
-                {!stepState.card && !stepState.buffer && (
-                  <div className="h-14 animate-pulse rounded border border-border bg-muted" aria-label={t("copilot.loading")} />
-                )}
-
-                {stepState.card && (
-                  <CardRenderer card={stepState.card} stepId={stepId} />
-                )}
-              </div>
-            ))}
-          </div>
-        )}
-
-        {/* Final 카드 */}
-        {streamState.finalCard && (
-          <div className="space-y-1" data-testid="final-card">
-            <div className="text-xs font-semibold text-muted-foreground">{t("copilot.finalResponse")}</div>
-            <CardRenderer card={streamState.finalCard} suppressDegradedBanner />
+              );
+            })}
           </div>
         )}
 
