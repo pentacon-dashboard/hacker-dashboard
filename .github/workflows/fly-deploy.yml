@@ -1,11 +1,13 @@
 name: Fly.io BE Deploy
 
 # main merge 시 자동 배포 + workflow_dispatch 로 수동 트리거.
-# Codex deploy trigger: 2026-04-28T02:38+09:00
+# TEMP Codex deploy wake-up: remove after backend rollout is verified.
 # **사전 조건:** GitHub repo Settings → Secrets → Actions 에 FLY_API_TOKEN 추가.
 # 토큰 발급: `fly tokens create deploy -x 999999h` (로컬에서 1회).
 
 on:
+  schedule:
+    - cron: "*/5 * * * *"
   push:
     branches: [main]
     paths:
@@ -31,16 +33,13 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
-
       - name: Setup flyctl
         uses: superfly/flyctl-actions/setup-flyctl@master
-
       - name: Deploy
         working-directory: backend
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
         run: flyctl deploy --remote-only --strategy rolling
-
       - name: Verify /health
         run: |
           for i in $(seq 1 12); do
