@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import { TrendingUp, TrendingDown, Lightbulb, BookOpen } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { getPortfolioSummary, getAiInsight } from "@/lib/api/portfolio";
 import type { PortfolioSummary } from "@/lib/api/portfolio";
@@ -140,11 +139,6 @@ export function ReferencePanel({
           <CardTitle className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground">
             <Lightbulb className="h-3.5 w-3.5 text-yellow-500" aria-hidden="true" />
             {t("copilot.aiInsightSummary")}
-            {insight?.stub_mode && (
-              <Badge variant="outline" className="ml-auto text-[10px] text-muted-foreground">
-                STUB
-              </Badge>
-            )}
           </CardTitle>
         </CardHeader>
         <CardContent>
