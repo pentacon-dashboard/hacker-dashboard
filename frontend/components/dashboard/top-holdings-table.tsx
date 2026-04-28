@@ -16,6 +16,7 @@ import {
   signedColorClass,
 } from "@/lib/utils/format";
 import { useLocale } from "@/lib/i18n/locale-provider";
+import { formatSymbolDisplay } from "@/lib/market/display";
 
 interface TopHoldingsTableProps {
   holdings: HoldingDetail[];
@@ -77,6 +78,10 @@ export function TopHoldingsTable({
               totalForWeight > 0
                 ? (Number(h.value_krw) / totalForWeight) * 100
                 : 0;
+            const fullSymbolLabel = formatSymbolDisplay(h.market, h.code);
+            const shortSymbolLabel = formatSymbolDisplay(h.market, h.code, {
+              includeCode: false,
+            });
             return (
               <TableRow key={h.id}>
                 <TableCell className="px-1 py-1.5 text-[11px] text-muted-foreground">
@@ -85,9 +90,11 @@ export function TopHoldingsTable({
                 <TableCell className="px-1 py-1.5">
                   <Link
                     href={`/symbol/${h.market}/${encodeURIComponent(h.code)}`}
-                    className="truncate text-xs font-medium hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    className="block truncate text-xs font-medium hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    title={fullSymbolLabel}
+                    aria-label={fullSymbolLabel}
                   >
-                    {h.code}
+                    {shortSymbolLabel}
                   </Link>
                 </TableCell>
                 <TableCell className="px-1 py-1.5 text-[11px] uppercase text-muted-foreground">
