@@ -13,15 +13,22 @@ _registry: dict[str, MarketAdapter] = {}
 def _build_registry() -> dict[str, MarketAdapter]:
     # 지연 임포트: httpx client 가 아직 초기화 안 됐을 수도 있으므로
     from app.services.market.binance import BinanceAdapter
+    from app.services.market.kiwoom import KiwoomAdapter
     from app.services.market.naver_kr import NaverKrAdapter
     from app.services.market.upbit import UpbitAdapter
     from app.services.market.yahoo import YahooAdapter
+
+    naver_fallback = NaverKrAdapter()
 
     return {
         "upbit": UpbitAdapter(),
         "binance": BinanceAdapter(),
         "yahoo": YahooAdapter(),
-        "naver_kr": NaverKrAdapter(),
+        # Domestic stock aliases prefer Kiwoom REST quotes and fall back to the
+        # existing Naver/yfinance path when credentials or upstream data are unavailable.
+        "kiwoom": KiwoomAdapter(market="kiwoom", fallback=naver_fallback),
+        "krx": KiwoomAdapter(market="krx", fallback=naver_fallback),
+        "naver_kr": KiwoomAdapter(market="naver_kr", fallback=naver_fallback),
     }
 
 
