@@ -27,12 +27,18 @@ import { type SymbolInfo } from "@/lib/api/symbols";
 import { SymbolSearch } from "@/components/watchlist/symbol-search";
 import { listHoldings } from "@/lib/api/portfolio";
 import { useLocale } from "@/lib/i18n/locale-provider";
+import {
+  formatSymbolDisplay,
+  isDomesticStockMarket,
+} from "@/lib/market/display";
 
 const ASSET_CLASS_MAP: Record<string, string> = {
   upbit: "crypto",
   binance: "crypto",
   yahoo: "stock",
   naver_kr: "stock",
+  krx: "stock",
+  kiwoom: "stock",
 };
 
 function resolveAssetClass(item: { market: string }) {
@@ -172,11 +178,14 @@ export function WatchlistTable() {
                 const ticker = tickers[tickerKey];
                 const assetClass = resolveAssetClass(item);
                 const currency =
-                  item.market === "upbit" ? "KRW" : "USD";
+                  item.market === "upbit" || isDomesticStockMarket(item.market)
+                    ? "KRW"
+                    : "USD";
                 const price = ticker?.price;
                 const changePct = ticker?.change_pct ?? 0;
                 const volume = ticker?.volume;
                 const isPositive = changePct >= 0;
+                const displaySymbol = formatSymbolDisplay(item.market, item.code);
 
                 const isHolding = holdingCodeSet.has(
                   `${item.market}:${item.code}`,
@@ -194,7 +203,7 @@ export function WatchlistTable() {
                             href={`/symbol/${encodeURIComponent(item.market)}/${encodeURIComponent(item.code)}`}
                             className="font-medium hover:underline focus:outline-none focus:ring-2 focus:ring-ring rounded"
                           >
-                            {item.code}
+                            {displaySymbol}
                           </Link>
                           {isHolding && (
                             <Badge
@@ -269,7 +278,7 @@ export function WatchlistTable() {
                         size="icon"
                         data-testid="watchlist-delete"
                         className="h-8 w-8 text-muted-foreground hover:text-destructive"
-                        aria-label={`${item.code} ${t("table.delete")}`}
+                        aria-label={`${displaySymbol} ${t("table.delete")}`}
                         disabled={deleteMutation.isPending}
                         onClick={() => deleteMutation.mutate(item.id)}
                       >
