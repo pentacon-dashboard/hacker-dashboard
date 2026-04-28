@@ -20,6 +20,11 @@ class Settings(BaseSettings):
     # LLM
     openai_api_key: str = ""
 
+    # Market data: Kiwoom REST API (domestic/KRX quotes)
+    kiwoom_app_key: str = ""
+    kiwoom_secret_key: str = ""
+    kiwoom_base_url: str = "https://api.kiwoom.com"
+
     # CORS
     cors_origins: list[str] = ["http://localhost:3000", "http://localhost:3001"]
 
