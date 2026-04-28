@@ -21,6 +21,7 @@ import {
   signedColorClass,
 } from "@/lib/utils/format";
 import { useLocale } from "@/lib/i18n/locale-provider";
+import { formatSymbolDisplay } from "@/lib/market/display";
 
 type SortKey = "pnl_pct" | "value_krw";
 type CurrencyFilter = "ALL" | "KRW" | "USD" | "USDT";
@@ -122,6 +123,7 @@ export function HoldingsTable({ holdings }: HoldingsTableProps) {
           <TableBody>
             {sorted.map((holding) => {
               const pnlColor = signedColorClass(holding.pnl_krw);
+              const displaySymbol = formatSymbolDisplay(holding.market, holding.code);
               return (
                 <TableRow key={holding.id}>
                   <TableCell>
@@ -130,7 +132,7 @@ export function HoldingsTable({ holdings }: HoldingsTableProps) {
                         href={`/symbol/${encodeURIComponent(holding.market)}/${encodeURIComponent(holding.code)}`}
                         className="font-medium hover:underline focus:outline-none focus:ring-2 focus:ring-ring rounded"
                       >
-                        {holding.code}
+                        {displaySymbol}
                       </Link>
                       <Badge variant="secondary" className="w-fit text-[10px]">
                         {holding.market}
@@ -168,7 +170,7 @@ export function HoldingsTable({ holdings }: HoldingsTableProps) {
                       variant="ghost"
                       size="icon"
                       className="h-8 w-8 text-muted-foreground hover:text-destructive"
-                      aria-label={`${holding.code} ${t("table.delete")}`}
+                      aria-label={`${displaySymbol} ${t("table.delete")}`}
                       disabled={deleteMutation.isPending}
                       onClick={() => deleteMutation.mutate(holding.id)}
                     >
