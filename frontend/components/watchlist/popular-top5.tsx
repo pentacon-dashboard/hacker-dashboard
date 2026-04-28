@@ -3,6 +3,7 @@
 import { TrendingUp, TrendingDown } from "lucide-react";
 import { useLocale } from "@/lib/i18n/locale-provider";
 import { translateSymbolName } from "@/lib/i18n/map";
+import { getDomesticStockName } from "@/lib/market/display";
 
 export interface TopListItem {
   rank: number;
@@ -39,6 +40,11 @@ export function PopularTop5({ items, title }: PopularTop5Props) {
         {items.slice(0, 5).map((item) => {
           const change = Number(item.change_pct);
           const isPos = change >= 0;
+          const domesticName = getDomesticStockName(item.ticker);
+          const tickerLabel = domesticName ?? item.ticker;
+          const secondaryLabel = domesticName
+            ? item.ticker
+            : translateName(item.ticker, item.name);
           return (
             <li
               key={item.ticker}
@@ -50,8 +56,8 @@ export function PopularTop5({ items, title }: PopularTop5Props) {
                   {item.rank}
                 </span>
                 <div className="min-w-0">
-                  <p className="truncate text-xs font-medium">{item.ticker}</p>
-                  <p className="truncate text-[10px] text-muted-foreground">{translateName(item.ticker, item.name)}</p>
+                  <p className="truncate text-xs font-medium">{tickerLabel}</p>
+                  <p className="truncate text-[10px] text-muted-foreground">{secondaryLabel}</p>
                 </div>
               </div>
               <span
