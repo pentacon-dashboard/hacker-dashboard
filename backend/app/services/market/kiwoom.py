@@ -13,8 +13,6 @@ import re
 from datetime import UTC, datetime, timedelta
 from typing import Any
 
-import httpx
-
 from app.core.config import settings
 from app.schemas.market import OhlcBar, Quote, SymbolInfo
 from app.services.market.base import MarketAdapter, get_http_client
