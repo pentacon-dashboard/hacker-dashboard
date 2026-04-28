@@ -3,6 +3,7 @@
 import { TrendingUp, TrendingDown } from "lucide-react";
 import type { TopListItem } from "./popular-top5";
 import { useLocale } from "@/lib/i18n/locale-provider";
+import { getDomesticStockName } from "@/lib/market/display";
 
 interface GainersLosersTop5Props {
   gainers: TopListItem[];
@@ -30,13 +31,16 @@ function MiniList({ items, variant }: { items: TopListItem[]; variant: "gainer" 
         <ul className="space-y-1">
           {items.slice(0, 5).map((item) => {
             const change = Number(item.change_pct);
+            const tickerLabel = getDomesticStockName(item.ticker) ?? item.ticker;
             return (
               <li
                 key={item.ticker}
                 className="flex items-center justify-between gap-1"
                 data-testid={`${variant}-item-${item.ticker}`}
               >
-                <span className="min-w-0 truncate text-xs">{item.ticker}</span>
+                <span className="min-w-0 truncate text-xs" title={item.ticker}>
+                  {tickerLabel}
+                </span>
                 <span
                   className={`shrink-0 text-xs font-semibold tabular-nums ${
                     isGainer
