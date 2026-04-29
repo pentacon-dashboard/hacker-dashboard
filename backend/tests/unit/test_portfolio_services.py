@@ -254,10 +254,10 @@ class TestSectorHeatmap:
         assert tiles[0].sector == "커스텀섹터"
 
     def test_unknown_ticker_goes_to_other(self):
-        """미매핑 티커 → 'Other' 섹터."""
+        """미매핑 티커 → '기타' 섹터."""
         holdings = [_make_holding(1, "UNKNOWN_XYZ", "1.00", value_krw="1000000.00")]
         tiles = sector_heatmap(holdings)
-        assert tiles[0].sector == "Other"
+        assert tiles[0].sector == "기타"
 
 
 # ──────────────────────────────────────────────────────────────────────────────

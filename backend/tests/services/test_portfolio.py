@@ -79,7 +79,7 @@ async def test_compute_summary_single_krw_holding() -> None:
 
         summary = await compute_summary(holdings)
 
-    assert summary.user_id == "demo"
+    assert summary.user_id == "pb-demo"
     # 평가금액: 60,000,000 * 0.5 = 30,000,000 KRW
     assert Decimal(summary.total_value_krw) == Decimal("30000000.00")
     # 원가: 50,000,000 * 0.5 = 25,000,000 KRW
