@@ -93,7 +93,7 @@ async def _critique_gate(
 
     try:
         raw = await _llm_module.call_llm(
-            system_prompt_name="copilot_planner_system",
+            system_prompt_name="critique_system",
             user_content=prompt,
             max_tokens=300,
         )
@@ -151,6 +151,7 @@ def _coerce_llm_answer_to_text(text: str) -> str:
             "message",
             "analysis",
             "content",
+            "body",
         ):
             value = parsed.get(key)
             if isinstance(value, str) and value.strip():
@@ -325,7 +326,15 @@ async def _run_agent_llm(step: CopilotStep, user_query: str) -> dict[str, Any]:
 
     try:
         if agent in {"portfolio", "rebalance"}:
-            ctx = await _fetch_portfolio_context()
+            try:
+                ctx = await _fetch_portfolio_context()
+            except Exception as exc:  # noqa: BLE001
+                ctx = {
+                    "portfolio_context_unavailable": True,
+                    "reason": type(exc).__name__,
+                    "indicators": {},
+                    "holdings": [],
+                }
             user_content = (
                 f"사용자 질문: {user_query}\n\n"
                 f"포트폴리오 데이터:\n{json.dumps(ctx, ensure_ascii=False, indent=2)}"

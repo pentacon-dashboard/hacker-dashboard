@@ -49,20 +49,6 @@
     "reason": null
   },
   {
-    "type": "step.gate",
-    "step_id": "a",
-    "gate": "domain",
-    "status": "pass",
-    "reason": null
-  },
-  {
-    "type": "step.gate",
-    "step_id": "a",
-    "gate": "critique",
-    "status": "pass",
-    "reason": null
-  },
-  {
     "type": "step.result",
     "step_id": "a",
     "card": {
@@ -126,7 +112,7 @@
     "type": "final.card",
     "card": {
       "type": "text",
-      "content": "[a(degraded)] {'type': 'comparison_table', 'symbols': ['AAPL', 'DEFINITELY_NOT_A_SYMBOL_XYZ'], 'metrics': ['return_3m_pct', 'volatility_pct', 'pe_ratio', 'market_cap_usd'], 'rows': [{'symbol': 'AAPL', 'metrics': {'return_3m_pct': 26, 'volatility_pct': 26, 'pe_ratio': 21, 'market_cap_usd': 7000000000}}, {'symbol': 'DEFINITELY_NOT_A_SYMBOL_XYZ', 'metrics': {'return_3m_pct': 12, 'volatility_pct': 22, 'pe_ratio': None, 'market_cap_usd': 3000000000}}], 'summary': 'Comparison of AAPL, DEFINITELY_NOT_A_SYMBOL_XYZ across return, volatility, and valuation metrics.', 'degraded': True}",
+      "content": "Comparison of AAPL, DEFINITELY_NOT_A_SYMBOL_XYZ across return, volatility, and valuation metrics.\n- AAPL: return_3m_pct: 26, volatility_pct: 26, pe_ratio: 21, market_cap_usd: 7,000,000,000\n- DEFINITELY_NOT_A_SYMBOL_XYZ: return_3m_pct: 12, volatility_pct: 22, pe_ratio: -, market_cap_usd: 3,000,000,000",
       "degraded": true
     }
   },

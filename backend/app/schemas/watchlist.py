@@ -9,6 +9,9 @@ from typing import Literal
 
 from pydantic import BaseModel, Field
 
+_NO_NUL_PATTERN = r"^[^\x00]+$"
+_MAX_ALERT_THRESHOLD = Decimal("99999999999999.9999")
+
 
 class WatchlistItem(BaseModel):
     id: int
@@ -46,17 +49,43 @@ class TopListItem(BaseModel):
 class WatchlistAlertCreate(BaseModel):
     """POST /watchlist/alerts 요청 본문."""
 
-    symbol: str = Field(..., min_length=1, description="심볼 (예: NVDA, KRW-BTC)")
-    market: str = Field(..., min_length=1, description="마켓 (yahoo | upbit | naver_kr | binance)")
+    symbol: str = Field(
+        ...,
+        min_length=1,
+        max_length=50,
+        pattern=_NO_NUL_PATTERN,
+        description="심볼 (예: NVDA, KRW-BTC)",
+    )
+    market: str = Field(
+        ...,
+        min_length=1,
+        max_length=20,
+        pattern=_NO_NUL_PATTERN,
+        description="마켓 (yahoo | upbit | naver_kr | binance)",
+    )
     direction: Literal["above", "below"] = Field(..., description="above | below")
-    threshold: Decimal = Field(..., gt=Decimal("0"), description="알림 임계가격")
+    threshold: Decimal = Field(
+        ...,
+        gt=Decimal("0"),
+        le=_MAX_ALERT_THRESHOLD,
+        max_digits=18,
+        decimal_places=4,
+        description="알림 임계가격",
+    )
 
 
 class WatchlistAlertUpdate(BaseModel):
     """PATCH /watchlist/alerts/{id} 요청 본문 (부분 업데이트)."""
 
     enabled: bool | None = Field(None, description="알림 활성화 여부")
-    threshold: Decimal | None = Field(None, gt=Decimal("0"), description="임계가격 변경")
+    threshold: Decimal | None = Field(
+        None,
+        gt=Decimal("0"),
+        le=_MAX_ALERT_THRESHOLD,
+        max_digits=18,
+        decimal_places=4,
+        description="임계가격 변경",
+    )
 
 
 class WatchlistAlertResponse(BaseModel):

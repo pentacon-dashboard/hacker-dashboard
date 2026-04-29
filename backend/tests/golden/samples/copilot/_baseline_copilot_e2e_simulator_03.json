@@ -51,20 +51,6 @@
     "reason": null
   },
   {
-    "type": "step.gate",
-    "step_id": "a",
-    "gate": "domain",
-    "status": "pass",
-    "reason": null
-  },
-  {
-    "type": "step.gate",
-    "step_id": "a",
-    "gate": "critique",
-    "status": "pass",
-    "reason": null
-  },
-  {
     "type": "step.result",
     "step_id": "a",
     "card": {
@@ -102,7 +88,7 @@
     "type": "final.card",
     "card": {
       "type": "text",
-      "content": "[a(degraded)] {'type': 'simulator_result', 'base_value': 0.0, 'shocked_value': 0.0, 'twr_change_pct': 0.0, 'scenarios': [], 'sensitivity': {}, 'degraded': True}",
+      "content": "시뮬레이션 기준 포트폴리오 가치는 0에서 0로 변합니다.\n예상 수익률 변화는 0%입니다.",
       "degraded": true
     }
   },
