@@ -144,7 +144,7 @@ make contract  # schemathesis (서버 기동 중 필요)
 
 | 서비스 | URL |
 |--------|-----|
-| Frontend (Vercel) | https://hacker-dashboard.vercel.app |
+| Frontend (Vercel) | https://hacker-dashboard-fe.vercel.app |
 | Backend API (Fly.io) | https://hacker-dashboard-api.fly.dev |
 | API 문서 (Swagger) | https://hacker-dashboard-api.fly.dev/docs |
 
