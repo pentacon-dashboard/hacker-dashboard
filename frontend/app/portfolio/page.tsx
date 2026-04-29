@@ -15,7 +15,6 @@ import { SectorHeatmap } from "@/components/portfolio/sector-heatmap";
 import { MonthlyReturnCalendar } from "@/components/portfolio/monthly-return-calendar";
 import { AiInsightCard } from "@/components/portfolio/ai-insight-card";
 import { RebalancePanel } from "@/components/portfolio/rebalance-panel";
-import { ClientBriefingDialog } from "@/components/reports/client-briefing-dialog";
 import { useLocale } from "@/lib/i18n/locale-provider";
 import { useDataSettings } from "@/lib/hooks/use-data-settings";
 import {
@@ -241,10 +240,6 @@ export default function PortfolioPage() {
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            <ClientBriefingDialog
-              clientId={selectedClientId}
-              clientName={selectedClient?.client_name}
-            />
             <AddHoldingDialog clientId={selectedClientId} />
           </div>
         </div>
@@ -281,10 +276,6 @@ export default function PortfolioPage() {
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            <ClientBriefingDialog
-              clientId={selectedClientId}
-              clientName={selectedClient?.client_name}
-            />
             <AddHoldingDialog clientId={selectedClientId} />
           </div>
         </div>
@@ -318,10 +309,6 @@ export default function PortfolioPage() {
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <ClientBriefingDialog
-            clientId={selectedClientId}
-            clientName={selectedClient?.client_name}
-          />
           <AddHoldingDialog clientId={selectedClientId} />
         </div>
       </div>

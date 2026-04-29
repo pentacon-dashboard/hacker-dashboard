@@ -12,10 +12,6 @@ export type HoldingDetail = components["schemas"]["HoldingDetail"];
 export type PortfolioSummary = components["schemas"]["PortfolioSummary"];
 export type SnapshotResponse = components["schemas"]["SnapshotResponse"];
 export type PortfolioClientsResponse = components["schemas"]["PortfolioClientsResponse"];
-export type ClientBriefingReportRequest =
-  components["schemas"]["ClientBriefingReportRequest"];
-export type ClientBriefingReportResponse =
-  components["schemas"]["ClientBriefingReportResponse"];
 
 type ListHoldingsResponse =
   paths["/portfolio/holdings"]["get"]["responses"]["200"]["content"]["application/json"];
@@ -121,15 +117,6 @@ export async function getMonthlyReturns(
 export async function getAiInsight(clientId?: string): Promise<AiInsightResponse> {
   const qs = clientId ? `?client_id=${encodeURIComponent(clientId)}` : "";
   return apiFetch<AiInsightResponse>(`/portfolio/ai-insight${qs}`);
-}
-
-export async function createClientBriefingReport(
-  body: ClientBriefingReportRequest,
-): Promise<ClientBriefingReportResponse> {
-  return apiFetch<ClientBriefingReportResponse>("/portfolio/reports/client-briefing", {
-    method: "POST",
-    body: JSON.stringify(body),
-  });
 }
 
 // --- Phase 2: /portfolio/market-leaders ---
