@@ -106,7 +106,11 @@ const SLIDER_LABELS: Record<keyof SliderTarget, string> = {
   cash: "현금",
 };
 
-export function RebalancePanel() {
+interface RebalancePanelProps {
+  clientId?: string;
+}
+
+export function RebalancePanel({ clientId = "client-001" }: RebalancePanelProps) {
   const [target, setTarget] = useState<SliderTarget>(DEFAULT_TARGET);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -146,6 +150,7 @@ export function RebalancePanel() {
     setError(null);
     try {
       const response = await requestRebalance({
+        client_id: clientId,
         target_allocation: {
           stock_kr: target.stock_kr / 100,
           stock_us: target.stock_us / 100,
@@ -165,7 +170,7 @@ export function RebalancePanel() {
     } finally {
       setIsLoading(false);
     }
-  }, [target, isValidTotal]);
+  }, [target, isValidTotal, clientId]);
 
   const totalDiff = total - 100;
   const totalBadgeClass =

@@ -42,6 +42,8 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         load_fixture_corpus()
         logger.info("stub 모드: news fixture corpus 로드 완료")
 
+    market.seed_default_watchlist()
+
     # sprint-integration: 격리 harness 환경에서 sqlite 스키마 자동 생성
     # BACKEND_DB_AUTOCREATE=1 일 때만 실행 — 운영 환경에서는 alembic 이 담당
     if os.environ.get("BACKEND_DB_AUTOCREATE", "0") == "1":

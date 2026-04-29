@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { getAlerts, createAlert, type AlertCreate } from "@/lib/api/watchlist";
 import { listWatchlist } from "@/lib/api/watchlist";
 import { useLocale } from "@/lib/i18n/locale-provider";
+import { formatSymbolDisplay } from "@/lib/market/display";
 
 /**
  * CustomAlertCard — 사용자 맞춤 알림 규칙을 세밀하게 만들기 위한 카드.
@@ -75,7 +76,7 @@ export function CustomAlertCard() {
           <option value="">— {t("watchlist.title")} —</option>
           {items.map((i) => (
             <option key={i.id} value={`${i.market}|${i.code}`}>
-              {i.code} ({i.market})
+              {formatSymbolDisplay(i.market, i.code)}
             </option>
           ))}
         </select>

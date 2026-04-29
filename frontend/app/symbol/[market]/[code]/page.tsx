@@ -25,7 +25,7 @@ import { SectionCard } from "@/components/dashboard/section-card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatUSD, formatKRW } from "@/lib/utils/format";
 import { useLocale } from "@/lib/i18n/locale-provider";
-import { formatSymbolDisplay } from "@/lib/market/display";
+import { getSymbolDisplayParts } from "@/lib/market/display";
 
 const ASSET_CLASS_MAP: Record<string, string> = {
   upbit: "crypto",
@@ -185,10 +185,8 @@ export default function SymbolDetailPage() {
   const params = useParams<{ market: string; code: string }>();
   const decodedMarket = decodeURIComponent(params.market);
   const decodedCode = decodeURIComponent(params.code);
-  const displaySymbol = formatSymbolDisplay(decodedMarket, decodedCode);
-  const headerMeta = displaySymbol === decodedCode
-    ? decodedMarket
-    : `${decodedMarket} · ${decodedCode}`;
+  const displaySymbol = getSymbolDisplayParts(decodedMarket, decodedCode);
+  const headerMeta = displaySymbol.secondary ?? decodedMarket;
 
   const [timeframe, setTimeframe] = useState<Timeframe>("day");
 
@@ -319,7 +317,7 @@ export default function SymbolDetailPage() {
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="space-y-1">
           <div className="flex items-center gap-2">
-            <h1 className="text-2xl font-bold tracking-tight">{displaySymbol}</h1>
+            <h1 className="text-2xl font-bold tracking-tight">{displaySymbol.primary}</h1>
             <AssetBadge assetClass={assetClass} />
             <span className="text-sm text-muted-foreground">{headerMeta}</span>
           </div>

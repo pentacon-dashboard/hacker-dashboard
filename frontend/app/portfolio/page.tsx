@@ -1,7 +1,8 @@
 "use client";
 
+import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Wallet, TrendingUp, BarChart3, Layers, Target } from "lucide-react";
+import { Wallet, TrendingUp, BarChart3, Layers, Target, Users } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/common/empty-state";
 import { ErrorState } from "@/components/common/error-state";
@@ -14,13 +15,16 @@ import { SectorHeatmap } from "@/components/portfolio/sector-heatmap";
 import { MonthlyReturnCalendar } from "@/components/portfolio/monthly-return-calendar";
 import { AiInsightCard } from "@/components/portfolio/ai-insight-card";
 import { RebalancePanel } from "@/components/portfolio/rebalance-panel";
+import { ClientBriefingDialog } from "@/components/reports/client-briefing-dialog";
 import { useLocale } from "@/lib/i18n/locale-provider";
 import { useDataSettings } from "@/lib/hooks/use-data-settings";
 import {
   getPortfolioSummary,
+  getPortfolioClients,
   getSectorHeatmap,
   getMonthlyReturns,
   getAiInsight,
+  type PortfolioClientsResponse,
 } from "@/lib/api/portfolio";
 import {
   formatKRWCompact,
@@ -28,47 +32,167 @@ import {
   formatSignedNumber,
   signedColorClass,
 } from "@/lib/utils/format";
+import { getDisplayableHoldings } from "@/lib/portfolio/display-safety";
 
 export const dynamic = "force-dynamic";
 
 export default function PortfolioPage() {
   const { t } = useLocale();
   const { refreshIntervalMs, autoRefresh } = useDataSettings();
+  const [selectedClientId, setSelectedClientId] = useState("client-001");
+  const currentYear = new Date().getFullYear();
+
+  const clientsQuery = useQuery({
+    queryKey: ["portfolio", "clients"],
+    queryFn: getPortfolioClients,
+    staleTime: 60_000,
+    refetchInterval: autoRefresh ? refreshIntervalMs : false,
+  });
 
   const summaryQuery = useQuery({
-    queryKey: ["portfolio", "summary"],
-    queryFn: () => getPortfolioSummary(),
+    queryKey: ["portfolio", "summary", selectedClientId],
+    queryFn: () => getPortfolioSummary(undefined, selectedClientId),
     staleTime: 30_000,
     refetchInterval: autoRefresh ? refreshIntervalMs : false,
   });
 
   const heatmapQuery = useQuery({
-    queryKey: ["portfolio", "sectors", "heatmap"],
-    queryFn: getSectorHeatmap,
+    queryKey: ["portfolio", "sectors", "heatmap", selectedClientId],
+    queryFn: () => getSectorHeatmap(selectedClientId),
     staleTime: 60_000,
     refetchInterval: autoRefresh ? refreshIntervalMs : false,
   });
 
   const calendarQuery = useQuery({
-    queryKey: ["portfolio", "monthly-returns"],
-    queryFn: () => getMonthlyReturns(new Date().getFullYear()),
+    queryKey: ["portfolio", "monthly-returns", currentYear, selectedClientId],
+    queryFn: () => getMonthlyReturns(currentYear, selectedClientId),
     staleTime: 300_000,
   });
 
   const insightQuery = useQuery({
-    queryKey: ["portfolio", "ai-insight"],
-    queryFn: getAiInsight,
+    queryKey: ["portfolio", "ai-insight", selectedClientId],
+    queryFn: () => getAiInsight(selectedClientId),
     staleTime: 300_000,
   });
 
+  useEffect(() => {
+    const clients = clientsQuery.data?.clients ?? [];
+    if (clients.length === 0) return;
+    const hasSelectedClient = clients.some((client) => client.client_id === selectedClientId);
+    if (!hasSelectedClient) {
+      setSelectedClientId(clients[0]!.client_id);
+    }
+  }, [clientsQuery.data, selectedClientId]);
+
   const isLoading = summaryQuery.isLoading;
   const isError = summaryQuery.isError;
+  const clientRows = clientsQuery.data?.clients ?? [];
+  const selectedClient = clientRows.find((client) => client.client_id === selectedClientId);
+  const clientName = selectedClient?.client_name ?? selectedClientId;
+  const summary = summaryQuery.data;
+  const displayHoldings = useMemo(
+    () => getDisplayableHoldings(summary?.holdings ?? []),
+    [summary?.holdings],
+  );
+  const hiddenHoldingCount = Math.max(
+    0,
+    (summary?.holdings.length ?? 0) - displayHoldings.length,
+  );
 
   function handleRetry() {
+    void clientsQuery.refetch();
     void summaryQuery.refetch();
     void heatmapQuery.refetch();
     void calendarQuery.refetch();
     void insightQuery.refetch();
+  }
+
+  function renderClientBook(data?: PortfolioClientsResponse | null) {
+    const rows = data?.clients ?? [];
+    return (
+      <SectionCard
+        title="PB 고객 목록"
+        testId="portfolio-section-clients"
+        action={
+          data ? (
+            <span className="text-xs text-muted-foreground">
+              전체 AUM {formatKRWCompact(data.aum_krw)}
+            </span>
+          ) : null
+        }
+      >
+        {clientsQuery.isLoading ? (
+          <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-4">
+            {[...Array(4)].map((_, i) => (
+              <Skeleton key={i} className="h-24 w-full" />
+            ))}
+          </div>
+        ) : rows.length === 0 ? (
+          <div className="flex h-24 items-center justify-center text-sm text-muted-foreground">
+            등록된 고객 포트폴리오가 없습니다.
+          </div>
+        ) : (
+          <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-4">
+            {rows.map((client) => {
+              const active = client.client_id === selectedClientId;
+              return (
+                <button
+                  key={client.client_id}
+                  type="button"
+                  onClick={() => setSelectedClientId(client.client_id)}
+                  className={`min-h-24 rounded-md border p-3 text-left transition-colors ${
+                    active
+                      ? "border-primary bg-primary/5"
+                      : "border-border hover:bg-accent"
+                  }`}
+                  aria-pressed={active}
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="flex min-w-0 items-center gap-2 text-sm font-semibold">
+                      <Users className="h-4 w-4 shrink-0" />
+                      <span className="truncate">{client.client_name}</span>
+                    </span>
+                    <span
+                      className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${
+                        client.risk_grade === "high"
+                          ? "bg-red-100 text-red-700"
+                          : client.risk_grade === "medium"
+                            ? "bg-amber-100 text-amber-700"
+                            : "bg-emerald-100 text-emerald-700"
+                      }`}
+                    >
+                      {client.risk_grade}
+                    </span>
+                  </div>
+                  <div className="mt-3 grid grid-cols-3 gap-2 text-xs">
+                    <div>
+                      <p className="text-muted-foreground">AUM</p>
+                      <p className="mt-1 font-semibold tabular-nums">
+                        {formatKRWCompact(client.aum_krw)}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground">보유</p>
+                      <p className="mt-1 font-semibold tabular-nums">
+                        {client.holdings_count}개
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground">손익률</p>
+                      <p
+                        className={`mt-1 font-semibold tabular-nums ${signedColorClass(client.total_pnl_pct)}`}
+                      >
+                        {formatPct(client.total_pnl_pct, { signed: true })}
+                      </p>
+                    </div>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        )}
+      </SectionCard>
+    );
   }
 
   if (isLoading) {
@@ -106,22 +230,29 @@ export default function PortfolioPage() {
     );
   }
 
-  const summary = summaryQuery.data;
-
   if (!summary || summary.holdings.length === 0) {
     return (
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold tracking-tight">{t("portfolio.title")}</h1>
-            <p className="text-sm text-muted-foreground">{t("portfolio.subtitle")}</p>
+            <p className="text-sm text-muted-foreground">
+              {clientName} 고객의 PB 워크스테이션
+            </p>
           </div>
-          <AddHoldingDialog />
+          <div className="flex flex-wrap items-center gap-2">
+            <ClientBriefingDialog
+              clientId={selectedClientId}
+              clientName={selectedClient?.client_name}
+            />
+            <AddHoldingDialog clientId={selectedClientId} />
+          </div>
         </div>
+        {renderClientBook(clientsQuery.data)}
         <EmptyState
           title={t("portfolio.emptyTitle")}
           description={t("portfolio.emptyDesc")}
-          action={<AddHoldingDialog />}
+          action={<AddHoldingDialog clientId={selectedClientId} />}
         />
       </div>
     );
@@ -136,6 +267,45 @@ export default function PortfolioPage() {
     ? Number(rawSummary.win_rate_pct)
     : summary.holdings.filter((h: { pnl_pct: string | number }) => Number(h.pnl_pct) > 0).length /
       Math.max(summary.holdings.length, 1) * 100;
+  const hasOnlyCorruptedHoldings =
+    summary.holdings.length > 0 && displayHoldings.length === 0;
+
+  if (hasOnlyCorruptedHoldings) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight">{t("portfolio.title")}</h1>
+            <p className="text-sm text-muted-foreground">
+              {clientName} 고객의 PB 워크스테이션
+            </p>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <ClientBriefingDialog
+              clientId={selectedClientId}
+              clientName={selectedClient?.client_name}
+            />
+            <AddHoldingDialog clientId={selectedClientId} />
+          </div>
+        </div>
+
+        {renderClientBook(clientsQuery.data)}
+
+        <div className="rounded-md border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">
+          <p className="font-medium">{t("common.dataCorruptedTitle")}</p>
+          <p className="mt-1 text-xs text-amber-800">
+            보유 종목 {hiddenHoldingCount}건은 심볼 또는 통화 값이 손상되어 포트폴리오 요약에서 제외했습니다.
+          </p>
+        </div>
+
+        <EmptyState
+          title="표시 가능한 보유 종목이 없습니다"
+          description="손상된 데이터를 숨겼습니다. 보유 종목을 다시 등록하면 포트폴리오 분석이 정상적으로 표시됩니다."
+          action={<AddHoldingDialog clientId={selectedClientId} />}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -143,10 +313,20 @@ export default function PortfolioPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">{t("portfolio.title")}</h1>
-          <p className="text-sm text-muted-foreground">{t("portfolio.subtitle")}</p>
+          <p className="text-sm text-muted-foreground">
+            {clientName} 고객의 PB 워크스테이션
+          </p>
         </div>
-        <AddHoldingDialog />
+        <div className="flex flex-wrap items-center gap-2">
+          <ClientBriefingDialog
+            clientId={selectedClientId}
+            clientName={selectedClient?.client_name}
+          />
+          <AddHoldingDialog clientId={selectedClientId} />
+        </div>
       </div>
+
+      {renderClientBook(clientsQuery.data)}
 
       {/* KPI 5개 */}
       <section
@@ -241,13 +421,18 @@ export default function PortfolioPage() {
           className="lg:col-span-8"
           testId="portfolio-section-holdings"
         >
-          <HoldingsTable holdings={summary.holdings} />
+          {hiddenHoldingCount > 0 && (
+            <p className="mb-3 text-xs text-muted-foreground">
+              일부 보유 종목은 심볼 또는 통화 데이터가 올바르지 않아 숨김 처리되었습니다.
+            </p>
+          )}
+          <HoldingsTable holdings={displayHoldings} />
         </SectionCard>
       </section>
 
       {/* 하단: 섹터 히트맵 */}
       <SectionCard
-        title={t("portfolio.sectorHeatmap")}
+        title="GICS 섹터 트리맵"
         testId="portfolio-section-heatmap"
       >
         {heatmapQuery.isLoading ? (
@@ -271,7 +456,7 @@ export default function PortfolioPage() {
           ) : (
             <MonthlyReturnCalendar
               cells={calendarQuery.data ?? []}
-              year={new Date().getFullYear()}
+              year={currentYear}
             />
           )}
         </SectionCard>
@@ -299,7 +484,7 @@ export default function PortfolioPage() {
         >
           {t("portfolio.rebalance")}
         </h2>
-        <RebalancePanel />
+        <RebalancePanel clientId={selectedClientId} />
       </section>
     </div>
   );

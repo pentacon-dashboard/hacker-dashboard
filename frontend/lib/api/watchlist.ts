@@ -37,7 +37,8 @@ export interface WatchlistSummary {
   watched_count: number;
   up_avg_pct: string;
   down_avg_pct: string;
-  top_gainer: string;
+  top_gainer_name: string;
+  top_gainer_pct: string;
 }
 
 export async function getWatchlistSummary(): Promise<WatchlistSummary> {

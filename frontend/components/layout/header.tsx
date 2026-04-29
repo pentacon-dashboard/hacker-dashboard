@@ -128,6 +128,7 @@ export function Header() {
           variant="ghost"
           size="icon"
           onClick={handleToggle}
+          disabled={!mounted}
           aria-label={isDark ? t("header.lightMode") : t("header.darkMode")}
           data-testid="theme-toggle"
           suppressHydrationWarning

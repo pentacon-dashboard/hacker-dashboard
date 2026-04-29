@@ -5,6 +5,7 @@ import Image from "next/image";
 import { searchNews, type Citation } from "@/lib/api/news";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useLocale } from "@/lib/i18n/locale-provider";
+import { sanitizeCitations } from "@/lib/portfolio/display-safety";
 
 interface NewsPanelProps {
   symbols: string[];
@@ -50,7 +51,7 @@ export function NewsPanel({ symbols, query, limit = 5 }: NewsPanelProps) {
       k: limit,
     })
       .then((res) => {
-        if (!cancelled) setItems(res);
+        if (!cancelled) setItems(sanitizeCitations(res));
       })
       .catch((err) => {
         if (!cancelled) {

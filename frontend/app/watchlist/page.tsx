@@ -100,7 +100,9 @@ export default function WatchlistPage() {
             />
             <KpiCard
               label={t("watchlist.kpi.topGainer")}
-              value={summary?.top_gainer ?? "-"}
+              value={summary?.top_gainer_name ?? t("watchlist.kpi.topGainerEmpty")}
+              delta={summary?.top_gainer_pct}
+              deltaValue={summary ? Number(summary.top_gainer_pct) : undefined}
               icon={<Star className="h-4 w-4" />}
               accent="amber"
               testId="watchlist-kpi-top-gainer"

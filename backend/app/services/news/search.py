@@ -13,6 +13,7 @@ from __future__ import annotations
 import math
 import os
 from typing import Any
+from urllib.parse import urlparse
 
 from app.schemas.news import Citation
 from app.services.rag.embeddings import embed
@@ -35,6 +36,15 @@ def _ensure_fixture_loaded() -> None:
         load_fixture_corpus()
 
 
+def _is_clean_stub_document(doc: dict[str, Any]) -> bool:
+    title = str(doc.get("title") or "").strip()
+    source_url = str(doc.get("source_url") or "").strip()
+    parsed = urlparse(source_url)
+    if not title or parsed.scheme not in {"http", "https"} or not parsed.netloc:
+        return False
+    return bool(str(doc.get("text") or "").strip())
+
+
 def search_news_stub(
     query: str,
     symbols: list[str] | None,
@@ -51,6 +61,9 @@ def search_news_stub(
     # 모든 청크 수집
     candidates: list[dict[str, Any]] = []
     for doc in _stub_documents.values():
+        if not _is_clean_stub_document(doc):
+            continue
+
         # symbols 필터 (제목/텍스트에 심볼이 포함된 문서만)
         if symbols:
             text_upper = (doc.get("title", "") + " " + doc.get("text", "")).upper()

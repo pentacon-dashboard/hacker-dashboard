@@ -28,7 +28,7 @@ import { SymbolSearch } from "@/components/watchlist/symbol-search";
 import { listHoldings } from "@/lib/api/portfolio";
 import { useLocale } from "@/lib/i18n/locale-provider";
 import {
-  formatSymbolDisplay,
+  getSymbolDisplayParts,
   isDomesticStockMarket,
 } from "@/lib/market/display";
 
@@ -185,7 +185,8 @@ export function WatchlistTable() {
                 const changePct = ticker?.change_pct ?? 0;
                 const volume = ticker?.volume;
                 const isPositive = changePct >= 0;
-                const displaySymbol = formatSymbolDisplay(item.market, item.code);
+                const displayParts = getSymbolDisplayParts(item.market, item.code);
+                const displaySymbol = displayParts.primary;
 
                 const isHolding = holdingCodeSet.has(
                   `${item.market}:${item.code}`,
@@ -202,6 +203,7 @@ export function WatchlistTable() {
                           <Link
                             href={`/symbol/${encodeURIComponent(item.market)}/${encodeURIComponent(item.code)}`}
                             className="font-medium hover:underline focus:outline-none focus:ring-2 focus:ring-ring rounded"
+                            title={displayParts.secondary ?? displayParts.normalizedCode}
                           >
                             {displaySymbol}
                           </Link>
@@ -214,9 +216,11 @@ export function WatchlistTable() {
                             </Badge>
                           )}
                         </div>
-                        <div className="text-xs text-muted-foreground">
-                          {item.market}
-                        </div>
+                        {displayParts.secondary ? (
+                          <div className="text-xs text-muted-foreground">
+                            {displayParts.secondary}
+                          </div>
+                        ) : null}
                       </div>
                     </TableCell>
                     <TableCell>

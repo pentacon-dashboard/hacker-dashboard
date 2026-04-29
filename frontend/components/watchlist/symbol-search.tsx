@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { searchSymbols, type SymbolInfo } from "@/lib/api/symbols";
 import { AssetBadge } from "@/components/common/asset-badge";
 import { useLocale } from "@/lib/i18n/locale-provider";
+import { getSymbolDisplayParts } from "@/lib/market/display";
 
 interface SymbolSearchProps {
   onSelect: (symbol: SymbolInfo) => void;
@@ -97,25 +98,34 @@ export function SymbolSearch({ onSelect }: SymbolSearchProps) {
           aria-label={t("watchlist.search.results")}
           className="absolute z-50 mt-1 max-h-64 w-full overflow-auto rounded-md border bg-popover shadow-md"
         >
-          {results.map((item) => (
-            <li
-              key={`${item.market}:${item.symbol}`}
-              role="option"
-              aria-selected={false}
-              className="flex cursor-pointer items-center justify-between px-3 py-2 text-sm hover:bg-accent focus:bg-accent outline-none"
-              onClick={() => handleSelect(item)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" || e.key === " ") handleSelect(item);
-              }}
-              tabIndex={0}
-            >
-              <span className="font-medium">{item.symbol}</span>
-              <span className="mx-2 flex-1 truncate text-muted-foreground">
-                {item.name}
-              </span>
-              <AssetBadge assetClass={item.asset_class} />
-            </li>
-          ))}
+          {results.map((item) => {
+            const displayParts = getSymbolDisplayParts(item.market, item.symbol, {
+              fallbackName: item.name,
+              includeMarket: false,
+            });
+
+            return (
+              <li
+                key={`${item.market}:${item.symbol}`}
+                role="option"
+                aria-selected={false}
+                className="flex cursor-pointer items-center justify-between px-3 py-2 text-sm hover:bg-accent focus:bg-accent outline-none"
+                onClick={() => handleSelect(item)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") handleSelect(item);
+                }}
+                tabIndex={0}
+              >
+                <div className="min-w-0">
+                  <span className="block truncate font-medium">{displayParts.primary}</span>
+                  <span className="block truncate text-xs text-muted-foreground">
+                    {displayParts.secondary ?? item.market}
+                  </span>
+                </div>
+                <AssetBadge assetClass={item.asset_class} />
+              </li>
+            );
+          })}
         </ul>
       )}
       {open && !loading && results.length === 0 && query.trim().length > 0 && (
