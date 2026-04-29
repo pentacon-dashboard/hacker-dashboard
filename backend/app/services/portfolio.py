@@ -21,6 +21,7 @@ from app.schemas.portfolio import DimensionItem, HoldingDetail, PortfolioSummary
 from app.services.fx import get_rate
 from app.services.market import get_adapter
 from app.services.portfolio_service import build_market_leaders, calc_win_rate
+from app.services.sector_map import get_sector
 
 logger = logging.getLogger(__name__)
 
@@ -57,6 +58,9 @@ class HoldingInput:
 
     def __init__(self, data: Any) -> None:
         self.id: int = int(data.id) if hasattr(data, "id") else int(data["id"])
+        self.client_id: str = (
+            data.client_id if hasattr(data, "client_id") else data.get("client_id", "client-001")
+        )
         self.market: str = data.market if hasattr(data, "market") else data["market"]
         self.code: str = data.code if hasattr(data, "code") else data["code"]
         self.quantity: Decimal = _d(
@@ -73,6 +77,10 @@ async def compute_summary(
     prev_snapshot: Any | None = None,
     period_snapshot: Any | None = None,
     period_days: int = 30,
+    user_id: str = "pb-demo",
+    client_id: str = "client-001",
+    client_name: str | None = None,
+    pb_aum_krw: str | None = None,
 ) -> PortfolioSummary:
     """holdings 목록으로 포트폴리오 집계.
 
@@ -87,6 +95,7 @@ async def compute_summary(
     total_value = Decimal("0")
     total_cost = Decimal("0")
     asset_class_values: dict[str, Decimal] = {}
+    sector_values: dict[str, Decimal] = {}
     holding_details: list[HoldingDetail] = []
 
     for item in items:
@@ -121,6 +130,8 @@ async def compute_summary(
 
         ac = _classify_asset(item.market)
         asset_class_values[ac] = asset_class_values.get(ac, Decimal("0")) + value_krw
+        sector = get_sector(item.code)
+        sector_values[sector] = sector_values.get(sector, Decimal("0")) + value_krw
 
         holding_details.append(
             HoldingDetail(
@@ -147,6 +158,11 @@ async def compute_summary(
     for ac, val in asset_class_values.items():
         ratio = (val / total_value) if total_value != 0 else Decimal("0")
         breakdown[ac] = _fmt(ratio, 4)
+
+    sector_breakdown: dict[str, str] = {}
+    for sector, val in sector_values.items():
+        ratio = (val / total_value) if total_value != 0 else Decimal("0")
+        sector_breakdown[sector] = _fmt(ratio, 4)
 
     # 일간 변동
     daily_change_krw = Decimal("0")
@@ -221,7 +237,10 @@ async def compute_summary(
     market_leaders = build_market_leaders(holding_details)
 
     return PortfolioSummary(
-        user_id="demo",
+        user_id=user_id,
+        client_id=client_id,
+        client_name=client_name,
+        pb_aum_krw=pb_aum_krw,
         total_value_krw=_fmt(total_value, 2),
         total_cost_krw=_fmt(total_cost, 2),
         total_pnl_krw=_fmt(total_pnl_krw, 2),
@@ -229,6 +248,7 @@ async def compute_summary(
         daily_change_krw=_fmt(daily_change_krw, 2),
         daily_change_pct=_fmt(daily_change_pct, 2),
         asset_class_breakdown=breakdown,
+        sector_breakdown=sector_breakdown,
         holdings=holding_details,
         holdings_count=len(holding_details),
         worst_asset_pct=_fmt(worst_asset_pct, 2),
@@ -243,7 +263,9 @@ async def compute_summary(
 
 async def build_portfolio_context(
     db: AsyncSession,
-    user_id: str = "demo",
+    user_id: str = "pb-demo",
+    client_id: str = "client-001",
+    client_name: str | None = None,
     target_market: str | None = None,
     target_code: str | None = None,
 ) -> Any | None:
@@ -258,7 +280,9 @@ async def build_portfolio_context(
     from app.schemas.analyze import PortfolioContext, PortfolioHolding
 
     try:
-        result = await db.execute(select(Holding).where(Holding.user_id == user_id))
+        result = await db.execute(
+            select(Holding).where(Holding.user_id == user_id, Holding.client_id == client_id)
+        )
         holdings_rows = list(result.scalars().all())
     except Exception as exc:
         logger.warning("build_portfolio_context: holdings 조회 실패 — %s", exc)
@@ -270,8 +294,14 @@ async def build_portfolio_context(
     logger.debug("build_portfolio_context: holdings=%d개", len(holdings_rows))
 
     try:
-        prev = await get_prev_snapshot(db, user_id)
-        summary = await compute_summary(holdings_rows, prev_snapshot=prev)
+        prev = await get_prev_snapshot(db, user_id, client_id=client_id)
+        summary = await compute_summary(
+            holdings_rows,
+            prev_snapshot=prev,
+            user_id=user_id,
+            client_id=client_id,
+            client_name=client_name,
+        )
     except Exception as exc:
         logger.warning("build_portfolio_context: compute_summary 실패 — %s", exc)
         return None
@@ -328,14 +358,21 @@ async def build_portfolio_context(
         matched_holding = holding_map.get((target_market.lower(), target_code.lower()))
 
     return PortfolioContext(
+        client_id=client_id,
+        client_name=client_name,
         holdings=portfolio_holdings,
         total_value_krw=total_value_krw,
         asset_class_breakdown=asset_class_breakdown,
+        sector_breakdown={
+            sector: float(ratio_str) for sector, ratio_str in summary.sector_breakdown.items()
+        },
         matched_holding=matched_holding,
     )
 
 
-async def get_latest_snapshot(session: AsyncSession, user_id: str = "demo") -> Any | None:
+async def get_latest_snapshot(
+    session: AsyncSession, user_id: str = "pb-demo", client_id: str = "client-001"
+) -> Any | None:
     """가장 최근 포트폴리오 스냅샷 조회."""
     from sqlalchemy import desc
 
@@ -343,14 +380,16 @@ async def get_latest_snapshot(session: AsyncSession, user_id: str = "demo") -> A
 
     result = await session.execute(
         select(PortfolioSnapshot)
-        .where(PortfolioSnapshot.user_id == user_id)
+        .where(PortfolioSnapshot.user_id == user_id, PortfolioSnapshot.client_id == client_id)
         .order_by(desc(PortfolioSnapshot.snapshot_date))
         .limit(1)
     )
     return result.scalar_one_or_none()
 
 
-async def get_prev_snapshot(session: AsyncSession, user_id: str = "demo") -> Any | None:
+async def get_prev_snapshot(
+    session: AsyncSession, user_id: str = "pb-demo", client_id: str = "client-001"
+) -> Any | None:
     """전일(오늘 제외) 포트폴리오 스냅샷 조회 — 일간 변동 계산용."""
     from datetime import date
 
@@ -363,6 +402,7 @@ async def get_prev_snapshot(session: AsyncSession, user_id: str = "demo") -> Any
         select(PortfolioSnapshot)
         .where(
             PortfolioSnapshot.user_id == user_id,
+            PortfolioSnapshot.client_id == client_id,
             PortfolioSnapshot.snapshot_date < today,
         )
         .order_by(desc(PortfolioSnapshot.snapshot_date))
@@ -372,7 +412,10 @@ async def get_prev_snapshot(session: AsyncSession, user_id: str = "demo") -> Any
 
 
 async def get_period_snapshot(
-    session: AsyncSession, user_id: str = "demo", period_days: int = 30
+    session: AsyncSession,
+    user_id: str = "pb-demo",
+    period_days: int = 30,
+    client_id: str = "client-001",
 ) -> Any | None:
     """N일 전 시점 이전의 가장 최근 스냅샷 조회 — period_change_pct 계산용.
 
@@ -389,6 +432,7 @@ async def get_period_snapshot(
         select(PortfolioSnapshot)
         .where(
             PortfolioSnapshot.user_id == user_id,
+            PortfolioSnapshot.client_id == client_id,
             PortfolioSnapshot.snapshot_date <= anchor,
         )
         .order_by(desc(PortfolioSnapshot.snapshot_date))

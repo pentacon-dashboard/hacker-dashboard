@@ -36,9 +36,7 @@ def test_stub_news_search_filters_malformed_fixture_rows(tmp_path) -> None:
         results = search_news_stub("market", None, None, None, 5)
 
         assert results
-        assert {item.source_url for item in results} == {
-            "https://example.com/news/market-note"
-        }
+        assert {item.source_url for item in results} == {"https://example.com/news/market-note"}
         assert all(item.title for item in results)
     finally:
         _stub_documents.clear()

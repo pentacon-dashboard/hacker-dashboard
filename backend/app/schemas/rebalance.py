@@ -14,6 +14,7 @@ from pydantic import BaseModel, Field, StrictBool, StrictFloat, field_validator
 
 ActionType = Literal["buy", "sell"]
 AssetClassKey = Literal["stock_kr", "stock_us", "crypto", "cash", "fx"]
+CLIENT_ID_PATTERN = r"^[A-Za-z0-9][A-Za-z0-9._:-]{0,63}$"
 
 
 class TargetAllocation(BaseModel):
@@ -50,6 +51,7 @@ class RebalanceConstraints(BaseModel):
 
 
 class RebalanceRequest(BaseModel):
+    client_id: str = Field("client-001", min_length=1, max_length=64, pattern=CLIENT_ID_PATTERN)
     target_allocation: TargetAllocation
     constraints: RebalanceConstraints = Field(default_factory=RebalanceConstraints)
 

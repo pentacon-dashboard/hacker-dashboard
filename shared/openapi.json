@@ -664,30 +664,6 @@
       }
     },
     "/portfolio/holdings": {
-      "get": {
-        "tags": [
-          "portfolio"
-        ],
-        "summary": "List Holdings",
-        "description": "보유 종목 전체 조회.",
-        "operationId": "list_holdings_portfolio_holdings_get",
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "items": {
-                    "$ref": "#/components/schemas/HoldingResponse"
-                  },
-                  "type": "array",
-                  "title": "Response List Holdings Portfolio Holdings Get"
-                }
-              }
-            }
-          }
-        }
-      },
       "post": {
         "tags": [
           "portfolio"
@@ -696,14 +672,14 @@
         "description": "보유 종목 추가.",
         "operationId": "create_holding_portfolio_holdings_post",
         "requestBody": {
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/HoldingCreate"
               }
             }
-          },
-          "required": true
+          }
         },
         "responses": {
           "201": {
@@ -718,6 +694,57 @@
           },
           "400": {
             "description": "JSON 파싱 실패"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "portfolio"
+        ],
+        "summary": "List Holdings",
+        "description": "보유 종목 전체 조회.",
+        "operationId": "list_holdings_portfolio_holdings_get",
+        "parameters": [
+          {
+            "name": "client_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 64,
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,63}$",
+              "description": "Client ID",
+              "default": "client-001",
+              "title": "Client Id"
+            },
+            "description": "Client ID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/HoldingResponse"
+                  },
+                  "title": "Response List Holdings Portfolio Holdings Get"
+                }
+              }
+            }
           },
           "422": {
             "description": "Validation Error",
@@ -858,6 +885,21 @@
               "title": "Period Days"
             },
             "description": "period_change_pct 계산 기간 (일). 기본 30일."
+          },
+          {
+            "name": "client_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 64,
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,63}$",
+              "description": "Client ID",
+              "default": "client-001",
+              "title": "Client Id"
+            },
+            "description": "Client ID"
           }
         ],
         "responses": {
@@ -877,6 +919,28 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/portfolio/clients": {
+      "get": {
+        "tags": [
+          "portfolio"
+        ],
+        "summary": "List Clients",
+        "description": "Return PB-managed client portfolio overview rows.",
+        "operationId": "list_clients_portfolio_clients_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PortfolioClientsResponse"
                 }
               }
             }
@@ -930,6 +994,21 @@
               "title": "To"
             },
             "description": "종료 날짜 (YYYY-MM-DD)"
+          },
+          {
+            "name": "client_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 64,
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,63}$",
+              "description": "Client ID",
+              "default": "client-001",
+              "title": "Client Id"
+            },
+            "description": "Client ID"
           }
         ],
         "responses": {
@@ -975,6 +1054,7 @@
                 "$ref": "#/components/schemas/RebalanceRequest"
               },
               "example": {
+                "client_id": "client-001",
                 "target_allocation": {
                   "stock_kr": 0.3,
                   "stock_us": 0.3,
@@ -1020,17 +1100,44 @@
         "summary": "섹터 히트맵",
         "description": "섹터별 비중 + 가중 PnL 히트맵 데이터를 반환한다.\n\n보유 종목을 섹터로 분류하고 각 섹터의 value_krw 비중 및 손익률을 집계한다.\n미분류 종목은 '기타' 섹터로 통합.",
         "operationId": "get_sector_heatmap_portfolio_sectors_heatmap_get",
+        "parameters": [
+          {
+            "name": "client_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 64,
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,63}$",
+              "description": "Client ID",
+              "default": "client-001",
+              "title": "Client Id"
+            },
+            "description": "Client ID"
+          }
+        ],
         "responses": {
           "200": {
             "description": "Successful Response",
             "content": {
               "application/json": {
                 "schema": {
+                  "type": "array",
                   "items": {
                     "$ref": "#/components/schemas/SectorHeatmapTile"
                   },
-                  "type": "array",
                   "title": "Response Get Sector Heatmap Portfolio Sectors Heatmap Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
                 }
               }
             }
@@ -1066,6 +1173,21 @@
               "title": "Year"
             },
             "description": "조회 연도 (기본: 현재 연도)"
+          },
+          {
+            "name": "client_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 64,
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,63}$",
+              "description": "Client ID",
+              "default": "client-001",
+              "title": "Client Id"
+            },
+            "description": "Client ID"
           }
         ],
         "responses": {
@@ -1104,6 +1226,23 @@
         "summary": "AI 포트폴리오 인사이트 (stub 모드)",
         "description": "포트폴리오 요약 기반 AI 인사이트를 반환한다.\n\nADR-0012 stub 모드: LLM 호출 없이 결정론적 문단 생성.\ngates 필드로 3단 품질 게이트 통과 여부 표시.",
         "operationId": "get_ai_insight_portfolio_ai_insight_get",
+        "parameters": [
+          {
+            "name": "client_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 64,
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,63}$",
+              "description": "Client ID",
+              "default": "client-001",
+              "title": "Client Id"
+            },
+            "description": "Client ID"
+          }
+        ],
         "responses": {
           "200": {
             "description": "Successful Response",
@@ -1111,6 +1250,16 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/AiInsightResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
                 }
               }
             }
@@ -2503,6 +2652,15 @@
             "title": "Include Portfolio Context",
             "description": "True면 서버가 DB에서 holdings를 조회해 AgentState에 주입. LLM이 개인화된 분석 수행.",
             "default": false
+          },
+          "client_id": {
+            "type": "string",
+            "maxLength": 64,
+            "minLength": 1,
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,63}$",
+            "title": "Client Id",
+            "description": "Portfolio client context id",
+            "default": "client-001"
           }
         },
         "type": "object",
@@ -2584,6 +2742,14 @@
             "type": "boolean",
             "title": "Include Portfolio Context",
             "default": false
+          },
+          "client_id": {
+            "type": "string",
+            "maxLength": 64,
+            "minLength": 1,
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,63}$",
+            "title": "Client Id",
+            "default": "client-001"
           }
         },
         "type": "object",
@@ -3044,6 +3210,15 @@
       },
       "HoldingCreate": {
         "properties": {
+          "client_id": {
+            "type": "string",
+            "maxLength": 64,
+            "minLength": 1,
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,63}$",
+            "title": "Client Id",
+            "description": "PB 고객 식별자",
+            "default": "client-001"
+          },
           "market": {
             "type": "string",
             "minLength": 1,
@@ -3180,6 +3355,22 @@
           "user_id": {
             "type": "string",
             "title": "User Id"
+          },
+          "client_id": {
+            "type": "string",
+            "title": "Client Id",
+            "default": "client-001"
+          },
+          "client_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Client Name"
           },
           "market": {
             "type": "string",
@@ -3856,12 +4047,119 @@
         "title": "OhlcBar",
         "description": "OHLC 캔들 하나"
       },
+      "PortfolioClientRow": {
+        "properties": {
+          "client_id": {
+            "type": "string",
+            "title": "Client Id"
+          },
+          "client_name": {
+            "type": "string",
+            "title": "Client Name"
+          },
+          "aum_krw": {
+            "type": "string",
+            "title": "Aum Krw"
+          },
+          "holdings_count": {
+            "type": "integer",
+            "title": "Holdings Count"
+          },
+          "risk_grade": {
+            "type": "string",
+            "enum": [
+              "low",
+              "medium",
+              "high"
+            ],
+            "title": "Risk Grade"
+          },
+          "risk_score_pct": {
+            "type": "string",
+            "title": "Risk Score Pct"
+          },
+          "total_pnl_pct": {
+            "type": "string",
+            "title": "Total Pnl Pct"
+          }
+        },
+        "type": "object",
+        "required": [
+          "client_id",
+          "client_name",
+          "aum_krw",
+          "holdings_count",
+          "risk_grade",
+          "risk_score_pct",
+          "total_pnl_pct"
+        ],
+        "title": "PortfolioClientRow"
+      },
+      "PortfolioClientsResponse": {
+        "properties": {
+          "user_id": {
+            "type": "string",
+            "title": "User Id",
+            "default": "pb-demo"
+          },
+          "aum_krw": {
+            "type": "string",
+            "title": "Aum Krw"
+          },
+          "client_count": {
+            "type": "integer",
+            "title": "Client Count"
+          },
+          "clients": {
+            "items": {
+              "$ref": "#/components/schemas/PortfolioClientRow"
+            },
+            "type": "array",
+            "title": "Clients"
+          }
+        },
+        "type": "object",
+        "required": [
+          "aum_krw",
+          "client_count",
+          "clients"
+        ],
+        "title": "PortfolioClientsResponse"
+      },
       "PortfolioSummary": {
         "properties": {
           "user_id": {
             "type": "string",
             "title": "User Id",
-            "default": "demo"
+            "default": "pb-demo"
+          },
+          "client_id": {
+            "type": "string",
+            "title": "Client Id",
+            "default": "client-001"
+          },
+          "client_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Client Name"
+          },
+          "pb_aum_krw": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pb Aum Krw",
+            "description": "PB가 관리하는 전체 AUM. 단일 고객 summary에서는 없을 수 있음."
           },
           "total_value_krw": {
             "type": "string",
@@ -3894,6 +4192,14 @@
             "type": "object",
             "title": "Asset Class Breakdown",
             "description": "{'crypto': '0.50', 'stock_us': '0.30', ...}"
+          },
+          "sector_breakdown": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object",
+            "title": "Sector Breakdown",
+            "description": "GICS 섹터 또는 비주식 자산군별 비중 {'Information Technology': '0.45'}"
           },
           "holdings": {
             "items": {
@@ -4179,6 +4485,14 @@
       },
       "RebalanceRequest": {
         "properties": {
+          "client_id": {
+            "type": "string",
+            "maxLength": 64,
+            "minLength": 1,
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,63}$",
+            "title": "Client Id",
+            "default": "client-001"
+          },
           "target_allocation": {
             "$ref": "#/components/schemas/TargetAllocation"
           },
@@ -4535,6 +4849,22 @@
           "user_id": {
             "type": "string",
             "title": "User Id"
+          },
+          "client_id": {
+            "type": "string",
+            "title": "Client Id",
+            "default": "client-001"
+          },
+          "client_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Client Name"
           },
           "snapshot_date": {
             "type": "string",

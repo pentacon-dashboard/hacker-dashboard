@@ -3,9 +3,11 @@
 from __future__ import annotations
 
 from decimal import Decimal
-from typing import Any
+from typing import Any, Literal
 
 from pydantic import BaseModel, Field, field_serializer
+
+CLIENT_ID_PATTERN = r"^[A-Za-z0-9][A-Za-z0-9._:-]{0,63}$"
 
 
 class MarketLeader(BaseModel):
@@ -52,6 +54,13 @@ class AiInsightResponse(BaseModel):
 
 
 class HoldingCreate(BaseModel):
+    client_id: str = Field(
+        "client-001",
+        min_length=1,
+        max_length=64,
+        pattern=CLIENT_ID_PATTERN,
+        description="PB 고객 식별자",
+    )
     market: str = Field(..., min_length=1, description="upbit | binance | yahoo | naver_kr")
     code: str = Field(..., min_length=1, description="심볼/코드 (예: KRW-BTC, AAPL)")
     quantity: Decimal = Field(..., gt=Decimal("0"), description="보유 수량")
@@ -69,6 +78,8 @@ class HoldingUpdate(BaseModel):
 class HoldingResponse(BaseModel):
     id: int
     user_id: str
+    client_id: str = "client-001"
+    client_name: str | None = None
     market: str
     code: str
     quantity: Decimal
@@ -116,7 +127,13 @@ class PortfolioSummary(BaseModel):
     worst_asset_pct, risk_score_pct, period_change_pct, dimension_breakdown).
     """
 
-    user_id: str = "demo"
+    user_id: str = "pb-demo"
+    client_id: str = "client-001"
+    client_name: str | None = None
+    pb_aum_krw: str | None = Field(
+        None,
+        description="PB가 관리하는 전체 AUM. 단일 고객 summary에서는 없을 수 있음.",
+    )
     total_value_krw: str
     total_cost_krw: str
     total_pnl_krw: str
@@ -125,6 +142,10 @@ class PortfolioSummary(BaseModel):
     daily_change_pct: str
     asset_class_breakdown: dict[str, str] = Field(
         description="{'crypto': '0.50', 'stock_us': '0.30', ...}"
+    )
+    sector_breakdown: dict[str, str] = Field(
+        default_factory=dict,
+        description="GICS 섹터 또는 비주식 자산군별 비중 {'Information Technology': '0.45'}",
     )
     holdings: list[HoldingDetail]
     # ── 대시보드 KPI 확장 ─────────────────────────────
@@ -157,6 +178,8 @@ class PortfolioSummary(BaseModel):
 class SnapshotResponse(BaseModel):
     id: int
     user_id: str
+    client_id: str = "client-001"
+    client_name: str | None = None
     snapshot_date: str
     total_value_krw: str
     total_pnl_krw: str
@@ -165,3 +188,20 @@ class SnapshotResponse(BaseModel):
     created_at: str
 
     model_config = {"from_attributes": True}
+
+
+class PortfolioClientRow(BaseModel):
+    client_id: str
+    client_name: str
+    aum_krw: str
+    holdings_count: int
+    risk_grade: Literal["low", "medium", "high"]
+    risk_score_pct: str
+    total_pnl_pct: str
+
+
+class PortfolioClientsResponse(BaseModel):
+    user_id: str = "pb-demo"
+    aum_krw: str
+    client_count: int
+    clients: list[PortfolioClientRow]
