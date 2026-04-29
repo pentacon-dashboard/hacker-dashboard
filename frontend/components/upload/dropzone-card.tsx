@@ -34,14 +34,20 @@ export function DropzoneCard({
     [onFileAccepted],
   );
 
-  const { getRootProps, getInputProps, isDragActive } = useDropzone({
+  const { getRootProps, getInputProps, isDragActive, open } = useDropzone({
     onDrop,
     accept: { "text/csv": [".csv"], "application/vnd.ms-excel": [".csv"] },
     maxFiles: 1,
     disabled: uploading,
+    noClick: true,
+    noKeyboard: true,
     onDragEnter: () => setDragActive(true),
     onDragLeave: () => setDragActive(false),
   });
+
+  const openFileDialog = useCallback(() => {
+    if (!uploading) open();
+  }, [open, uploading]);
 
   return (
     <Card data-testid="dropzone-card">
@@ -91,7 +97,9 @@ export function DropzoneCard({
           </div>
         ) : (
           <div
-            {...getRootProps()}
+            {...getRootProps({
+              onClick: openFileDialog,
+            })}
             className={cn(
               "flex cursor-pointer flex-col items-center justify-center gap-3 rounded-xl border-2 border-dashed px-6 py-10 transition-colors",
               isDragActive || dragActive
@@ -116,7 +124,16 @@ export function DropzoneCard({
                 {t("upload.dropzone.hint")}
               </p>
             </div>
-            <Button variant="outline" size="sm" tabIndex={-1} aria-hidden="true">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={(event) => {
+                event.stopPropagation();
+                openFileDialog();
+              }}
+              data-testid="file-select-button"
+            >
               {t("upload.dropzone.select")}
             </Button>
           </div>

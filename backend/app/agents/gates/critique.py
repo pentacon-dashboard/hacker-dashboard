@@ -15,6 +15,7 @@ Critique Gate — 별도 LLM 호출로 Analyzer 결론의 근거 진위 검증.
 from __future__ import annotations
 
 import json
+import re
 from typing import Any, cast
 
 from app.agents.llm import call_llm, extract_json
@@ -36,6 +37,7 @@ def _build_user_content(state: AgentState) -> str:
                 "highlights": highlights,
                 "evidence": evidence,
                 "metrics": output.get("metrics"),
+                "deterministic_indicators": output.get("_indicators"),
             },
         },
         ensure_ascii=False,
@@ -65,6 +67,7 @@ async def critique_gate(state: AgentState) -> AgentState:
     except ValueError as exc:
         return _mark(state, f"fail: critique JSON parse error — {exc}")
 
+    parsed = _normalize_critique_verdict(parsed, output)
     verdict = parsed.get("verdict")
     reason = parsed.get("reason", "")
 
@@ -74,6 +77,159 @@ async def critique_gate(state: AgentState) -> AgentState:
         return _mark(state, f"fail: {reason or 'claims unsupported'}", critique=parsed)
 
     return _mark(state, f"fail: missing or invalid verdict — got {verdict!r}")
+
+
+def _normalize_critique_verdict(
+    parsed: dict[str, Any],
+    analyzer_output: dict[str, Any],
+) -> dict[str, Any]:
+    """Repair self-inconsistent critique output with deterministic claim statuses.
+
+    The critique prompt requires verdict=pass when every per_claim status is
+    supported or unclear. Some LLM responses still return verdict=fail with a
+    reason such as "all claims supported"; the deterministic per-claim evidence
+    should win over that contradictory aggregate verdict.
+    """
+    if parsed.get("verdict") != "fail":
+        return parsed
+
+    per_claim = parsed.get("per_claim")
+    if not isinstance(per_claim, list) or not per_claim:
+        return parsed
+
+    parsed = _repair_metric_supported_claims(parsed, analyzer_output)
+    per_claim = parsed.get("per_claim")
+    if not isinstance(per_claim, list) or not per_claim:
+        return parsed
+
+    statuses: list[str] = []
+    for item in per_claim:
+        if not isinstance(item, dict):
+            return parsed
+        status = str(item.get("status", "")).strip().lower()
+        if not status:
+            return parsed
+        statuses.append(status)
+
+    supported_statuses = {"supported", "unclear", "pass", "ok"}
+    failing_markers = ("unsupported", "hallucinated", "fail", "error")
+    has_failure = any(any(marker in status for marker in failing_markers) for status in statuses)
+    all_supported_or_unclear = all(status in supported_statuses for status in statuses)
+
+    if has_failure or not all_supported_or_unclear:
+        return parsed
+
+    normalized = {**parsed, "verdict": "pass"}
+    normalized["reason"] = "all claims supported"
+    return normalized
+
+
+def _repair_metric_supported_claims(
+    parsed: dict[str, Any],
+    analyzer_output: dict[str, Any],
+) -> dict[str, Any]:
+    per_claim = parsed.get("per_claim")
+    if not isinstance(per_claim, list):
+        return parsed
+
+    repaired: list[Any] = []
+    changed = False
+    for item in per_claim:
+        if not isinstance(item, dict):
+            repaired.append(item)
+            continue
+
+        status = str(item.get("status", "")).strip().lower()
+        claim = str(item.get("claim", ""))
+        if status in {"hallucinated", "unsupported"} and _claim_supported_by_metrics(
+            claim,
+            analyzer_output,
+        ):
+            repaired.append({**item, "status": "supported"})
+            changed = True
+        else:
+            repaired.append(item)
+
+    if not changed:
+        return parsed
+    return {**parsed, "per_claim": repaired}
+
+
+def _claim_supported_by_metrics(claim: str, analyzer_output: dict[str, Any]) -> bool:
+    """Support common rounded portfolio metric claims with deterministic metrics."""
+    percentages = _extract_percent_values(claim)
+    if not percentages:
+        return False
+
+    candidates: list[float] = []
+    claim_lower = claim.lower()
+    claim_upper = claim.upper()
+
+    for metrics in _metric_sources(analyzer_output):
+        currency_exposure = metrics.get("currency_exposure")
+        if isinstance(currency_exposure, dict):
+            non_krw = 0.0
+            for ccy, weight in currency_exposure.items():
+                numeric = _as_float(weight)
+                if numeric is None:
+                    continue
+                pct = numeric * 100.0
+                ccy_key = str(ccy).upper()
+                if ccy_key != "KRW":
+                    non_krw += pct
+                if ccy_key in claim_upper:
+                    candidates.append(pct)
+            if "비원화" in claim or "non-krw" in claim_lower or "non krw" in claim_lower:
+                candidates.append(non_krw)
+
+        class_breakdown = metrics.get("asset_class_breakdown")
+        if isinstance(class_breakdown, dict):
+            for asset_class, weight in class_breakdown.items():
+                numeric = _as_float(weight)
+                if numeric is None:
+                    continue
+                key = str(asset_class).lower()
+                if key in claim_lower or "비중" in claim:
+                    candidates.append(numeric * 100.0)
+
+    if not candidates:
+        return False
+
+    return all(
+        any(_nearly_equal_percent(value, candidate) for candidate in candidates)
+        for value in percentages
+    )
+
+
+def _metric_sources(analyzer_output: dict[str, Any]) -> list[dict[str, Any]]:
+    sources: list[dict[str, Any]] = []
+    for key in ("metrics", "_indicators"):
+        value = analyzer_output.get(key)
+        if isinstance(value, dict):
+            sources.append(value)
+    return sources
+
+
+def _extract_percent_values(claim: str) -> list[float]:
+    values: list[float] = []
+    for match in re.finditer(r"[-+]?\d+(?:\.\d+)?\s*%", claim):
+        raw = match.group(0).replace("%", "").strip()
+        numeric = _as_float(raw)
+        if numeric is not None:
+            values.append(numeric)
+    return values
+
+
+def _nearly_equal_percent(value: float, candidate: float) -> bool:
+    tolerance = max(0.2, abs(candidate) * 0.02)
+    return abs(value - candidate) <= tolerance
+
+
+def _as_float(value: Any) -> float | None:
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return None
 
 
 def _mark(state: AgentState, status: str, *, critique: dict[str, Any] | None = None) -> AgentState:

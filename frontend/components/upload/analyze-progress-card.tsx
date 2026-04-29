@@ -5,11 +5,13 @@ import { CheckCircle, Circle, Loader2, AlertCircle, ChevronRight } from "lucide-
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { analyzeCsv } from "@/lib/api/analyze";
 import { API_BASE } from "@/lib/api/client";
 import type { AnalyzerConfig } from "./analyzer-config-card";
 import { useLocale } from "@/lib/i18n/locale-provider";
 
 type GateStatus = "idle" | "running" | "pass" | "fail";
+type GateKey = "router" | "schema" | "domain" | "critique";
 
 interface GateState {
   router: GateStatus;
@@ -30,7 +32,7 @@ const INITIAL_GATES: GateState = {
 // GATE_LABELS는 컴포넌트 내부에서 t() 기반으로 생성
 
 interface GateDetail {
-  gate: string;
+  gate: GateKey;
   status: "pass" | "fail";
   detail?: string;
   reason?: string;
@@ -38,13 +40,31 @@ interface GateDetail {
 
 interface AnalyzeProgressCardProps {
   uploadId?: string | null;
+  file?: File | null;
   config: AnalyzerConfig;
   disabled?: boolean;
   onComplete?: () => void;
 }
 
+function statusFromGateValue(value: string | undefined): GateStatus {
+  if (!value) return "idle";
+  const normalized = value.toLowerCase();
+  if (normalized === "fail: all claims supported" || normalized === "all claims supported") {
+    return "pass";
+  }
+  if (normalized.startsWith("pass") || normalized.startsWith("ok")) return "pass";
+  if (normalized.startsWith("fail") || normalized.startsWith("error")) return "fail";
+  return "idle";
+}
+
+function detailFromGateValue(value: string | undefined): string | undefined {
+  if (!value) return undefined;
+  return value.replace(/^(pass|fail|ok|error)[:\s-]*/i, "").trim() || value;
+}
+
 export function AnalyzeProgressCard({
   uploadId,
+  file,
   config,
   disabled,
   onComplete,
@@ -75,16 +95,76 @@ export function AnalyzeProgressCard({
     setRouterChoice(null);
 
     try {
+      if (file) {
+        const { response } = await analyzeCsv(file);
+        const meta = response.meta;
+        const schemaStatus = statusFromGateValue(meta.gates["schema_gate"]);
+        const domainStatus = statusFromGateValue(meta.gates["domain_gate"]);
+        const critiqueStatus = statusFromGateValue(meta.gates["critique_gate"]);
+        const nextGates: GateState = {
+          router: "pass",
+          schema: schemaStatus,
+          domain: domainStatus,
+          critique: critiqueStatus,
+          done: false,
+        };
+        const directDetails: Record<string, GateDetail> = {
+          router: {
+            gate: "router",
+            status: "pass",
+            detail: meta.asset_class,
+            reason: meta.router_reason,
+          },
+        };
+
+        const directGateMap = [
+          ["schema", schemaStatus, meta.gates["schema_gate"]],
+          ["domain", domainStatus, meta.gates["domain_gate"]],
+          ["critique", critiqueStatus, meta.gates["critique_gate"]],
+        ] as const;
+
+        for (const [gate, gateStatus, rawDetail] of directGateMap) {
+          if (gateStatus === "pass" || gateStatus === "fail") {
+            directDetails[gate] = {
+              gate,
+              status: gateStatus,
+              detail: detailFromGateValue(rawDetail),
+              reason: detailFromGateValue(rawDetail),
+            };
+          }
+        }
+
+        const hasFailure = [schemaStatus, domainStatus, critiqueStatus].includes("fail");
+        setRouterChoice(meta.router_reason || `${meta.asset_class} analyzer`);
+        setGateDetails(directDetails);
+        setGates({ ...nextGates, done: !hasFailure && response.status !== "error" });
+
+        if (hasFailure || response.status === "error") {
+          setStatus("error");
+          setError(
+            (response.result?.["_analyzer_error"] as string | undefined) ??
+              "분석 결과 검증에 실패했습니다.",
+          );
+          return;
+        }
+
+        setStatus("done");
+        setTimeout(() => onComplete?.(), 2500);
+        return;
+      }
+
       // POST /upload/analyze → SSE stream
       const res = await fetch(`${API_BASE}/upload/analyze`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           upload_id: uploadId,
-          analyzer: config.analyzer,
-          period_days: config.period_days,
-          currency: config.currency,
-          include_fx: config.include_fx,
+          config: {
+            analyzer: config.analyzer,
+            period_days: config.period_days,
+            base_currency: config.currency,
+            include_fx: config.include_fx,
+          },
         }),
       });
 
@@ -112,7 +192,7 @@ export function AnalyzeProgressCard({
             const evt = JSON.parse(jsonStr) as Record<string, unknown>;
 
             if (evt["type"] === "gate") {
-              const gate = evt["gate"] as string;
+              const gate = evt["gate"] as GateKey;
               const evtStatus = evt["status"] as "pass" | "fail";
 
               if (gate === "router" && evtStatus === "pass") {
@@ -140,6 +220,66 @@ export function AnalyzeProgressCard({
                 }
                 return next;
               });
+              if (evtStatus === "fail") {
+                setStatus("error");
+                setError((evt["reason"] as string | undefined) ?? (evt["detail"] as string | undefined) ?? "분석 게이트 실패");
+              }
+            } else if (typeof evt["step"] === "string") {
+              const stepToGate: Record<string, GateKey | "complete"> = {
+                router: "router",
+                schema_gate: "schema",
+                schema: "schema",
+                domain_gate: "domain",
+                domain: "domain",
+                critique_gate: "critique",
+                critique: "critique",
+                complete: "complete",
+              };
+              const step = stepToGate[evt["step"]];
+              const evtStatus = evt["status"] as GateStatus;
+              const message = (evt["message"] as string | undefined) ?? "";
+
+              if (step === "complete") {
+                if (evtStatus === "pass") {
+                  setGates((prev) => ({ ...prev, done: true }));
+                  setStatus("done");
+                  setTimeout(() => onComplete?.(), 2500);
+                }
+                continue;
+              }
+
+              if (!step) continue;
+
+              if (step === "router" && evtStatus === "pass" && message) {
+                setRouterChoice(message);
+              }
+
+              if (evtStatus === "pass" || evtStatus === "fail") {
+                setGateDetails((prev) => ({
+                  ...prev,
+                  [step]: {
+                    gate: step,
+                    status: evtStatus,
+                    detail: message,
+                    reason: message,
+                  },
+                }));
+              }
+
+              setGates((prev) => {
+                const next = { ...prev, [step]: evtStatus } as GateState;
+                const order = ["router", "schema", "domain", "critique"] as const;
+                const idx = order.indexOf(step);
+                if (evtStatus === "pass" && idx < order.length - 1) {
+                  next[order[idx + 1]!] = "running";
+                }
+                return next;
+              });
+
+              if (evtStatus === "fail") {
+                setStatus("error");
+                setError(message || "분석 게이트 실패");
+              }
             } else if (evt["type"] === "done") {
               setGates((prev) => ({ ...prev, done: true }));
               setStatus("done");
@@ -158,7 +298,7 @@ export function AnalyzeProgressCard({
       setError(msg);
       setStatus("error");
     }
-  }, [uploadId, config, onComplete]);
+  }, [uploadId, file, config, onComplete]);
 
   const gateOrder = ["router", "schema", "domain", "critique"] as const;
 

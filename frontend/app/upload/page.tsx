@@ -18,6 +18,15 @@ const DEFAULT_CONFIG: AnalyzerConfig = {
   include_fx: true,
 };
 
+function getPreviewRows(result: ValidationResult | null): Record<string, string>[] {
+  return result?.preview_rows ?? result?.preview ?? [];
+}
+
+function getPreviewColumns(result: ValidationResult | null): string[] {
+  const rows = getPreviewRows(result);
+  return result?.columns_detected ?? Object.keys(rows[0] ?? {});
+}
+
 export default function UploadPage() {
   const router = useRouter();
   const { t } = useLocale();
@@ -120,8 +129,8 @@ export default function UploadPage() {
 
         {/* 3. 데이터 미리보기 */}
         <PreviewTable
-          columns={validationResult?.columns_detected}
-          rows={validationResult?.preview_rows}
+          columns={getPreviewColumns(validationResult)}
+          rows={getPreviewRows(validationResult)}
           loading={validationLoading}
         />
 
@@ -136,6 +145,7 @@ export default function UploadPage() {
         <div className="md:col-span-2">
           <AnalyzeProgressCard
             uploadId={validationResult?.upload_id ?? null}
+            file={selectedFile}
             config={config}
             disabled={!validationResult || uploading || validationLoading}
             onComplete={handleAnalyzeComplete}

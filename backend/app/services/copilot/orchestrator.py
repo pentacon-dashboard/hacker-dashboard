@@ -13,7 +13,7 @@ import os
 import uuid
 from collections import defaultdict
 from collections.abc import AsyncGenerator
-from typing import Any
+from typing import Any, cast
 
 import app.agents.llm as _llm_module
 from app.agents.llm import extract_json
@@ -142,7 +142,16 @@ def _coerce_llm_answer_to_text(text: str) -> str:
         return _sanitize_debug_text(stripped)
 
     if isinstance(parsed, dict):
-        for key in ("answer", "response", "narrative", "summary", "headline", "message", "analysis", "content"):
+        for key in (
+            "answer",
+            "response",
+            "narrative",
+            "summary",
+            "headline",
+            "message",
+            "analysis",
+            "content",
+        ):
             value = parsed.get(key)
             if isinstance(value, str) and value.strip():
                 return value.strip()
@@ -162,7 +171,10 @@ def _coerce_llm_answer_to_text(text: str) -> str:
         return "\n".join(lines).strip() or "분석 결과를 정리했습니다."
 
     if isinstance(parsed, list):
-        return "\n".join(f"- {_format_value(item)}" for item in parsed[:6]) or "분석 결과를 정리했습니다."
+        return (
+            "\n".join(f"- {_format_value(item)}" for item in parsed[:6])
+            or "분석 결과를 정리했습니다."
+        )
 
     return _format_value(parsed)
 
@@ -171,8 +183,12 @@ def _sanitize_debug_text(text: str) -> str:
     cleaned = text.strip()
     cleaned = cleaned.replace("sync fallback:", "", 1).strip()
     cleaned = cleaned.replace("(sync fallback)", "").strip()
-    cleaned = cleaned.replace("LLM 미설정 — OPENAI_API_KEY 를 설정해 주세요.", "AI 분석 설정이 아직 완료되지 않았습니다.")
-    cleaned = cleaned.replace("LLM 미설정 - OPENAI_API_KEY 를 설정해 주세요.", "AI 분석 설정이 아직 완료되지 않았습니다.")
+    cleaned = cleaned.replace(
+        "LLM 미설정 — OPENAI_API_KEY 를 설정해 주세요.", "AI 분석 설정이 아직 완료되지 않았습니다."
+    )
+    cleaned = cleaned.replace(
+        "LLM 미설정 - OPENAI_API_KEY 를 설정해 주세요.", "AI 분석 설정이 아직 완료되지 않았습니다."
+    )
     for prefix in (
         "포트폴리오 분석 결과:",
         "portfolio 분석 결과:",
@@ -195,7 +211,9 @@ def _fallback_text(agent: str, user_query: str) -> str:
             "보유 종목 수, 상위 종목 비중, 통화 노출, 최근 손익률을 함께 확인한 뒤 리밸런싱 여부를 판단하세요."
         )
     if agent == "rebalance":
-        return "리밸런싱은 단일 종목과 자산군 비중이 과도하게 높아졌는지부터 확인하는 것이 좋습니다."
+        return (
+            "리밸런싱은 단일 종목과 자산군 비중이 과도하게 높아졌는지부터 확인하는 것이 좋습니다."
+        )
     return f"{user_query or '요청한 내용'}에 대한 분석을 정리했습니다."
 
 
@@ -223,7 +241,11 @@ def _run_step_sync(step: CopilotStep, user_query: str = "") -> dict[str, Any]:
     force_fail = os.environ.get("COPILOT_FORCE_FAIL_STEP", "")
     if force_fail and step.step_id == force_fail:
         return {
-            "card": {"type": "text", "content": "요청한 분석 일부를 완료하지 못했습니다.", "degraded": True},
+            "card": {
+                "type": "text",
+                "content": "요청한 분석 일부를 완료하지 못했습니다.",
+                "degraded": True,
+            },
             "gate_results": {"schema": "fail", "domain": "skip", "critique": "skip"},
             "forced_fail": True,
         }
@@ -242,7 +264,11 @@ def _run_step_sync(step: CopilotStep, user_query: str = "") -> dict[str, Any]:
         return run_news_rag(step)
 
     return {
-        "card": {"type": "text", "content": _fallback_text(step.agent, user_query), "degraded": True},
+        "card": {
+            "type": "text",
+            "content": _fallback_text(step.agent, user_query),
+            "degraded": True,
+        },
         "gate_results": {"schema": "pass", "domain": "pass", "critique": "skip"},
     }
 
@@ -317,19 +343,30 @@ async def _run_agent_llm(step: CopilotStep, user_query: str) -> dict[str, Any]:
             max_tokens=2048,
             expect_json=agent in {"portfolio", "rebalance"},
         )
-        cleaned = _coerce_llm_answer_to_text(_strip_code_fence(raw)) or _fallback_text(agent, user_query)
+        cleaned = _coerce_llm_answer_to_text(_strip_code_fence(raw)) or _fallback_text(
+            agent, user_query
+        )
         return {
             "card": {"type": "text", "content": cleaned, "degraded": False},
             "gate_results": {"schema": "pass", "domain": "pass", "critique": "pass"},
         }
     except LLMUnavailableError:
         return {
-            "card": {"type": "text", "content": _fallback_text(agent, user_query), "degraded": True},
+            "card": {
+                "type": "text",
+                "content": _fallback_text(agent, user_query),
+                "degraded": True,
+            },
             "gate_results": {"schema": "pass", "domain": "pass", "critique": "skip"},
         }
     except Exception as exc:  # noqa: BLE001
         return {
-            "card": {"type": "text", "content": f"{_fallback_text(agent, user_query)}", "degraded": True, "degraded_reason": str(exc)[:160]},
+            "card": {
+                "type": "text",
+                "content": f"{_fallback_text(agent, user_query)}",
+                "degraded": True,
+                "degraded_reason": str(exc)[:160],
+            },
             "gate_results": {"schema": "pass", "domain": "pass", "critique": "skip"},
         }
 
@@ -362,22 +399,62 @@ async def _execute_step(
     degraded = bool(card.get("degraded"))
 
     if forced_fail or gate_results.get("schema") == "fail":
-        gate_events.append(_sse({"type": "step.gate", "step_id": step.step_id, "gate": "schema", "status": "fail", "reason": gate_results.get("schema", "")}))
+        gate_events.append(
+            _sse(
+                {
+                    "type": "step.gate",
+                    "step_id": step.step_id,
+                    "gate": "schema",
+                    "status": "fail",
+                    "reason": gate_results.get("schema", ""),
+                }
+            )
+        )
         degraded = True
     else:
         if gate_policy.schema_check:
             schema_status, schema_reason = _schema_gate(card, step)
-            gate_events.append(_sse({"type": "step.gate", "step_id": step.step_id, "gate": "schema", "status": schema_status, "reason": schema_reason if schema_status == "fail" else None}))
+            gate_events.append(
+                _sse(
+                    {
+                        "type": "step.gate",
+                        "step_id": step.step_id,
+                        "gate": "schema",
+                        "status": schema_status,
+                        "reason": schema_reason if schema_status == "fail" else None,
+                    }
+                )
+            )
             degraded = degraded or schema_status == "fail"
 
         if not degraded and gate_policy.domain:
             domain_status, domain_reason = _domain_gate(card, step)
-            gate_events.append(_sse({"type": "step.gate", "step_id": step.step_id, "gate": "domain", "status": domain_status, "reason": domain_reason if domain_status == "fail" else None}))
+            gate_events.append(
+                _sse(
+                    {
+                        "type": "step.gate",
+                        "step_id": step.step_id,
+                        "gate": "domain",
+                        "status": domain_status,
+                        "reason": domain_reason if domain_status == "fail" else None,
+                    }
+                )
+            )
             degraded = degraded or domain_status == "fail"
 
         if not degraded and gate_policy.critique and gate_results.get("critique") != "skip":
             critique_status, critique_reason = await _critique_gate(card, step)
-            gate_events.append(_sse({"type": "step.gate", "step_id": step.step_id, "gate": "critique", "status": critique_status, "reason": critique_reason if critique_status == "fail" else None}))
+            gate_events.append(
+                _sse(
+                    {
+                        "type": "step.gate",
+                        "step_id": step.step_id,
+                        "gate": "critique",
+                        "status": critique_status,
+                        "reason": critique_reason if critique_status == "fail" else None,
+                    }
+                )
+            )
             degraded = degraded or critique_status == "fail"
 
     if degraded:
@@ -427,13 +504,20 @@ def _card_to_final_text(card: dict[str, Any]) -> str:
         summary = str(card.get("summary") or "").strip()
         if summary:
             lines.append(summary)
-        rows = card.get("rows") if isinstance(card.get("rows"), list) else []
-        for row in rows[:4]:
-            if not isinstance(row, dict):
+        rows_value = card.get("rows")
+        rows = rows_value if isinstance(rows_value, list) else []
+        for row_value in rows[:4]:
+            if not isinstance(row_value, dict):
                 continue
+            row = cast("dict[str, Any]", row_value)
             symbol = row.get("symbol", "종목")
-            metrics = row.get("metrics") if isinstance(row.get("metrics"), dict) else {}
-            metric_text = ", ".join(f"{name}: {_format_value(value)}" for name, value in list(metrics.items())[:4])
+            metrics_value = row.get("metrics")
+            metrics = (
+                cast("dict[str, Any]", metrics_value) if isinstance(metrics_value, dict) else {}
+            )
+            metric_text = ", ".join(
+                f"{name}: {_format_value(value)}" for name, value in list(metrics.items())[:4]
+            )
             lines.append(f"- {symbol}: {metric_text}" if metric_text else f"- {symbol}")
         return "\n".join(lines) or "비교 분석 결과를 정리했습니다."
 
@@ -442,18 +526,26 @@ def _card_to_final_text(card: dict[str, Any]) -> str:
             f"시뮬레이션 기준 포트폴리오 가치는 {_format_value(card.get('base_value'))}에서 {_format_value(card.get('shocked_value'))}로 변합니다.",
             f"예상 수익률 변화는 {_format_value(card.get('twr_change_pct'))}%입니다.",
         ]
-        scenarios = card.get("scenarios") if isinstance(card.get("scenarios"), list) else []
-        for scenario in scenarios[:3]:
-            if isinstance(scenario, dict):
-                lines.append(f"- {scenario.get('symbol', '종목')}: 변화율 {_format_value(scenario.get('delta_pct'))}%")
+        scenarios_value = card.get("scenarios")
+        scenarios = scenarios_value if isinstance(scenarios_value, list) else []
+        for scenario_value in scenarios[:3]:
+            if isinstance(scenario_value, dict):
+                scenario = cast("dict[str, Any]", scenario_value)
+                lines.append(
+                    f"- {scenario.get('symbol', '종목')}: 변화율 {_format_value(scenario.get('delta_pct'))}%"
+                )
         return "\n".join(lines)
 
     if card_type == "scorecard":
-        rows = card.get("rows") if isinstance(card.get("rows"), list) else []
+        rows_value = card.get("rows")
+        rows = rows_value if isinstance(rows_value, list) else []
         lines = [str(card.get("title") or "주요 지표")]
-        for row in rows[:5]:
-            if isinstance(row, dict):
-                lines.append(f"- {row.get('label', '지표')}: {_format_value(row.get('value'))}{row.get('unit') or ''}")
+        for row_value in rows[:5]:
+            if isinstance(row_value, dict):
+                row = cast("dict[str, Any]", row_value)
+                lines.append(
+                    f"- {row.get('label', '지표')}: {_format_value(row.get('value'))}{row.get('unit') or ''}"
+                )
         return "\n".join(lines)
 
     if card_type == "chart":
@@ -472,15 +564,24 @@ async def _run_final_gate(
     query: str,
     queue: asyncio.Queue[bytes],
 ) -> dict[str, Any]:
-    bodies: list[str] = []
+    """모든 step 결과를 합성해 최종 통합 카드를 만들고 step_id='final' 게이트를 실행한다.
+
+    sprint-05: 세션 컨텍스트를 썼더라도 매번 전부 재실행 (캐시 금지).
+    """
+    # 최종 통합 카드 합성
+    bodies = []
     any_step_degraded = False
-    for result in step_results.values():
-        card = result.get("card", {})
-        degraded = bool(result.get("degraded", False) or card.get("degraded", False))
-        any_step_degraded = any_step_degraded or degraded
-        text = _card_to_final_text(card)
-        if text:
-            bodies.append(text)
+    for _sid, r in step_results.items():
+        card = r.get("card", {})
+        degraded = r.get("degraded", False) or card.get("degraded", False)
+        if degraded:
+            any_step_degraded = True
+        content = _card_to_final_text(card)
+        if len(step_results) == 1:
+            bodies.append(content)
+        else:
+            suffix = " (일부 제한)" if degraded else ""
+            bodies.append(f"분석 결과{suffix}\n{content}")
 
     final_card: dict[str, Any] = {
         "type": "text",
@@ -497,13 +598,43 @@ async def _run_final_gate(
     )
 
     schema_status, schema_reason = _schema_gate(final_card, final_step)
-    await queue.put(_sse({"type": "step.gate", "step_id": "final", "gate": "schema", "status": schema_status, "reason": schema_reason if schema_status == "fail" else None}))
+    await queue.put(
+        _sse(
+            {
+                "type": "step.gate",
+                "step_id": "final",
+                "gate": "schema",
+                "status": schema_status,
+                "reason": schema_reason if schema_status == "fail" else None,
+            }
+        )
+    )
 
     domain_status, domain_reason = _domain_gate(final_card, final_step)
-    await queue.put(_sse({"type": "step.gate", "step_id": "final", "gate": "domain", "status": domain_status, "reason": domain_reason if domain_status == "fail" else None}))
+    await queue.put(
+        _sse(
+            {
+                "type": "step.gate",
+                "step_id": "final",
+                "gate": "domain",
+                "status": domain_status,
+                "reason": domain_reason if domain_status == "fail" else None,
+            }
+        )
+    )
 
     critique_status, critique_reason = await _critique_gate(final_card, final_step, is_final=True)
-    await queue.put(_sse({"type": "step.gate", "step_id": "final", "gate": "critique", "status": critique_status, "reason": critique_reason if critique_status == "fail" else None}))
+    await queue.put(
+        _sse(
+            {
+                "type": "step.gate",
+                "step_id": "final",
+                "gate": "critique",
+                "status": critique_status,
+                "reason": critique_reason if critique_status == "fail" else None,
+            }
+        )
+    )
 
     if schema_status == "fail" or domain_status == "fail" or critique_status == "fail":
         final_card = {**final_card, "degraded": True}
@@ -528,7 +659,9 @@ async def stream_copilot_query(
     context_str = format_context_for_planner(active_context)
 
     try:
-        plan: CopilotPlan = await build_copilot_plan(query=context_str, session_id=resolved_session_id)
+        plan: CopilotPlan = await build_copilot_plan(
+            query=context_str, session_id=resolved_session_id
+        )
     except Exception as exc:  # noqa: BLE001
         yield _sse({"type": "error", "code": "PLANNER_ERROR", "message": str(exc)})
         yield _sse({"type": "done", "session_id": resolved_session_id, "turn_id": turn_id})
@@ -555,7 +688,11 @@ async def stream_copilot_query(
         for step, result in sorted_pairs:
             if isinstance(result, Exception):
                 step_results[step.step_id] = {
-                    "card": {"type": "text", "content": "분석 중 일부 오류가 발생했습니다.", "degraded": True},
+                    "card": {
+                        "type": "text",
+                        "content": "분석 중 일부 오류가 발생했습니다.",
+                        "degraded": True,
+                    },
                     "degraded": True,
                 }
             else:
