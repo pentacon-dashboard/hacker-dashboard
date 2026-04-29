@@ -1,0 +1,59 @@
+# Project-local Codex command policy for hacker-dashboard.
+# These rules apply to commands requested outside the sandbox.
+
+prefix_rule(
+    pattern = ["git", "reset", "--hard"],
+    decision = "forbidden",
+    justification = "Do not discard user work. Inspect diffs and make a targeted reverse patch instead.",
+    match = ["git reset --hard", "git reset --hard HEAD~1"],
+    not_match = ["git reset --soft HEAD~1"],
+)
+
+prefix_rule(
+    pattern = ["git", "checkout", "--"],
+    decision = "prompt",
+    justification = "Path checkout can discard user changes; require explicit approval.",
+    match = ["git checkout -- frontend/app/page.tsx"],
+)
+
+prefix_rule(
+    pattern = ["git", "clean"],
+    decision = "prompt",
+    justification = "Cleaning untracked files can remove user or generated artifacts; require explicit approval.",
+    match = ["git clean -fd", "git clean -fdx"],
+)
+
+prefix_rule(
+    pattern = ["rm", "-rf"],
+    decision = "prompt",
+    justification = "Recursive deletion requires an explicit target review.",
+    match = ["rm -rf .next", "rm -rf node_modules"],
+)
+
+prefix_rule(
+    pattern = ["Remove-Item"],
+    decision = "prompt",
+    justification = "PowerShell deletion requires explicit review when run outside the sandbox.",
+    match = ["Remove-Item .next -Recurse -Force"],
+)
+
+prefix_rule(
+    pattern = ["npm", "install"],
+    decision = "prompt",
+    justification = "Dependency graph changes must be intentional for the competition submission.",
+    match = ["npm install", "npm install recharts"],
+)
+
+prefix_rule(
+    pattern = ["uv", "add"],
+    decision = "prompt",
+    justification = "Backend dependency changes must be intentional for the competition submission.",
+    match = ["uv add pandas", "uv add --dev pytest"],
+)
+
+prefix_rule(
+    pattern = ["docker", "compose", "down"],
+    decision = "prompt",
+    justification = "Stopping local services can interrupt backend validation; require explicit approval.",
+    match = ["docker compose down"],
+)

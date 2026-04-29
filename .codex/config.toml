@@ -1,0 +1,28 @@
+approval_policy = "on-request"
+project_doc_fallback_filenames = [
+    ".codex/project.md",
+    ".codex/competition/Skills.md",
+]
+project_doc_max_bytes = 65536
+sandbox_mode = "workspace-write"
+web_search = "cached"
+
+[agents]
+max_depth = 1
+max_threads = 6
+
+[features]
+multi_agent = true
+shell_snapshot = false
+
+[shell_environment_policy]
+exclude = [
+    "ANTHROPIC_API_KEY",
+    "OPENAI_API_KEY",
+    "DATABASE_URL",
+    "NEXT_PUBLIC_COPILOT_MOCK",
+]
+inherit = "core"
+
+[shell_environment_policy.set]
+CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS = "1"

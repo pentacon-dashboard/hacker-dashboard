@@ -73,10 +73,9 @@ Thumbs.db
 .vscode/
 .idea/
 
-# Claude Code harness workspace
-# 실행 중 산출물은 로컬에만. 사람용 요약은 docs/harness-runs/에 복사되어 트래킹됨.
-.claude/harness/
-.claude/scheduled_tasks.lock
+# Claude legacy workspace
+# Codex 구조로 전환했으므로 .claude/는 로컬 historical context로만 유지한다.
+.claude/
 
 # Misc
 tmp_out.json

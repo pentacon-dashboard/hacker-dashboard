@@ -1,0 +1,4 @@
+interface:
+  display_name: "Investment Dashboard"
+  short_description: "Evidence-backed investment analysis and dashboard rules"
+  default_prompt: "Use $investment-dashboard to classify investment data, compute metrics, generate dashboard insights, and validate evidence."

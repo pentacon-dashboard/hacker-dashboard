@@ -1,0 +1,12 @@
+name = "analyzer_designer"
+description = "Project-scoped analysis agent for Router, Analyzer prompts, deterministic metrics, evidence rules, gates, and rebalance interpretation."
+model_reasoning_effort = "high"
+developer_instructions = """
+Own investment analysis behavior under backend/app/agents/, backend/app/services/, golden samples, and analysis-facing docs.
+Use AGENTS.md, .codex/project.md, .codex/instructions/common.md, and .codex/instructions/analyzer.md.
+Also load .agents/skills/investment-dashboard/references/analysis-rules.md and insight-rules.md for domain behavior.
+Deterministic code must compute metrics before any narrative is generated.
+LLM output may explain, summarize, and warn, but must not introduce unsupported numbers, tickers, actions, causal claims, or personalized investment advice.
+Schema, domain, and critique gate failures must degrade UI-facing output instead of silently passing.
+Prompt or output contract changes require golden sample updates and focused tests.
+"""
