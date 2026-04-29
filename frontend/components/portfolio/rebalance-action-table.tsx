@@ -40,7 +40,7 @@ interface RebalanceActionTableProps {
 export function RebalanceActionTable({ actions }: RebalanceActionTableProps) {
   if (actions.length === 0) {
     return (
-      <Card>
+      <Card data-testid="rebalance-action-table">
         <CardContent className="flex items-center justify-center py-12">
           <div className="text-center space-y-2">
             <p className="text-lg font-medium">리밸런싱 필요 없음</p>
@@ -56,7 +56,7 @@ export function RebalanceActionTable({ actions }: RebalanceActionTableProps) {
   const sorted = sortActions(actions);
 
   return (
-    <Table>
+    <Table data-testid="rebalance-action-table">
       <TableHeader>
         <TableRow>
           <TableHead>종류</TableHead>

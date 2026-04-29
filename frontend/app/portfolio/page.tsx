@@ -13,6 +13,7 @@ import { HoldingsTable } from "@/components/portfolio/holdings-table";
 import { SectorHeatmap } from "@/components/portfolio/sector-heatmap";
 import { MonthlyReturnCalendar } from "@/components/portfolio/monthly-return-calendar";
 import { AiInsightCard } from "@/components/portfolio/ai-insight-card";
+import { RebalancePanel } from "@/components/portfolio/rebalance-panel";
 import { useLocale } from "@/lib/i18n/locale-provider";
 import { useDataSettings } from "@/lib/hooks/use-data-settings";
 import {
@@ -285,6 +286,20 @@ export default function PortfolioPage() {
             isLoading={insightQuery.isLoading}
           />
         </SectionCard>
+      </section>
+
+      <section
+        aria-labelledby="portfolio-rebalance-title"
+        className="space-y-4"
+        data-testid="portfolio-section-rebalance"
+      >
+        <h2
+          id="portfolio-rebalance-title"
+          className="text-sm font-semibold tracking-tight"
+        >
+          {t("portfolio.rebalance")}
+        </h2>
+        <RebalancePanel />
       </section>
     </div>
   );

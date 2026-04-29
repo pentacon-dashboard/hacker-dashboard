@@ -171,8 +171,9 @@ test.describe("Rebalance proposal", () => {
     await submitBtn.click();
 
     // 액션 테이블에 종목 코드 확인
-    await expect(page.getByText(/KRW-BTC/)).toBeVisible();
-    await expect(page.getByText(/AAPL/)).toBeVisible();
+    const actionTable = page.getByTestId("rebalance-action-table");
+    await expect(actionTable.getByText(/upbit \/ KRW-BTC/)).toBeVisible();
+    await expect(actionTable.getByText(/yahoo \/ AAPL/)).toBeVisible();
 
     // LLM 해석 헤드라인 확인
     await expect(page.getByText(/코인 비중 축소/)).toBeVisible();
@@ -249,6 +250,6 @@ test.describe("Rebalance proposal", () => {
     await submitBtn.click();
 
     // "LLM 해석 실패" 배너 표시 확인
-    await expect(page.getByText(/LLM 해석 실패/)).toBeVisible();
+    await expect(page.getByRole("heading", { name: "LLM 해석 실패" })).toBeVisible();
   });
 });

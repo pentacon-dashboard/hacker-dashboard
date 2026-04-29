@@ -150,6 +150,7 @@ export const DICT: Dict = {
   "portfolio.sectorHeatmap": { ko: "섹터별 수익률 히트맵", en: "Sector Return Heatmap" },
   "portfolio.monthlyCalendar": { ko: "월간 수익률 달력", en: "Monthly Return Calendar" },
   "portfolio.aiInsight": { ko: "AI 인사이트", en: "AI Insight" },
+  "portfolio.rebalance": { ko: "리밸런싱 제안", en: "Rebalance Proposal" },
   "portfolio.totalReturn": { ko: "총 손익률", en: "Total Return" },
   "portfolio.dialog.search": { ko: "종목 검색", en: "Search symbol" },
   "portfolio.dialog.currency": { ko: "통화", en: "Currency" },
