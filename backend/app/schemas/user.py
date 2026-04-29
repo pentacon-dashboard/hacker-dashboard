@@ -4,23 +4,24 @@ from __future__ import annotations
 
 from typing import Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, StrictBool, StrictFloat, StrictInt
 
 _NO_NUL_PATTERN = r"^[^\x00]+$"
+StrictNumber = StrictFloat | StrictInt
 
 
 class NotificationSettings(BaseModel):
-    email_alerts: bool = True
-    push_alerts: bool = False
-    price_threshold_pct: float = 5.0
-    daily_digest: bool = True
+    email_alerts: StrictBool = True
+    push_alerts: StrictBool = False
+    price_threshold_pct: StrictNumber = 5.0
+    daily_digest: StrictBool = True
 
 
 class DataSettings(BaseModel):
-    refresh_interval_sec: int = 60
-    auto_refresh: bool = True
-    auto_backup: bool = False
-    cache_size_mb: int = 256
+    refresh_interval_sec: StrictInt = 60
+    auto_refresh: StrictBool = True
+    auto_backup: StrictBool = False
+    cache_size_mb: StrictInt = 256
 
 
 class ThemeSettings(BaseModel):

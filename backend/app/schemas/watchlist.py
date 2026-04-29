@@ -7,10 +7,11 @@ from __future__ import annotations
 from decimal import Decimal
 from typing import Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, StrictBool
 
 _NO_NUL_PATTERN = r"^[^\x00]+$"
-_MAX_ALERT_THRESHOLD = Decimal("99999999999999.9999")
+_MAX_ALERT_THRESHOLD = Decimal("100000000000000")
+_ALERT_THRESHOLD_STEP = 0.0001
 
 
 class WatchlistItem(BaseModel):
@@ -67,7 +68,8 @@ class WatchlistAlertCreate(BaseModel):
     threshold: Decimal = Field(
         ...,
         gt=Decimal("0"),
-        le=_MAX_ALERT_THRESHOLD,
+        lt=_MAX_ALERT_THRESHOLD,
+        multiple_of=_ALERT_THRESHOLD_STEP,
         max_digits=18,
         decimal_places=4,
         description="알림 임계가격",
@@ -77,11 +79,12 @@ class WatchlistAlertCreate(BaseModel):
 class WatchlistAlertUpdate(BaseModel):
     """PATCH /watchlist/alerts/{id} 요청 본문 (부분 업데이트)."""
 
-    enabled: bool | None = Field(None, description="알림 활성화 여부")
+    enabled: StrictBool | None = Field(None, description="알림 활성화 여부")
     threshold: Decimal | None = Field(
         None,
         gt=Decimal("0"),
-        le=_MAX_ALERT_THRESHOLD,
+        lt=_MAX_ALERT_THRESHOLD,
+        multiple_of=_ALERT_THRESHOLD_STEP,
         max_digits=18,
         decimal_places=4,
         description="임계가격 변경",
