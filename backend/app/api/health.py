@@ -12,6 +12,8 @@ from __future__ import annotations
 
 import asyncio
 import time
+from collections.abc import Awaitable
+from typing import Any, cast
 
 import redis.asyncio as aioredis
 from fastapi import APIRouter, Request
@@ -58,7 +60,7 @@ async def _ping_redis() -> None:
         socket_timeout=_CHECK_TIMEOUT_SECONDS,
     )
     try:
-        await client.ping()
+        await cast(Awaitable[Any], client.ping())
     finally:
         await client.aclose()
 
