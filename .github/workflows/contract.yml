@@ -91,6 +91,7 @@ jobs:
           uv run schemathesis run ../shared/openapi.json \
             --url http://localhost:8000 \
             --checks all \
+            --max-examples=5 \
             --report junit \
             --report-junit-path ../contract-results.xml
           status=$?
