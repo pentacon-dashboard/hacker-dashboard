@@ -53,7 +53,7 @@ export interface paths {
          * @description 심볼 통합 검색 (upbit + yahoo + naver_kr + alias).
          *
          *     - 4개 소스를 asyncio.gather 로 병렬 호출
-         *     - (market, symbol) 기준 dedupe, 높은 score 유지
+         *     - canonical symbol 기준 dedupe, 높은 score 유지
          *     - score 내림차순 정렬 후 상위 50개 반환
          *     - score 필드는 응답에 포함되지 않음 (SymbolInfo.score 는 exclude=True)
          */

@@ -362,7 +362,7 @@ export const DICT: Dict = {
     ko: "CSV 파일을 업로드하여 포트폴리오를 자동 분석합니다.",
     en: "Upload CSV to auto-analyze your portfolio.",
   },
-  "upload.section.dropzone": { ko: "1. 파일 업로드", en: "1. File Upload" },
+  "upload.section.dropzone": { ko: "1. 파일 선택", en: "1. File Select" },
   "upload.section.validation": { ko: "2. 데이터 검증 상태", en: "2. Validation Status" },
   "upload.section.preview": {
     ko: "3. 데이터 미리보기 (상위 5행)",

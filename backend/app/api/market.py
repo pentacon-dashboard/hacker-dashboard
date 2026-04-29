@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import asyncio
 import math
+import re
 from datetime import UTC, datetime, timedelta
 from typing import Any
 
@@ -46,6 +47,7 @@ router = APIRouter(prefix="/market", tags=["market"])
 # 실제 DB 연결 시 SQLAlchemy session으로 교체
 _watchlist: dict[int, dict[str, Any]] = {}
 _next_id: int = 1
+_KR_STOCK_SYMBOL_RE = re.compile(r"^(?P<code>\d{6})(?:\.(?:KS|KQ))?$", re.IGNORECASE)
 
 _SAMPLE_SYMBOLS: list[Symbol] = [
     Symbol(
@@ -79,7 +81,7 @@ async def search_symbols(
     """심볼 통합 검색 (upbit + yahoo + naver_kr + alias).
 
     - 4개 소스를 asyncio.gather 로 병렬 호출
-    - (market, symbol) 기준 dedupe, 높은 score 유지
+    - canonical symbol 기준 dedupe, 높은 score 유지
     - score 내림차순 정렬 후 상위 50개 반환
     - score 필드는 응답에 포함되지 않음 (SymbolInfo.score 는 exclude=True)
     """
@@ -111,6 +113,13 @@ async def search_symbols(
             scored.append((item, rank_score))
         return scored
 
+    def _canonical_search_key(item: SymbolInfo) -> tuple[str, str]:
+        normalized_symbol = item.symbol.strip().upper()
+        kr_stock = _KR_STOCK_SYMBOL_RE.fullmatch(normalized_symbol)
+        if kr_stock is not None:
+            return ("kr_stock", kr_stock.group("code"))
+        return (item.market, normalized_symbol)
+
     all_scored: list[tuple[SymbolInfo, int]] = []
     all_scored.extend(_assign_adapter_scores(upbit_res, 200))
     all_scored.extend(_assign_adapter_scores(yahoo_res, 200))
@@ -119,7 +128,7 @@ async def search_symbols(
 
     best: dict[tuple[str, str], tuple[SymbolInfo, int]] = {}
     for item, score in all_scored:
-        key = (item.market, item.symbol)
+        key = _canonical_search_key(item)
         if key not in best or score > best[key][1]:
             best[key] = (item, score)
 

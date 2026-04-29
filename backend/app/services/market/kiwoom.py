@@ -69,7 +69,9 @@ class KiwoomAdapter(MarketAdapter):
         # the piece that feeds portfolio valuation; OHLC can continue through the
         # existing domestic fallback until chart TR parsing is implemented.
         if self._fallback is not None:
-            return await self._fallback.fetch_ohlc(_normalize_krx_code(symbol) or symbol, interval=interval, limit=limit)
+            return await self._fallback.fetch_ohlc(
+                _normalize_krx_code(symbol) or symbol, interval=interval, limit=limit
+            )
         raise ValueError("Kiwoom OHLC fallback is not configured")
 
     async def search_symbols(self, query: str) -> list[SymbolInfo]:
@@ -116,12 +118,20 @@ class KiwoomAdapter(MarketAdapter):
 
     async def _get_access_token(self) -> str:
         now = datetime.now(UTC)
-        if self._token and self._token_expires_at and now < self._token_expires_at - _TOKEN_REFRESH_SKEW:
+        if (
+            self._token
+            and self._token_expires_at
+            and now < self._token_expires_at - _TOKEN_REFRESH_SKEW
+        ):
             return self._token
 
         async with self._token_lock:
             now = datetime.now(UTC)
-            if self._token and self._token_expires_at and now < self._token_expires_at - _TOKEN_REFRESH_SKEW:
+            if (
+                self._token
+                and self._token_expires_at
+                and now < self._token_expires_at - _TOKEN_REFRESH_SKEW
+            ):
                 return self._token
 
             client = get_http_client()

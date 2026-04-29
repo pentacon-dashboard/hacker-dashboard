@@ -12,8 +12,10 @@ import { CopilotDrawer } from "@/components/copilot/copilot-drawer";
  */
 export function CommandBarTrigger() {
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [inputOpen, setInputOpen] = useState(false);
+  const [inputValue, setInputValue] = useState("");
   const { state, query, reset } = useCopilotStream();
-  // 인풋 ref — 숨김 인풋으로 포커스 받기
+  // 인풋 ref — 기본은 숨김, E2E와 단축키 사용 시 화면에 노출
   const hiddenInputRef = useRef<HTMLInputElement>(null);
 
   // ⌘K / Ctrl+K 단축키 → Drawer 열기 (포커스 이동)
@@ -22,7 +24,11 @@ export function CommandBarTrigger() {
       const isMeta = e.metaKey || e.ctrlKey;
       if (isMeta && e.key === "k") {
         e.preventDefault();
-        hiddenInputRef.current?.focus();
+        setInputOpen(true);
+        requestAnimationFrame(() => {
+          hiddenInputRef.current?.focus();
+          hiddenInputRef.current?.select();
+        });
       }
     }
     window.addEventListener("keydown", handleKey);
@@ -34,6 +40,7 @@ export function CommandBarTrigger() {
     if (typeof window === "undefined") return;
     const params = new URLSearchParams(window.location.search);
     if (params.get("copilot") === "1") {
+      setInputOpen(true);
       const raf = requestAnimationFrame(() => {
         hiddenInputRef.current?.focus();
       });
@@ -43,12 +50,13 @@ export function CommandBarTrigger() {
 
   function handleHiddenInputKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
     if (e.key === "Enter") {
-      const q = (e.target as HTMLInputElement).value.trim();
+      e.preventDefault();
+      const q = inputValue.trim();
       if (q) {
         reset();
         setDrawerOpen(true);
         void query(q);
-        (e.target as HTMLInputElement).value = "";
+        setInputValue("");
       } else {
         // 빈 입력이면 Drawer를 열되 query 없이 열기
         setDrawerOpen(true);
@@ -56,21 +64,30 @@ export function CommandBarTrigger() {
     }
     if (e.key === "Escape") {
       setDrawerOpen(false);
+      setInputOpen(false);
+      setInputValue("");
       (e.target as HTMLInputElement).blur();
     }
   }
 
   return (
     <>
-      {/* 스크린리더·마우스에는 보이지 않는 숨김 입력 — ⌘K 트리거 전용 */}
+      {/* 스크린리더·마우스에는 기본적으로 숨기고, ⌘K 또는 ?copilot=1에서 노출 */}
       <input
         ref={hiddenInputRef}
         type="text"
-        aria-label="Copilot 질의 입력 (⌘K)"
+        aria-label="copilot-input"
         aria-hidden="false"
-        className="sr-only"
+        placeholder="Copilot에게 질의... (⌘K)"
+        value={inputValue}
+        onChange={(e) => setInputValue(e.target.value)}
+        className={
+          inputOpen
+            ? "fixed left-1/2 top-4 z-[60] h-10 w-[min(560px,calc(100vw-2rem))] -translate-x-1/2 rounded-md border bg-background px-3 text-sm shadow-lg placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+            : "sr-only"
+        }
         onKeyDown={handleHiddenInputKeyDown}
-        tabIndex={-1}
+        tabIndex={inputOpen ? 0 : -1}
         data-testid="command-bar-trigger-input"
       />
       <CopilotDrawer

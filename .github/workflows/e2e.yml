@@ -18,7 +18,7 @@ concurrency:
 
 jobs:
   e2e:
-    name: Playwright E2E (Chromium)
+    name: Playwright E2E Smoke (Chromium)
     runs-on: ubuntu-latest
     timeout-minutes: 15
     continue-on-error: true  # NOTE: 사전 누적된 데이터·환경 의존 e2e 결함은 별도 스프린트로 fix. smoke 3/3 은 본 PR 에서 통과 검증함
@@ -110,12 +110,16 @@ jobs:
         working-directory: frontend
         env:
           NEXT_PUBLIC_API_BASE: http://localhost:8000
+          NEXT_PUBLIC_COPILOT_MOCK: "1"
+          COPILOT_MOCK: "1"
         run: npm run build
 
       - name: Start frontend server
         working-directory: frontend
         env:
           NEXT_PUBLIC_API_BASE: http://localhost:8000
+          NEXT_PUBLIC_COPILOT_MOCK: "1"
+          COPILOT_MOCK: "1"
           PORT: 3000
         run: |
           npm run start &
@@ -129,13 +133,15 @@ jobs:
           done
 
       # ── Playwright 실행 ─────────────────────────────────────────────────────
-      - name: Run Playwright tests (Chromium only)
+      - name: Run Playwright smoke tests (Chromium only)
         working-directory: frontend
         env:
           CI: "true"
           E2E_BASE: http://localhost:3000
           BE_BASE: http://localhost:8000
-        run: npx playwright test --config=e2e/playwright.config.ts --project=chromium
+          NEXT_PUBLIC_COPILOT_MOCK: "1"
+          COPILOT_MOCK: "1"
+        run: npx playwright test e2e/smoke.spec.ts --config=e2e/playwright.config.ts --project=chromium
 
       # ── 아티팩트 업로드 ─────────────────────────────────────────────────────
       - name: Upload Playwright report

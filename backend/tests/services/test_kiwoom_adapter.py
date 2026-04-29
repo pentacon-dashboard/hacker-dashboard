@@ -68,12 +68,16 @@ class _FallbackAdapter:
 
 
 @pytest.mark.asyncio
-async def test_kiwoom_quote_uses_token_and_normalizes_response(monkeypatch: pytest.MonkeyPatch) -> None:
+async def test_kiwoom_quote_uses_token_and_normalizes_response(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     fake_client = _FakeClient()
     monkeypatch.setattr("app.services.market.kiwoom.get_http_client", lambda: fake_client)
     monkeypatch.setattr("app.services.market.kiwoom.settings.kiwoom_app_key", "app-key")
     monkeypatch.setattr("app.services.market.kiwoom.settings.kiwoom_secret_key", "secret-key")
-    monkeypatch.setattr("app.services.market.kiwoom.settings.kiwoom_base_url", "https://mockapi.kiwoom.com")
+    monkeypatch.setattr(
+        "app.services.market.kiwoom.settings.kiwoom_base_url", "https://mockapi.kiwoom.com"
+    )
 
     adapter = KiwoomAdapter(market="krx", fallback=_FallbackAdapter())
     quote = await adapter.fetch_quote("005930.KS")

@@ -85,7 +85,7 @@
     "step_id": "a",
     "card": {
       "type": "text",
-      "content": "포트폴리오 분석 결과 (sync fallback): TSLA 최근 1년 분석",
+      "content": "fake card",
       "degraded": false
     }
   },
@@ -173,7 +173,7 @@
     "type": "final.card",
     "card": {
       "type": "text",
-      "content": "[a] 포트폴리오 분석 결과 (sync fallback): TSLA 최근 1년 분석\n\n[b] {'type': 'comparison_table', 'symbols': ['TSLA', 'MSFT'], 'metrics': ['return_3m_pct', 'volatility_pct', 'pe_ratio', 'market_cap_usd'], 'rows': [{'symbol': 'TSLA', 'metrics': {'return_3m_pct': -2, 'volatility_pct': 18, 'pe_ratio': 23, 'market_cap_usd': 9000000000}}, {'symbol': 'MSFT', 'metrics': {'return_3m_pct': 4, 'volatility_pct': 24, 'pe_ratio': None, 'market_cap_usd': 5000000000}}], 'summary': 'Comparison of TSLA, MSFT across return, volatility, and valuation metrics.'}",
+      "content": "분석 결과\nfake card\n\n분석 결과\nComparison of TSLA, MSFT across return, volatility, and valuation metrics.\n- TSLA: return_3m_pct: -2, volatility_pct: 18, pe_ratio: 23, market_cap_usd: 9,000,000,000\n- MSFT: return_3m_pct: 4, volatility_pct: 24, pe_ratio: -, market_cap_usd: 5,000,000,000",
       "degraded": false
     }
   },
@@ -322,7 +322,7 @@
     "type": "final.card",
     "card": {
       "type": "text",
-      "content": "[a] Summary of news for query: ''\n\n\nBased on [Tesla Q1 2026 Deliveries Miss Estimates: 422,875 Vehicles Delivered]: Tesla Inc. (TSLA) delivered 422,875 vehicles in the first quarter of 2026, falling short of analyst expectations of approximately 450,000 units. The electric vehicle maker also produced 433,371 vehicl\n\nBased on [Ethereum Pectra Upgrade Successfully Activated: Staking Limits Raised to 2048 ETH]: The Ethereum (ETH) network successfully activated the Pectra upgrade at slot 8,626,176 on January 15, 2026, marking one of the most significant protocol changes since the Merge in September 2022. The \n\nBased on [Apple Q1 2026 Earnings Beat: Revenue $124B, EPS $2.40]: dividend by 5% to $0.26 per share.\n\nAnalysts reacted positively to the results. 'Apple has demonstrated once again that it can execute at the highest level,' wrote Morgan Stanley analyst Erik Woodring",
+      "content": "Summary of news for query: ''\n\n\nBased on [Tesla Q1 2026 Deliveries Miss Estimates: 422,875 Vehicles Delivered]: Tesla Inc. (TSLA) delivered 422,875 vehicles in the first quarter of 2026, falling short of analyst expectations of approximately 450,000 units. The electric vehicle maker also produced 433,371 vehicl\n\nBased on [Ethereum Pectra Upgrade Successfully Activated: Staking Limits Raised to 2048 ETH]: The Ethereum (ETH) network successfully activated the Pectra upgrade at slot 8,626,176 on January 15, 2026, marking one of the most significant protocol changes since the Merge in September 2022. The \n\nBased on [Apple Q1 2026 Earnings Beat: Revenue $124B, EPS $2.40]: dividend by 5% to $0.26 per share.\n\nAnalysts reacted positively to the results. 'Apple has demonstrated once again that it can execute at the highest level,' wrote Morgan Stanley analyst Erik Woodring",
       "degraded": false
     }
   },

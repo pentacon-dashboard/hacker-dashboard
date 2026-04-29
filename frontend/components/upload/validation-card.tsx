@@ -7,15 +7,18 @@ import { useLocale } from "@/lib/i18n/locale-provider";
 
 export interface ValidationResult {
   upload_id: string;
-  filename: string;
+  filename?: string;
   total_rows: number;
   valid_rows: number;
   error_rows: number;
   warning_rows: number;
-  columns_detected: string[];
-  preview_rows: Record<string, string>[];
-  errors: { row: number; column: string; message: string }[];
-  warnings: { row: number; column: string; message: string }[];
+  columns_detected?: string[];
+  preview_rows?: Record<string, string>[];
+  preview?: Record<string, string>[];
+  errors?: { row: number; column?: string | null; code?: string; message: string }[];
+  warnings?: { row: number; column?: string | null; code?: string; message: string }[];
+  schema_fingerprint?: string;
+  created_at?: string;
 }
 
 interface ValidationCardProps {
@@ -26,6 +29,10 @@ interface ValidationCardProps {
 
 export function ValidationCard({ result, loading, error }: ValidationCardProps) {
   const { t } = useLocale();
+  const previewRows = result?.preview_rows ?? result?.preview ?? [];
+  const columnsDetected = result?.columns_detected ?? Object.keys(previewRows[0] ?? {});
+  const errors = result?.errors ?? [];
+
   return (
     <Card data-testid="validation-card">
       <CardHeader className="pb-3">
@@ -62,7 +69,7 @@ export function ValidationCard({ result, loading, error }: ValidationCardProps) 
             <div className="rounded-lg border border-border bg-muted/30 px-3 py-2">
               <p className="text-xs font-medium text-muted-foreground mb-1">{t("upload.validation.columns")}</p>
               <div className="flex flex-wrap gap-1">
-                {result.columns_detected.map((col) => (
+                {columnsDetected.map((col) => (
                   <span
                     key={col}
                     className="rounded bg-primary/10 px-2 py-0.5 text-xs font-mono text-primary"
@@ -103,15 +110,15 @@ export function ValidationCard({ result, loading, error }: ValidationCardProps) 
             </div>
 
             {/* 오류 목록 (최대 3개) */}
-            {result.errors.length > 0 && (
+            {errors.length > 0 && (
               <div className="space-y-1">
-                {result.errors.slice(0, 3).map((e, i) => (
+                {errors.slice(0, 3).map((e, i) => (
                   <div
                     key={i}
                     className="flex items-start gap-2 rounded border border-destructive/20 bg-destructive/5 px-2 py-1.5 text-xs text-destructive"
                   >
                     <span className="font-mono">R{e.row}</span>
-                    <span className="text-muted-foreground">{e.column}:</span>
+                    {e.column && <span className="text-muted-foreground">{e.column}:</span>}
                     <span>{e.message}</span>
                   </div>
                 ))}

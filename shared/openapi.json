@@ -59,7 +59,7 @@
           "market"
         ],
         "summary": "Search Symbols",
-        "description": "심볼 통합 검색 (upbit + yahoo + naver_kr + alias).\n\n- 4개 소스를 asyncio.gather 로 병렬 호출\n- (market, symbol) 기준 dedupe, 높은 score 유지\n- score 내림차순 정렬 후 상위 50개 반환\n- score 필드는 응답에 포함되지 않음 (SymbolInfo.score 는 exclude=True)",
+        "description": "심볼 통합 검색 (upbit + yahoo + naver_kr + alias).\n\n- 4개 소스를 asyncio.gather 로 병렬 호출\n- canonical symbol 기준 dedupe, 높은 score 유지\n- score 내림차순 정렬 후 상위 50개 반환\n- score 필드는 응답에 포함되지 않음 (SymbolInfo.score 는 exclude=True)",
         "operationId": "search_symbols_market_symbols_search_get",
         "parameters": [
           {
@@ -2786,7 +2786,9 @@
           "email": {
             "anyOf": [
               {
-                "type": "string"
+                "type": "string",
+                "maxLength": 256,
+                "pattern": "^[^\\x00]+$"
               },
               {
                 "type": "null"
@@ -3788,7 +3790,14 @@
             "default": false
           },
           "price_threshold_pct": {
-            "type": "number",
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "integer"
+              }
+            ],
             "title": "Price Threshold Pct",
             "default": 5.0
           },
@@ -4960,14 +4969,20 @@
         "properties": {
           "user_id": {
             "type": "string",
+            "maxLength": 64,
+            "pattern": "^[^\\x00]+$",
             "title": "User Id"
           },
           "name": {
             "type": "string",
+            "maxLength": 128,
+            "pattern": "^[^\\x00]+$",
             "title": "Name"
           },
           "email": {
             "type": "string",
+            "maxLength": 256,
+            "pattern": "^[^\\x00]+$",
             "title": "Email"
           },
           "avatar_url": {
@@ -4994,14 +5009,20 @@
         "properties": {
           "user_id": {
             "type": "string",
+            "maxLength": 64,
+            "pattern": "^[^\\x00]+$",
             "title": "User Id"
           },
           "name": {
             "type": "string",
+            "maxLength": 128,
+            "pattern": "^[^\\x00]+$",
             "title": "Name"
           },
           "email": {
             "type": "string",
+            "maxLength": 256,
+            "pattern": "^[^\\x00]+$",
             "title": "Email"
           },
           "language": {
@@ -5015,6 +5036,8 @@
           },
           "timezone": {
             "type": "string",
+            "maxLength": 64,
+            "pattern": "^[^\\x00]+$",
             "title": "Timezone",
             "default": "Asia/Seoul"
           },
@@ -5057,7 +5080,9 @@
           "name": {
             "anyOf": [
               {
-                "type": "string"
+                "type": "string",
+                "maxLength": 128,
+                "pattern": "^[^\\x00]+$"
               },
               {
                 "type": "null"
@@ -5083,7 +5108,9 @@
           "timezone": {
             "anyOf": [
               {
-                "type": "string"
+                "type": "string",
+                "maxLength": 64,
+                "pattern": "^[^\\x00]+$"
               },
               {
                 "type": "null"
@@ -5169,13 +5196,17 @@
         "properties": {
           "symbol": {
             "type": "string",
+            "maxLength": 50,
             "minLength": 1,
+            "pattern": "^[^\\x00]+$",
             "title": "Symbol",
             "description": "심볼 (예: NVDA, KRW-BTC)"
           },
           "market": {
             "type": "string",
+            "maxLength": 20,
             "minLength": 1,
+            "pattern": "^[^\\x00]+$",
             "title": "Market",
             "description": "마켓 (yahoo | upbit | naver_kr | binance)"
           },
@@ -5192,11 +5223,13 @@
             "anyOf": [
               {
                 "type": "number",
+                "multipleOf": 0.0001,
+                "exclusiveMaximum": 100000000000000.0,
                 "exclusiveMinimum": 0.0
               },
               {
                 "type": "string",
-                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,14}|(?=[\\d.]{1,19}0*$)\\d{0,14}\\.\\d{0,4}0*$)"
               }
             ],
             "title": "Threshold",
@@ -5282,11 +5315,13 @@
             "anyOf": [
               {
                 "type": "number",
+                "multipleOf": 0.0001,
+                "exclusiveMaximum": 100000000000000.0,
                 "exclusiveMinimum": 0.0
               },
               {
                 "type": "string",
-                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,14}|(?=[\\d.]{1,19}0*$)\\d{0,14}\\.\\d{0,4}0*$)"
               },
               {
                 "type": "null"
