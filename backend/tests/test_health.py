@@ -1,5 +1,9 @@
+import asyncio
+
 import pytest
 from httpx import AsyncClient
+
+from app.api import health as health_module
 
 
 @pytest.mark.asyncio
@@ -24,3 +28,25 @@ async def test_health_has_services_field(client: AsyncClient) -> None:
     assert "services" in body
     assert "db" in body["services"]
     assert "redis" in body["services"]
+
+
+@pytest.mark.asyncio
+async def test_db_check_times_out(monkeypatch: pytest.MonkeyPatch) -> None:
+    async def slow_ping() -> None:
+        await asyncio.sleep(1)
+
+    monkeypatch.setattr(health_module, "_CHECK_TIMEOUT_SECONDS", 0.01)
+    monkeypatch.setattr(health_module, "_ping_db", slow_ping)
+
+    assert await health_module._check_db() == "unreachable"
+
+
+@pytest.mark.asyncio
+async def test_redis_check_times_out(monkeypatch: pytest.MonkeyPatch) -> None:
+    async def slow_ping() -> None:
+        await asyncio.sleep(1)
+
+    monkeypatch.setattr(health_module, "_CHECK_TIMEOUT_SECONDS", 0.01)
+    monkeypatch.setattr(health_module, "_ping_redis", slow_ping)
+
+    assert await health_module._check_redis() == "unreachable"

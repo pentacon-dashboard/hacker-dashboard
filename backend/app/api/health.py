@@ -23,6 +23,8 @@ from app.db.session import engine
 
 router = APIRouter(tags=["infra"])
 
+_CHECK_TIMEOUT_SECONDS = 2.0
+
 
 class ServiceStatus(BaseModel):
     db: str
@@ -36,21 +38,34 @@ class HealthResponse(BaseModel):
     version: str
 
 
+async def _ping_db() -> None:
+    async with engine.connect() as conn:
+        await conn.execute(text("SELECT 1"))
+
+
 async def _check_db() -> str:
     try:
-        async with engine.connect() as conn:
-            await asyncio.wait_for(conn.execute(text("SELECT 1")), timeout=2.0)
+        await asyncio.wait_for(_ping_db(), timeout=_CHECK_TIMEOUT_SECONDS)
         return "ok"
     except Exception:
         return "unreachable"
 
 
+async def _ping_redis() -> None:
+    client = aioredis.from_url(
+        settings.redis_url,
+        socket_connect_timeout=_CHECK_TIMEOUT_SECONDS,
+        socket_timeout=_CHECK_TIMEOUT_SECONDS,
+    )
+    try:
+        await client.ping()
+    finally:
+        await client.aclose()
+
+
 async def _check_redis() -> str:
     try:
-        client = aioredis.from_url(settings.redis_url, socket_connect_timeout=2)
-        ping_coro = client.ping()
-        await asyncio.wait_for(ping_coro, timeout=2.0)  # type: ignore[arg-type]
-        await client.aclose()
+        await asyncio.wait_for(_ping_redis(), timeout=_CHECK_TIMEOUT_SECONDS)
         return "ok"
     except Exception:
         return "unreachable"

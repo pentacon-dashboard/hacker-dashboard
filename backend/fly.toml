@@ -11,6 +11,7 @@ primary_region = "nrt"
 [env]
   PORT = "8000"
   PYTHONUNBUFFERED = "1"
+  WEB_CONCURRENCY = "1"
 
 [http_service]
   internal_port = 8000
