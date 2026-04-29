@@ -17,6 +17,7 @@ from typing import Any
 
 import httpx
 
+from app.core.config import settings
 from app.schemas.news import Citation
 
 logger = logging.getLogger(__name__)
@@ -29,7 +30,15 @@ _ENTITY_MAP = {"&quot;": '"', "&amp;": "&", "&lt;": "<", "&gt;": ">", "&apos;": 
 
 def is_naver_configured() -> bool:
     """Naver API credential 환경변수가 모두 설정됐는지."""
-    return bool(os.environ.get("NAVER_CLIENT_ID")) and bool(os.environ.get("NAVER_CLIENT_SECRET"))
+    return bool(_get_client_id()) and bool(_get_client_secret())
+
+
+def _get_client_id() -> str:
+    return os.environ.get("NAVER_CLIENT_ID") or settings.naver_client_id
+
+
+def _get_client_secret() -> str:
+    return os.environ.get("NAVER_CLIENT_SECRET") or settings.naver_client_secret
 
 
 def _strip_html(text: str) -> str:
@@ -113,8 +122,8 @@ async def search_naver_news(
     - 종목 ticker 는 한국어 매핑 (예: AAPL → Apple, 005930 → 삼성전자)
     - 실패 / 빈 결과 시 빈 리스트 반환 (호출자가 fixture 폴백)
     """
-    client_id = os.environ.get("NAVER_CLIENT_ID")
-    client_secret = os.environ.get("NAVER_CLIENT_SECRET")
+    client_id = _get_client_id()
+    client_secret = _get_client_secret()
     if not client_id or not client_secret:
         return []
 

@@ -221,6 +221,16 @@ export const DICT: Dict = {
   "watchlist.alert.delete": { ko: "알림 삭제", en: "Delete alert" },
   "watchlist.alert.toggleOn": { ko: "켜기", en: "Enable" },
   "watchlist.alert.toggleOff": { ko: "끄기", en: "Disable" },
+  "watchlist.alert.corrupted": { ko: "손상된 알림 #{{id}}", en: "Corrupted alert #{{id}}" },
+  "watchlist.alert.corruptedHint": {
+    ko: "삭제 후 다시 생성하세요.",
+    en: "Delete and recreate this alert.",
+  },
+  "watchlist.alert.corruptedCount": {
+    ko: "복구가 필요한 알림 {{n}}개를 하단에 분리해 표시했습니다.",
+    en: "{{n}} alerts need cleanup and are shown separately below.",
+  },
+  "watchlist.kpi.topGainerEmpty": { ko: "상위 종목 없음", en: "No leader" },
 
   // Symbol
   "symbol.basicInfo": { ko: "기본 정보", en: "Basic Info" },
@@ -543,6 +553,18 @@ export const DICT: Dict = {
   "common.retry": { ko: "다시 시도", en: "Retry" },
   "common.refresh": { ko: "새로고침", en: "Refresh" },
   "common.close": { ko: "닫기", en: "Close" },
+  "common.dataCorruptedTitle": {
+    ko: "손상된 데이터가 감지되었습니다",
+    en: "Corrupted data detected",
+  },
+  "common.dataCorruptedDesc": {
+    ko: "표시 가능한 데이터만 노출하고 나머지는 숨겼습니다.",
+    en: "Only renderable data is shown and the rest is hidden.",
+  },
+  "common.marketNewsFallback": {
+    ko: "시장 전체 뉴스로 대체 표시 중",
+    en: "Showing broader market news instead",
+  },
   "common.demo": { ko: "DEMO", en: "DEMO" },
   "common.macro": { ko: "매크로", en: "Macro" },
   "common.assetClass": { ko: "자산군", en: "Asset class" },

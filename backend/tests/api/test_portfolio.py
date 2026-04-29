@@ -36,7 +36,8 @@ def _create_portfolio_tables(conn: Any) -> None:
         "holdings",
         metadata,
         Column("id", Integer, primary_key=True, autoincrement=True),
-        Column("user_id", String(50), nullable=False, default="demo"),
+        Column("user_id", String(50), nullable=False, default="pb-demo"),
+        Column("client_id", String(50), nullable=False, default="client-001"),
         Column("market", String(20), nullable=False),
         Column("code", String(50), nullable=False),
         Column("quantity", Numeric(24, 8), nullable=False),
@@ -49,14 +50,17 @@ def _create_portfolio_tables(conn: Any) -> None:
         "portfolio_snapshots",
         metadata,
         Column("id", Integer, primary_key=True, autoincrement=True),
-        Column("user_id", String(50), nullable=False, default="demo"),
+        Column("user_id", String(50), nullable=False, default="pb-demo"),
+        Column("client_id", String(50), nullable=False, default="client-001"),
         Column("snapshot_date", Date, nullable=False),
         Column("total_value_krw", Numeric(24, 4), nullable=False),
         Column("total_pnl_krw", Numeric(24, 4), nullable=False),
         Column("asset_class_breakdown", JSON, nullable=False),
         Column("holdings_detail", JSON, nullable=False),
         Column("created_at", DateTime(timezone=True)),
-        UniqueConstraint("user_id", "snapshot_date", name="uq_snapshot_user_date"),
+        UniqueConstraint(
+            "user_id", "client_id", "snapshot_date", name="uq_snapshot_user_client_date"
+        ),
     )
     metadata.create_all(conn)
 
@@ -106,7 +110,8 @@ async def test_create_holding(portfolio_client: AsyncClient) -> None:
     body = resp.json()
     assert body["market"] == "upbit"
     assert body["code"] == "KRW-BTC"
-    assert body["user_id"] == "demo"
+    assert body["user_id"] == "pb-demo"
+    assert body["client_id"] == "client-001"
     assert "id" in body
     assert "created_at" in body
     assert "updated_at" in body
@@ -141,6 +146,35 @@ async def test_list_holdings_after_create(portfolio_client: AsyncClient) -> None
     holdings = resp.json()
     assert len(holdings) == 1
     assert holdings[0]["code"] == "BTCUSDT"
+
+
+@pytest.mark.asyncio
+async def test_list_holdings_filters_by_client_id(portfolio_client: AsyncClient) -> None:
+    """client_id 쿼리는 기본 고객과 다른 고객 보유 종목을 분리한다."""
+    with patch("app.api.portfolio.get_adapter") as mock_reg:
+        mock_reg.return_value = AsyncMock()
+        await portfolio_client.post(
+            "/portfolio/holdings",
+            json={
+                "client_id": "client-002",
+                "market": "yahoo",
+                "code": "MSFT",
+                "quantity": "2",
+                "avg_cost": "300",
+                "currency": "USD",
+            },
+        )
+
+    default_resp = await portfolio_client.get("/portfolio/holdings")
+    client_resp = await portfolio_client.get("/portfolio/holdings?client_id=client-002")
+
+    assert default_resp.status_code == 200
+    assert default_resp.json() == []
+    assert client_resp.status_code == 200
+    holdings = client_resp.json()
+    assert len(holdings) == 1
+    assert holdings[0]["client_id"] == "client-002"
+    assert holdings[0]["code"] == "MSFT"
 
 
 @pytest.mark.asyncio
@@ -288,6 +322,89 @@ async def test_get_summary_with_holdings(portfolio_client: AsyncClient) -> None:
     body = resp.json()
     assert Decimal(body["total_value_krw"]) == Decimal("60000000.00")
     assert len(body["holdings"]) == 1
+
+
+@pytest.mark.asyncio
+async def test_get_clients_empty(portfolio_client: AsyncClient) -> None:
+    """GET /portfolio/clients는 빈 DB에서도 PB 고객 목록 형태를 유지한다."""
+    resp = await portfolio_client.get("/portfolio/clients")
+
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["user_id"] == "pb-demo"
+    assert body["client_count"] >= 1
+    assert body["clients"][0]["client_id"] == "client-001"
+    assert "risk_grade" in body["clients"][0]
+
+
+@pytest.mark.asyncio
+@pytest.mark.skip(reason="client briefing report endpoint is out of scope for this PR")
+async def test_client_briefing_report_success(portfolio_client: AsyncClient) -> None:
+    """고객 브리핑 리포트는 섹션별 evidence와 export_ready를 반환한다."""
+    with patch("app.api.portfolio.get_adapter") as mock_reg:
+        mock_reg.return_value = AsyncMock()
+        await portfolio_client.post(
+            "/portfolio/holdings",
+            json={
+                "market": "upbit",
+                "code": "KRW-BTC",
+                "quantity": "1.0",
+                "avg_cost": "50000000",
+                "currency": "KRW",
+            },
+        )
+
+    from app.schemas.market import Quote
+
+    mock_quote = Quote(
+        symbol="KRW-BTC",
+        market="upbit",
+        price=60000000.0,
+        change=0.0,
+        change_pct=0.0,
+        currency="KRW",
+        timestamp=datetime.now(UTC).isoformat(),
+    )
+
+    with (
+        patch("app.services.portfolio.get_adapter") as mock_adp,
+        patch("app.services.portfolio.get_rate", return_value=1.0),
+    ):
+        adapter = AsyncMock()
+        adapter.fetch_quote = AsyncMock(return_value=mock_quote)
+        mock_adp.return_value = adapter
+
+        resp = await portfolio_client.post(
+            "/portfolio/reports/client-briefing",
+            json={"client_id": "client-001"},
+        )
+
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["status"] == "success"
+    assert body["client_context"]["client_id"] == "client-001"
+    assert len(body["sections"]) == 5
+    assert all(section["evidence"] for section in body["sections"])
+    assert body["gate_results"]["evidence_gate"] == "pass"
+    assert body["export_ready"] is True
+    assert body["report_script"]
+
+
+@pytest.mark.asyncio
+@pytest.mark.skip(reason="client briefing report endpoint is out of scope for this PR")
+async def test_client_briefing_report_insufficient_data(portfolio_client: AsyncClient) -> None:
+    """보유 종목이 없으면 리포트는 근거 부족 상태로 fail closed 한다."""
+    resp = await portfolio_client.post(
+        "/portfolio/reports/client-briefing",
+        json={"client_id": "client-001"},
+    )
+
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["status"] == "insufficient_data"
+    assert body["export_ready"] is False
+    assert body["sections"] == []
+    assert body["gate_results"]["evidence_gate"].startswith("fail")
 
 
 # ──────────── Snapshots 테스트 ────────────

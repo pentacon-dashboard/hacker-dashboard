@@ -36,7 +36,8 @@ def _create_portfolio_tables(conn: Any) -> None:
         "holdings",
         metadata,
         Column("id", Integer, primary_key=True, autoincrement=True),
-        Column("user_id", String(50), nullable=False, default="demo"),
+        Column("user_id", String(50), nullable=False, default="pb-demo"),
+        Column("client_id", String(50), nullable=False, default="client-001"),
         Column("market", String(20), nullable=False),
         Column("code", String(50), nullable=False),
         Column("quantity", Numeric(24, 8), nullable=False),
@@ -49,14 +50,17 @@ def _create_portfolio_tables(conn: Any) -> None:
         "portfolio_snapshots",
         metadata,
         Column("id", Integer, primary_key=True, autoincrement=True),
-        Column("user_id", String(50), nullable=False, default="demo"),
+        Column("user_id", String(50), nullable=False, default="pb-demo"),
+        Column("client_id", String(50), nullable=False, default="client-001"),
         Column("snapshot_date", Date, nullable=False),
         Column("total_value_krw", Numeric(24, 4), nullable=False),
         Column("total_pnl_krw", Numeric(24, 4), nullable=False),
         Column("asset_class_breakdown", JSON, nullable=False),
         Column("holdings_detail", JSON, nullable=False),
         Column("created_at", DateTime(timezone=True)),
-        UniqueConstraint("user_id", "snapshot_date", name="uq_snapshot_user_date"),
+        UniqueConstraint(
+            "user_id", "client_id", "snapshot_date", name="uq_snapshot_user_client_date"
+        ),
     )
     metadata.create_all(conn)
 

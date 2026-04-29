@@ -11,6 +11,8 @@ export default [
       "node_modules/**",
       ".next/**",
       "out/**",
+      "e2e/playwright-report/**",
+      "e2e/test-results/**",
       "playwright-report/**",
       "test-results/**",
       "coverage/**",

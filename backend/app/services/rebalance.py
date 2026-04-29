@@ -102,6 +102,14 @@ def compute_drift(
     return {k: round(current.get(k, 0.0) - target.get(k, 0.0), 6) for k in all_keys}
 
 
+def compute_target_drift(
+    current_weights: dict[str, float],
+    target_weights: dict[str, float],
+) -> dict[str, float]:
+    """Pure deterministic drift helper for asset-class or sector weights."""
+    return compute_drift(current_weights, target_weights)
+
+
 def calculate_rebalance_actions(
     holdings: list[Any],
     current_values_krw: dict[int, Decimal],

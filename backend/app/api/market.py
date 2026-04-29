@@ -67,6 +67,33 @@ _SAMPLE_SYMBOLS: list[Symbol] = [
     Symbol(symbol="USD-KRW", name="USD/KRW", asset_class="fx", exchange=None, market="yahoo"),
 ]
 
+_DEFAULT_WATCHLIST_ITEMS: list[dict[str, str | None]] = [
+    {"market": "yahoo", "code": "NVDA", "memo": "AI semiconductor leader"},
+    {"market": "yahoo", "code": "AAPL", "memo": "US mega-cap core holding"},
+    {"market": "naver_kr", "code": "005930", "memo": "Korea semiconductor bellwether"},
+    {"market": "upbit", "code": "KRW-BTC", "memo": "Bitcoin KRW market"},
+]
+
+
+def seed_default_watchlist() -> None:
+    """Populate demo watchlist memory after a process restart."""
+    global _next_id
+
+    if _watchlist:
+        return
+
+    ts = datetime.now(UTC).isoformat()
+    for seed in _DEFAULT_WATCHLIST_ITEMS:
+        item_id = _next_id
+        _next_id += 1
+        _watchlist[item_id] = {
+            "id": item_id,
+            "market": seed["market"],
+            "code": seed["code"],
+            "memo": seed["memo"],
+            "created_at": ts,
+        }
+
 
 @router.get("/symbols", response_model=list[Symbol])
 async def list_symbols() -> list[Symbol]:

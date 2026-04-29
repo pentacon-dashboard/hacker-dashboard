@@ -42,6 +42,27 @@ router = APIRouter(prefix="/watchlist", tags=["watchlist"])
 
 _DEMO_USER = "demo"
 
+_SYMBOL_DISPLAY_NAMES: dict[str, str] = {
+    "AAPL": "Apple",
+    "AMZN": "Amazon",
+    "GOOGL": "Alphabet",
+    "KRW-BTC": "비트코인",
+    "KRW-ETH": "이더리움",
+    "META": "Meta",
+    "MSFT": "Microsoft",
+    "NVDA": "NVIDIA",
+    "TSLA": "Tesla",
+    "000660": "SK하이닉스",
+    "005930": "삼성전자",
+    "035420": "NAVER",
+    "035720": "카카오",
+}
+
+
+def _display_name(code: str | None) -> str:
+    normalized = str(code or "").strip().upper()
+    return _SYMBOL_DISPLAY_NAMES.get(normalized, normalized or "Unknown")
+
 
 def _alert_to_response(a: WatchlistAlert) -> WatchlistAlertResponse:
     return WatchlistAlertResponse(
@@ -79,7 +100,7 @@ async def get_watchlist_summary() -> WatchlistSummary:  # noqa: ANN201
             change_pct_str = "+0.00"
         enriched.append(
             {
-                "name": item.get("code", "Unknown"),  # memo 없으면 code 를 name 으로
+                "name": _display_name(item.get("code")),
                 "change_pct": change_pct_str,
             }
         )

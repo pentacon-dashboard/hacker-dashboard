@@ -2,8 +2,7 @@
 
 import { TrendingUp, TrendingDown } from "lucide-react";
 import { useLocale } from "@/lib/i18n/locale-provider";
-import { translateSymbolName } from "@/lib/i18n/map";
-import { getDomesticStockName } from "@/lib/market/display";
+import { getSymbolDisplayParts } from "@/lib/market/display";
 
 export interface TopListItem {
   rank: number;
@@ -19,8 +18,6 @@ interface PopularTop5Props {
 
 export function PopularTop5({ items, title }: PopularTop5Props) {
   const { t } = useLocale();
-  const translateName = (code: string, name: string) =>
-    translateSymbolName(code, name, t);
   const resolvedTitle = title ?? t("watchlist.popularTop5");
   if (items.length === 0) {
     return (
@@ -40,11 +37,10 @@ export function PopularTop5({ items, title }: PopularTop5Props) {
         {items.slice(0, 5).map((item) => {
           const change = Number(item.change_pct);
           const isPos = change >= 0;
-          const domesticName = getDomesticStockName(item.ticker);
-          const tickerLabel = domesticName ?? item.ticker;
-          const secondaryLabel = domesticName
-            ? item.ticker
-            : translateName(item.ticker, item.name);
+          const displayParts = getSymbolDisplayParts(null, item.ticker, {
+            fallbackName: item.name,
+            includeMarket: false,
+          });
           return (
             <li
               key={item.ticker}
@@ -56,8 +52,10 @@ export function PopularTop5({ items, title }: PopularTop5Props) {
                   {item.rank}
                 </span>
                 <div className="min-w-0">
-                  <p className="truncate text-xs font-medium">{tickerLabel}</p>
-                  <p className="truncate text-[10px] text-muted-foreground">{secondaryLabel}</p>
+                  <p className="truncate text-xs font-medium">{displayParts.primary}</p>
+                  <p className="truncate text-[10px] text-muted-foreground">
+                    {displayParts.secondary ?? item.ticker}
+                  </p>
                 </div>
               </div>
               <span

@@ -48,9 +48,9 @@ describe("TopHoldingsTable", () => {
     const rows = screen.getAllByRole("row").slice(1); // header 제외
     expect(rows).toHaveLength(5);
     // 1위는 NVDA (4.18M)
-    expect(within(rows[0]!).getByText("NVDA")).toBeInTheDocument();
+    expect(within(rows[0]!).getByText("NVIDIA")).toBeInTheDocument();
     // 2위는 AAPL (3.47M)
-    expect(within(rows[1]!).getByText("AAPL")).toBeInTheDocument();
+    expect(within(rows[1]!).getByText("Apple")).toBeInTheDocument();
   });
 
   it("totalValueKrw 미제공 시 holdings 합으로 비중을 계산한다", () => {

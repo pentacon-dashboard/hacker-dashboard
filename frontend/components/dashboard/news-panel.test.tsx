@@ -55,6 +55,19 @@ const NEWS_NO_THUMB: Citation[] = [
   },
 ];
 
+const INVALID_NEWS: Citation[] = [
+  {
+    doc_id: 301,
+    chunk_id: 1,
+    source_url: "not-a-url",
+    title: "",
+    published_at: null,
+    excerpt: "",
+    score: 0.11,
+    thumbnail_url: null,
+  },
+];
+
 describe("NewsPanel", () => {
   beforeEach(() => {
     vi.mocked(searchNews).mockReset();
@@ -132,6 +145,13 @@ describe("NewsPanel", () => {
       expect(searchNews).toHaveBeenCalledWith(
         expect.objectContaining({ query: "시장 동향" }),
       );
+    });
+  });
+  it("invalid citation payload 는 empty 상태로 degrade 한다", async () => {
+    vi.mocked(searchNews).mockResolvedValue(INVALID_NEWS);
+    render(<NewsPanel symbols={["AAPL"]} />);
+    await waitFor(() => {
+      expect(screen.getByTestId("news-panel-empty")).toBeInTheDocument();
     });
   });
 });

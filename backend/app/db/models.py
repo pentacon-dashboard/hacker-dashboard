@@ -60,7 +60,10 @@ class Holding(Base):
 
     id: Mapped[int] = mapped_column(primary_key=True)
     # demo 환경 — integer FK 대신 string user_id 사용
-    user_id: Mapped[str] = mapped_column(String(50), nullable=False, default="demo")
+    user_id: Mapped[str] = mapped_column(String(50), nullable=False, default="pb-demo")
+    client_id: Mapped[str] = mapped_column(
+        String(50), nullable=False, default="client-001", index=True
+    )
     market: Mapped[str] = mapped_column(String(20), nullable=False)
     code: Mapped[str] = mapped_column(String(50), nullable=False)
     quantity: Mapped[Decimal] = mapped_column(Numeric(24, 8), nullable=False)
@@ -78,7 +81,10 @@ class PortfolioSnapshot(Base):
     __tablename__ = "portfolio_snapshots"
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    user_id: Mapped[str] = mapped_column(String(50), nullable=False, default="demo")
+    user_id: Mapped[str] = mapped_column(String(50), nullable=False, default="pb-demo")
+    client_id: Mapped[str] = mapped_column(
+        String(50), nullable=False, default="client-001", index=True
+    )
     snapshot_date: Mapped[date] = mapped_column(Date, nullable=False)
     total_value_krw: Mapped[Decimal] = mapped_column(Numeric(24, 4), nullable=False)
     total_pnl_krw: Mapped[Decimal] = mapped_column(Numeric(24, 4), nullable=False)
@@ -90,7 +96,11 @@ class PortfolioSnapshot(Base):
     holdings_detail: Mapped[list[Any]] = mapped_column(JSONB, nullable=False, default=list)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
-    __table_args__ = (UniqueConstraint("user_id", "snapshot_date", name="uq_snapshot_user_date"),)
+    __table_args__ = (
+        UniqueConstraint(
+            "user_id", "client_id", "snapshot_date", name="uq_snapshot_user_client_date"
+        ),
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -146,7 +156,10 @@ class WatchlistAlert(Base):
     __tablename__ = "watchlist_alerts"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    user_id: Mapped[str] = mapped_column(String(50), nullable=False, index=True, default="demo")
+    user_id: Mapped[str] = mapped_column(String(50), nullable=False, index=True, default="pb-demo")
+    client_id: Mapped[str] = mapped_column(
+        String(50), nullable=False, index=True, default="client-001"
+    )
     symbol: Mapped[str] = mapped_column(String(50), nullable=False)  # "NVDA", "KRW-BTC"
     market: Mapped[str] = mapped_column(String(20), nullable=False)  # "yahoo", "upbit", "naver_kr"
     direction: Mapped[str] = mapped_column(String(10), nullable=False)  # "above" | "below"

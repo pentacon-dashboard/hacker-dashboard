@@ -10,5 +10,8 @@ htmlcov
 .coverage
 .env
 .env.*
-tests/
+tests/*
+!tests/fixtures/
+!tests/fixtures/news/
+!tests/fixtures/news/*.json
 # alembic/ 는 포함 — 마이그레이션 필요 (alembic/versions 포함)

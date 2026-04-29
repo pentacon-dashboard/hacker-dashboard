@@ -46,6 +46,8 @@ services:
     environment:
       DATABASE_URL: postgresql+asyncpg://hacker:hacker@postgres:5432/hacker_dashboard
       REDIS_URL: redis://redis:6379/0
+      NAVER_CLIENT_ID: ${NAVER_CLIENT_ID:-}
+      NAVER_CLIENT_SECRET: ${NAVER_CLIENT_SECRET:-}
       # 실 API 키는 플랫폼 secret 스토어 주입 — 여기엔 placeholder 만
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-placeholder}
     depends_on:

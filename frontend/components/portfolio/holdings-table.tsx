@@ -65,6 +65,58 @@ export function HoldingsTable({ holdings }: HoldingsTableProps) {
   });
 
   const numberLocale = locale === "en" ? "en-US" : "ko-KR";
+  const emptyMessage =
+    holdings.length === 0
+      ? "표시 가능한 보유 종목이 없습니다."
+      : "선택한 통화에 해당하는 보유 종목이 없습니다.";
+
+  if (sorted.length === 0) {
+    return (
+      <div className="space-y-3">
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-xs text-muted-foreground">{t("portfolio.currencyFilter")}:</span>
+          {CURRENCY_OPTIONS.map((opt) => (
+            <button
+              key={opt.key}
+              onClick={() => setCurrencyFilter(opt.key)}
+              className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
+                currencyFilter === opt.key
+                  ? "bg-primary text-primary-foreground"
+                  : "bg-muted text-muted-foreground hover:bg-muted/80"
+              }`}
+            >
+              {opt.label}
+            </button>
+          ))}
+          <span className="ml-auto text-xs text-muted-foreground">{t("portfolio.sortBy")}:</span>
+          <button
+            onClick={() => setSortKey("value_krw")}
+            className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
+              sortKey === "value_krw"
+                ? "bg-primary text-primary-foreground"
+                : "bg-muted text-muted-foreground hover:bg-muted/80"
+            }`}
+          >
+            {t("portfolio.sortByValue")}
+          </button>
+          <button
+            onClick={() => setSortKey("pnl_pct")}
+            className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
+              sortKey === "pnl_pct"
+                ? "bg-primary text-primary-foreground"
+                : "bg-muted text-muted-foreground hover:bg-muted/80"
+            }`}
+          >
+            {t("portfolio.sortByReturn")}
+          </button>
+        </div>
+
+        <div className="flex h-40 items-center justify-center rounded-lg border border-dashed text-sm text-muted-foreground">
+          {emptyMessage}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-3">

@@ -400,6 +400,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/portfolio/clients": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Clients
+         * @description Return PB-managed client portfolio overview rows.
+         */
+        get: operations["list_clients_portfolio_clients_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/portfolio/snapshots": {
         parameters: {
             query?: never;
@@ -1068,6 +1088,12 @@ export interface components {
              * @default false
              */
             include_portfolio_context: boolean;
+            /**
+             * Client Id
+             * @description Portfolio client context id
+             * @default client-001
+             */
+            client_id: string;
         };
         /** AnalyzeResponse */
         AnalyzeResponse: {
@@ -1115,6 +1141,11 @@ export interface components {
              * @default false
              */
             include_portfolio_context: boolean;
+            /**
+             * Client Id
+             * @default client-001
+             */
+            client_id: string;
         };
         /** Body_upload_csv_upload_csv_post */
         Body_upload_csv_upload_csv_post: {
@@ -1385,6 +1416,12 @@ export interface components {
         /** HoldingCreate */
         HoldingCreate: {
             /**
+             * Client Id
+             * @description PB 고객 식별자
+             * @default client-001
+             */
+            client_id: string;
+            /**
              * Market
              * @description upbit | binance | yahoo | naver_kr
              */
@@ -1446,6 +1483,13 @@ export interface components {
             id: number;
             /** User Id */
             user_id: string;
+            /**
+             * Client Id
+             * @default client-001
+             */
+            client_id: string;
+            /** Client Name */
+            client_name?: string | null;
             /** Market */
             market: string;
             /** Code */
@@ -1772,6 +1816,40 @@ export interface components {
             /** Volume */
             volume?: number | null;
         };
+        /** PortfolioClientRow */
+        PortfolioClientRow: {
+            /** Client Id */
+            client_id: string;
+            /** Client Name */
+            client_name: string;
+            /** Aum Krw */
+            aum_krw: string;
+            /** Holdings Count */
+            holdings_count: number;
+            /**
+             * Risk Grade
+             * @enum {string}
+             */
+            risk_grade: "low" | "medium" | "high";
+            /** Risk Score Pct */
+            risk_score_pct: string;
+            /** Total Pnl Pct */
+            total_pnl_pct: string;
+        };
+        /** PortfolioClientsResponse */
+        PortfolioClientsResponse: {
+            /**
+             * User Id
+             * @default pb-demo
+             */
+            user_id: string;
+            /** Aum Krw */
+            aum_krw: string;
+            /** Client Count */
+            client_count: number;
+            /** Clients */
+            clients: components["schemas"]["PortfolioClientRow"][];
+        };
         /**
          * PortfolioSummary
          * @description GET /portfolio/summary 응답.
@@ -1782,9 +1860,21 @@ export interface components {
         PortfolioSummary: {
             /**
              * User Id
-             * @default demo
+             * @default pb-demo
              */
             user_id: string;
+            /**
+             * Client Id
+             * @default client-001
+             */
+            client_id: string;
+            /** Client Name */
+            client_name?: string | null;
+            /**
+             * Pb Aum Krw
+             * @description PB가 관리하는 전체 AUM. 단일 고객 summary에서는 없을 수 있음.
+             */
+            pb_aum_krw?: string | null;
             /** Total Value Krw */
             total_value_krw: string;
             /** Total Cost Krw */
@@ -1802,6 +1892,13 @@ export interface components {
              * @description {'crypto': '0.50', 'stock_us': '0.30', ...}
              */
             asset_class_breakdown: {
+                [key: string]: string;
+            };
+            /**
+             * Sector Breakdown
+             * @description GICS 섹터 또는 비주식 자산군별 비중 {'Information Technology': '0.45'}
+             */
+            sector_breakdown?: {
                 [key: string]: string;
             };
             /** Holdings */
@@ -1960,6 +2057,11 @@ export interface components {
         };
         /** RebalanceRequest */
         RebalanceRequest: {
+            /**
+             * Client Id
+             * @default client-001
+             */
+            client_id: string;
             target_allocation: components["schemas"]["TargetAllocation"];
             constraints?: components["schemas"]["RebalanceConstraints"];
         };
@@ -2113,6 +2215,13 @@ export interface components {
             id: number;
             /** User Id */
             user_id: string;
+            /**
+             * Client Id
+             * @default client-001
+             */
+            client_id: string;
+            /** Client Name */
+            client_name?: string | null;
             /** Snapshot Date */
             snapshot_date: string;
             /** Total Value Krw */
@@ -3076,7 +3185,10 @@ export interface operations {
     };
     list_holdings_portfolio_holdings_get: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description Client ID */
+                client_id?: string;
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -3090,6 +3202,15 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HoldingResponse"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
@@ -3226,6 +3347,8 @@ export interface operations {
             query?: {
                 /** @description period_change_pct 계산 기간 (일). 기본 30일. */
                 period_days?: number;
+                /** @description Client ID */
+                client_id?: string;
             };
             header?: never;
             path?: never;
@@ -3253,6 +3376,26 @@ export interface operations {
             };
         };
     };
+    list_clients_portfolio_clients_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PortfolioClientsResponse"];
+                };
+            };
+        };
+    };
     list_snapshots_portfolio_snapshots_get: {
         parameters: {
             query?: {
@@ -3260,6 +3403,8 @@ export interface operations {
                 from?: string | null;
                 /** @description 종료 날짜 (YYYY-MM-DD) */
                 to?: string | null;
+                /** @description Client ID */
+                client_id?: string;
             };
             header?: never;
             path?: never;
@@ -3298,6 +3443,7 @@ export interface operations {
             content: {
                 /**
                  * @example {
+                 *       "client_id": "client-001",
                  *       "target_allocation": {
                  *         "stock_kr": 0.3,
                  *         "stock_us": 0.3,
@@ -3343,7 +3489,10 @@ export interface operations {
     };
     get_sector_heatmap_portfolio_sectors_heatmap_get: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description Client ID */
+                client_id?: string;
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -3359,6 +3508,15 @@ export interface operations {
                     "application/json": components["schemas"]["SectorHeatmapTile"][];
                 };
             };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
         };
     };
     get_monthly_returns_portfolio_monthly_returns_get: {
@@ -3366,6 +3524,8 @@ export interface operations {
             query?: {
                 /** @description 조회 연도 (기본: 현재 연도) */
                 year?: number | null;
+                /** @description Client ID */
+                client_id?: string;
             };
             header?: never;
             path?: never;
@@ -3395,7 +3555,10 @@ export interface operations {
     };
     get_ai_insight_portfolio_ai_insight_get: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description Client ID */
+                client_id?: string;
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -3409,6 +3572,15 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AiInsightResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

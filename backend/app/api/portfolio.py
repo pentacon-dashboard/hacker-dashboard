@@ -19,12 +19,15 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.db.models import Holding, PortfolioSnapshot
 from app.db.session import get_db
 from app.schemas.portfolio import (
+    CLIENT_ID_PATTERN,
     AiInsightResponse,
     HoldingCreate,
     HoldingResponse,
     HoldingUpdate,
     MarketLeader,
     MonthlyReturnCell,
+    PortfolioClientRow,
+    PortfolioClientsResponse,
     PortfolioSummary,
     SectorHeatmapTile,
     SnapshotResponse,
@@ -52,13 +55,36 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/portfolio", tags=["portfolio"])
 
-_DEMO_USER = "demo"
+_DEMO_USER = "pb-demo"
+_LEGACY_USER = "demo"
+_PB_USER_IDS = (_DEMO_USER, _LEGACY_USER)
+_DEFAULT_CLIENT_ID = "client-001"
+_CLIENT_NAMES: dict[str, str] = {
+    "client-001": "Client A",
+    "client-002": "Client B",
+    "client-003": "Client C",
+}
+
+
+def _client_name(client_id: str) -> str:
+    return _CLIENT_NAMES.get(client_id, client_id)
+
+
+def _risk_grade(score_pct: str) -> str:
+    score = float(score_pct)
+    if score >= 66:
+        return "high"
+    if score >= 33:
+        return "medium"
+    return "low"
 
 
 def _holding_to_response(h: Holding) -> HoldingResponse:
     return HoldingResponse(
         id=h.id,
         user_id=h.user_id,
+        client_id=getattr(h, "client_id", _DEFAULT_CLIENT_ID),
+        client_name=_client_name(getattr(h, "client_id", _DEFAULT_CLIENT_ID)),
         market=h.market,
         code=h.code,
         quantity=h.quantity,
@@ -100,6 +126,7 @@ async def create_holding(
     now = datetime.now(UTC)
     holding = Holding(
         user_id=_DEMO_USER,
+        client_id=body.client_id,
         market=body.market,
         code=body.code,
         quantity=body.quantity,
@@ -116,11 +143,20 @@ async def create_holding(
 
 @router.get("/holdings", response_model=list[HoldingResponse])
 async def list_holdings(
+    client_id: str = Query(
+        _DEFAULT_CLIENT_ID,
+        min_length=1,
+        max_length=64,
+        pattern=CLIENT_ID_PATTERN,
+        description="Client ID",
+    ),
     db: AsyncSession = Depends(get_db),
 ) -> list[HoldingResponse]:
     """보유 종목 전체 조회."""
     result = await db.execute(
-        select(Holding).where(Holding.user_id == _DEMO_USER).order_by(Holding.id)
+        select(Holding)
+        .where(Holding.user_id.in_(_PB_USER_IDS), Holding.client_id == client_id)
+        .order_by(Holding.id)
     )
     holdings = result.scalars().all()
     return [_holding_to_response(h) for h in holdings]
@@ -141,7 +177,7 @@ async def update_holding(
 ) -> HoldingResponse:
     """수량/평단가 수정."""
     result = await db.execute(
-        select(Holding).where(Holding.id == holding_id, Holding.user_id == _DEMO_USER)
+        select(Holding).where(Holding.id == holding_id, Holding.user_id.in_(_PB_USER_IDS))
     )
     holding = result.scalar_one_or_none()
     if holding is None:
@@ -169,7 +205,7 @@ async def delete_holding(
 ) -> None:
     """보유 종목 삭제."""
     result = await db.execute(
-        select(Holding).where(Holding.id == holding_id, Holding.user_id == _DEMO_USER)
+        select(Holding).where(Holding.id == holding_id, Holding.user_id.in_(_PB_USER_IDS))
     )
     holding = result.scalar_one_or_none()
     if holding is None:
@@ -190,24 +226,92 @@ async def get_summary(
         le=365,
         description="period_change_pct 계산 기간 (일). 기본 30일.",
     ),
+    client_id: str = Query(
+        _DEFAULT_CLIENT_ID,
+        min_length=1,
+        max_length=64,
+        pattern=CLIENT_ID_PATTERN,
+        description="Client ID",
+    ),
     db: AsyncSession = Depends(get_db),
 ) -> PortfolioSummary:
     """포트폴리오 집계 요약 (현재가 기반 실시간 계산).
 
     6개 KPI + 자산군 비중 + 디멘션 breakdown + TOP 종목을 한 번에 반환.
     """
-    result = await db.execute(select(Holding).where(Holding.user_id == _DEMO_USER))
+    result = await db.execute(
+        select(Holding).where(Holding.user_id.in_(_PB_USER_IDS), Holding.client_id == client_id)
+    )
     holdings = result.scalars().all()
 
-    prev_snap = await get_prev_snapshot(db, user_id=_DEMO_USER)
-    period_snap = await get_period_snapshot(db, user_id=_DEMO_USER, period_days=period_days)
+    prev_snap = await get_prev_snapshot(db, user_id=_DEMO_USER, client_id=client_id)
+    if prev_snap is None:
+        prev_snap = await get_prev_snapshot(db, user_id=_LEGACY_USER, client_id=client_id)
+    period_snap = await get_period_snapshot(
+        db, user_id=_DEMO_USER, period_days=period_days, client_id=client_id
+    )
+    if period_snap is None:
+        period_snap = await get_period_snapshot(
+            db, user_id=_LEGACY_USER, period_days=period_days, client_id=client_id
+        )
     summary = await compute_summary(
         list(holdings),
         prev_snapshot=prev_snap,
         period_snapshot=period_snap,
         period_days=period_days,
+        user_id=_DEMO_USER,
+        client_id=client_id,
+        client_name=_client_name(client_id),
     )
     return summary
+
+
+@router.get("/clients", response_model=PortfolioClientsResponse)
+async def list_clients(
+    db: AsyncSession = Depends(get_db),
+) -> PortfolioClientsResponse:
+    """Return PB-managed client portfolio overview rows."""
+    result = await db.execute(
+        select(Holding).where(Holding.user_id.in_(_PB_USER_IDS)).order_by(Holding.id)
+    )
+    holdings = list(result.scalars().all())
+
+    by_client: dict[str, list[Holding]] = {}
+    for holding in holdings:
+        cid = getattr(holding, "client_id", _DEFAULT_CLIENT_ID)
+        by_client.setdefault(cid, []).append(holding)
+    if not by_client:
+        by_client = {_DEFAULT_CLIENT_ID: [], "client-002": []}
+
+    rows: list[PortfolioClientRow] = []
+    total_aum = Decimal("0")
+    for cid, client_holdings in sorted(by_client.items()):
+        summary = await compute_summary(
+            client_holdings,
+            user_id=_DEMO_USER,
+            client_id=cid,
+            client_name=_client_name(cid),
+        )
+        aum = Decimal(summary.total_value_krw)
+        total_aum += aum
+        rows.append(
+            PortfolioClientRow(
+                client_id=cid,
+                client_name=_client_name(cid),
+                aum_krw=summary.total_value_krw,
+                holdings_count=summary.holdings_count,
+                risk_grade=_risk_grade(summary.risk_score_pct),
+                risk_score_pct=summary.risk_score_pct,
+                total_pnl_pct=summary.total_pnl_pct,
+            )
+        )
+
+    return PortfolioClientsResponse(
+        user_id=_DEMO_USER,
+        aum_krw=str(total_aum.quantize(Decimal("0.01"))),
+        client_count=len(rows),
+        clients=rows,
+    )
 
 
 # ────────────────────── Snapshots ──────────────────────
@@ -229,6 +333,13 @@ async def list_snapshots(
         pattern=r"^\d{4}-\d{2}-\d{2}$",
         description="종료 날짜 (YYYY-MM-DD)",
         alias="to",
+    ),
+    client_id: str = Query(
+        _DEFAULT_CLIENT_ID,
+        min_length=1,
+        max_length=64,
+        pattern=CLIENT_ID_PATTERN,
+        description="Client ID",
     ),
     db: AsyncSession = Depends(get_db),
 ) -> list[SnapshotResponse]:
@@ -255,7 +366,10 @@ async def list_snapshots(
                 {"msg": f"to 날짜 형식 오류: {exc}", "type": "value_error", "loc": ["query", "to"]}
             ],
         ) from exc
-    stmt = select(PortfolioSnapshot).where(PortfolioSnapshot.user_id == _DEMO_USER)
+    stmt = select(PortfolioSnapshot).where(
+        PortfolioSnapshot.user_id.in_(_PB_USER_IDS),
+        PortfolioSnapshot.client_id == client_id,
+    )
     if from_date:
         stmt = stmt.where(PortfolioSnapshot.snapshot_date >= from_date)
     if to_date:
@@ -269,6 +383,8 @@ async def list_snapshots(
         SnapshotResponse(
             id=s.id,
             user_id=s.user_id,
+            client_id=getattr(s, "client_id", _DEFAULT_CLIENT_ID),
+            client_name=_client_name(getattr(s, "client_id", _DEFAULT_CLIENT_ID)),
             snapshot_date=str(s.snapshot_date),
             total_value_krw=str(s.total_value_krw),
             total_pnl_krw=str(s.total_pnl_krw),
@@ -301,6 +417,7 @@ async def list_snapshots(
                 "application/json": {
                     "schema": {"$ref": "#/components/schemas/RebalanceRequest"},
                     "example": {
+                        "client_id": "client-001",
                         "target_allocation": {
                             "stock_kr": 0.3,
                             "stock_us": 0.3,
@@ -338,7 +455,9 @@ async def rebalance(
 
     # 1. holdings 로드
     result = await db.execute(
-        select(Holding).where(Holding.user_id == _DEMO_USER).order_by(Holding.id)
+        select(Holding)
+        .where(Holding.user_id.in_(_PB_USER_IDS), Holding.client_id == body.client_id)
+        .order_by(Holding.id)
     )
     holdings = list(result.scalars().all())
 
@@ -369,8 +488,16 @@ async def rebalance(
         )
 
     # 3. 현재가 조회 (compute_summary 재사용하여 value_krw, price 추출)
-    prev_snap = await get_prev_snapshot(db, user_id=_DEMO_USER)
-    summary = await compute_summary(list(holdings), prev_snapshot=prev_snap)
+    prev_snap = await get_prev_snapshot(db, user_id=_DEMO_USER, client_id=body.client_id)
+    if prev_snap is None:
+        prev_snap = await get_prev_snapshot(db, user_id=_LEGACY_USER, client_id=body.client_id)
+    summary = await compute_summary(
+        list(holdings),
+        prev_snapshot=prev_snap,
+        user_id=_DEMO_USER,
+        client_id=body.client_id,
+        client_name=_client_name(body.client_id),
+    )
 
     # holding id → value_krw, unit_price_krw 매핑 구성
     current_values_krw: dict[int, Decimal] = {}
@@ -471,6 +598,13 @@ async def rebalance(
     summary="섹터 히트맵",
 )
 async def get_sector_heatmap(
+    client_id: str = Query(
+        _DEFAULT_CLIENT_ID,
+        min_length=1,
+        max_length=64,
+        pattern=CLIENT_ID_PATTERN,
+        description="Client ID",
+    ),
     db: AsyncSession = Depends(get_db),
 ) -> list[SectorHeatmapTile]:
     """섹터별 비중 + 가중 PnL 히트맵 데이터를 반환한다.
@@ -478,14 +612,22 @@ async def get_sector_heatmap(
     보유 종목을 섹터로 분류하고 각 섹터의 value_krw 비중 및 손익률을 집계한다.
     미분류 종목은 '기타' 섹터로 통합.
     """
-    result = await db.execute(select(Holding).where(Holding.user_id == _DEMO_USER))
+    result = await db.execute(
+        select(Holding).where(Holding.user_id.in_(_PB_USER_IDS), Holding.client_id == client_id)
+    )
     holdings_rows = list(result.scalars().all())
 
     if not holdings_rows:
         return []
 
-    prev_snap = await get_prev_snapshot(db, user_id=_DEMO_USER)
-    summary = await compute_summary(list(holdings_rows), prev_snapshot=prev_snap)
+    prev_snap = await get_prev_snapshot(db, user_id=_DEMO_USER, client_id=client_id)
+    summary = await compute_summary(
+        list(holdings_rows),
+        prev_snapshot=prev_snap,
+        user_id=_DEMO_USER,
+        client_id=client_id,
+        client_name=_client_name(client_id),
+    )
 
     return sector_heatmap(summary.holdings)
 
@@ -502,6 +644,13 @@ async def get_monthly_returns(
         le=2100,
         description="조회 연도 (기본: 현재 연도)",
     ),
+    client_id: str = Query(
+        _DEFAULT_CLIENT_ID,
+        min_length=1,
+        max_length=64,
+        pattern=CLIENT_ID_PATTERN,
+        description="Client ID",
+    ),
     db: AsyncSession = Depends(get_db),
 ) -> list[MonthlyReturnCell]:
     """지정 연도의 일별 수익률 셀 목록을 반환한다 (365일).
@@ -513,14 +662,22 @@ async def get_monthly_returns(
 
     target_year = year if year is not None else _date.today().year
 
-    result = await db.execute(select(Holding).where(Holding.user_id == _DEMO_USER))
+    result = await db.execute(
+        select(Holding).where(Holding.user_id.in_(_PB_USER_IDS), Holding.client_id == client_id)
+    )
     holdings_rows = list(result.scalars().all())
 
     if not holdings_rows:
         return monthly_returns([], year=target_year)
 
-    prev_snap = await get_prev_snapshot(db, user_id=_DEMO_USER)
-    summary = await compute_summary(list(holdings_rows), prev_snapshot=prev_snap)
+    prev_snap = await get_prev_snapshot(db, user_id=_DEMO_USER, client_id=client_id)
+    summary = await compute_summary(
+        list(holdings_rows),
+        prev_snapshot=prev_snap,
+        user_id=_DEMO_USER,
+        client_id=client_id,
+        client_name=_client_name(client_id),
+    )
 
     return monthly_returns(summary.holdings, year=target_year)
 
@@ -531,6 +688,13 @@ async def get_monthly_returns(
     summary="AI 포트폴리오 인사이트 (stub 모드)",
 )
 async def get_ai_insight(
+    client_id: str = Query(
+        _DEFAULT_CLIENT_ID,
+        min_length=1,
+        max_length=64,
+        pattern=CLIENT_ID_PATTERN,
+        description="Client ID",
+    ),
     db: AsyncSession = Depends(get_db),
 ) -> AiInsightResponse:
     """포트폴리오 요약 기반 AI 인사이트를 반환한다.
@@ -538,16 +702,23 @@ async def get_ai_insight(
     ADR-0012 stub 모드: LLM 호출 없이 결정론적 문단 생성.
     gates 필드로 3단 품질 게이트 통과 여부 표시.
     """
-    result = await db.execute(select(Holding).where(Holding.user_id == _DEMO_USER))
+    result = await db.execute(
+        select(Holding).where(Holding.user_id.in_(_PB_USER_IDS), Holding.client_id == client_id)
+    )
     holdings_rows = list(result.scalars().all())
 
-    prev_snap = await get_prev_snapshot(db, user_id=_DEMO_USER)
-    period_snap = await get_period_snapshot(db, user_id=_DEMO_USER, period_days=30)
+    prev_snap = await get_prev_snapshot(db, user_id=_DEMO_USER, client_id=client_id)
+    period_snap = await get_period_snapshot(
+        db, user_id=_DEMO_USER, period_days=30, client_id=client_id
+    )
     summary = await compute_summary(
         list(holdings_rows),
         prev_snapshot=prev_snap,
         period_snapshot=period_snap,
         period_days=30,
+        user_id=_DEMO_USER,
+        client_id=client_id,
+        client_name=_client_name(client_id),
     )
 
     return ai_insight_stub(summary)

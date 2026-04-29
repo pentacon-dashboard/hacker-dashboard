@@ -49,7 +49,11 @@ function validate(form: FormState): FieldError {
   return errors;
 }
 
-export function AddHoldingDialog() {
+interface AddHoldingDialogProps {
+  clientId?: string;
+}
+
+export function AddHoldingDialog({ clientId = "client-001" }: AddHoldingDialogProps) {
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState<FormState>(INITIAL_FORM);
   const [errors, setErrors] = useState<FieldError>({});
@@ -60,6 +64,7 @@ export function AddHoldingDialog() {
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["portfolio", "summary"] });
       await queryClient.invalidateQueries({ queryKey: ["portfolio", "holdings"] });
+      await queryClient.invalidateQueries({ queryKey: ["portfolio", "clients"] });
       setOpen(false);
       setForm(INITIAL_FORM);
       setErrors({});
@@ -83,6 +88,7 @@ export function AddHoldingDialog() {
       return;
     }
     const body: HoldingCreate = {
+      client_id: clientId,
       market: form.market,
       code: form.code,
       quantity: form.quantity,

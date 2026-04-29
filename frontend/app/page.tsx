@@ -8,6 +8,7 @@ import {
   Layers,
   BadgeDollarSign,
   AlertTriangle,
+  Users,
 } from "lucide-react";
 import { KpiCard } from "@/components/dashboard/kpi-card";
 import { RiskGauge } from "@/components/dashboard/risk-gauge";
@@ -31,7 +32,9 @@ import { useLocale } from "@/lib/i18n/locale-provider";
 import { useDataSettings } from "@/lib/hooks/use-data-settings";
 import {
   getPortfolioSummary,
+  getPortfolioClients,
   getSnapshots,
+  type PortfolioClientsResponse,
   type PortfolioSummary,
   type SnapshotResponse,
 } from "@/lib/api/portfolio";
@@ -40,6 +43,11 @@ import {
   formatPct,
   signedColorClass,
 } from "@/lib/utils/format";
+import {
+  buildDashboardNewsQuery,
+  getDisplayableHoldings,
+  getDisplayableHoldingSymbols,
+} from "@/lib/portfolio/display-safety";
 
 const ASSET_CLASS_LABEL_KEYS: Record<string, string> = {
   stock_kr: "dashboard.alloc.stockKr",
@@ -69,6 +77,8 @@ function formatDate(d: Date): string {
 export default function DashboardHome() {
   const [summary, setSummary] = useState<PortfolioSummary | null>(null);
   const [snapshots, setSnapshots] = useState<SnapshotResponse[] | null>(null);
+  const [clients, setClients] = useState<PortfolioClientsResponse | null>(null);
+  const [selectedClientId, setSelectedClientId] = useState("client-001");
   const [error, setError] = useState<string | null>(null);
   const [period, setPeriod] = useState<PeriodKey>("1M");
   const { t } = useLocale();
@@ -76,6 +86,23 @@ export default function DashboardHome() {
 
   // Stable ref to the fetch function so the interval can always call the latest version
   const fetchRef = useRef<(() => void) | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    getPortfolioClients()
+      .then((data) => {
+        if (cancelled) return;
+        setClients(data);
+        const firstClient = data.clients[0]?.client_id;
+        if (firstClient) setSelectedClientId(firstClient);
+      })
+      .catch(() => {
+        if (!cancelled) setClients(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -93,8 +120,8 @@ export default function DashboardHome() {
       const toStr = formatDate(to);
 
       Promise.all([
-        getPortfolioSummary(days),
-        getSnapshots(fromStr, toStr).catch(() => [] as SnapshotResponse[]),
+        getPortfolioSummary(days, selectedClientId),
+        getSnapshots(fromStr, toStr, selectedClientId).catch(() => [] as SnapshotResponse[]),
       ])
         .then(([s, snaps]) => {
           if (cancelled) return;
@@ -116,7 +143,7 @@ export default function DashboardHome() {
     return () => {
       cancelled = true;
     };
-  }, [period]);
+  }, [period, selectedClientId]);
 
   // Auto-refresh interval — responds to settings changes without re-fetching from scratch
   useEffect(() => {
@@ -154,9 +181,161 @@ export default function DashboardHome() {
     from.setDate(to.getDate() - PERIOD_DAYS[period]);
     return `${formatDate(from)} ~ ${formatDate(to)}`;
   }, [period]);
+  const displayHoldings = useMemo(
+    () => getDisplayableHoldings(summary?.holdings ?? []),
+    [summary],
+  );
+  const hiddenHoldingCount = Math.max(
+    0,
+    (summary?.holdings.length ?? 0) - displayHoldings.length,
+  );
+  const newsSymbols = useMemo(
+    () => getDisplayableHoldingSymbols(summary?.holdings ?? []),
+    [summary],
+  );
+  const newsQuery = useMemo(
+    () => buildDashboardNewsQuery(summary?.holdings ?? []),
+    [summary],
+  );
 
   const hasError = error !== null;
   const isLoading = summary === null;
+  const selectedClient = clients?.clients.find(
+    (client) => client.client_id === selectedClientId,
+  );
+  const hasOnlyCorruptedHoldings =
+    summary !== null && hiddenHoldingCount > 0 && displayHoldings.length === 0;
+
+  function renderClientBook() {
+    return (
+      <SectionCard
+        title="PB 고객 북"
+        testId="section-client-book"
+        action={
+          clients ? (
+            <span className="text-xs text-muted-foreground">
+              전체 AUM {formatKRWCompact(clients.aum_krw)}
+            </span>
+          ) : null
+        }
+      >
+        {clients === null ? (
+          <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-4">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <Skeleton key={i} className="h-20 w-full" />
+            ))}
+          </div>
+        ) : clients.clients.length === 0 ? (
+          <div className="flex h-20 items-center justify-center text-sm text-muted-foreground">
+            등록된 고객 포트폴리오가 없습니다.
+          </div>
+        ) : (
+          <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-4">
+            {clients.clients.map((client) => {
+              const active = client.client_id === selectedClientId;
+              return (
+                <button
+                  key={client.client_id}
+                  type="button"
+                  onClick={() => setSelectedClientId(client.client_id)}
+                  className={`min-h-20 rounded-md border p-3 text-left transition-colors ${
+                    active ? "border-primary bg-primary/5" : "border-border hover:bg-accent"
+                  }`}
+                  aria-pressed={active}
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="flex min-w-0 items-center gap-2 text-sm font-semibold">
+                      <Users className="h-4 w-4 shrink-0" />
+                      <span className="truncate">{client.client_name}</span>
+                    </span>
+                    <span
+                      className={`text-xs font-semibold ${signedColorClass(client.total_pnl_pct)}`}
+                    >
+                      {formatPct(client.total_pnl_pct, { signed: true })}
+                    </span>
+                  </div>
+                  <div className="mt-2 flex items-center justify-between gap-2 text-xs text-muted-foreground">
+                    <span>{formatKRWCompact(client.aum_krw)}</span>
+                    <span>{client.holdings_count}개 보유</span>
+                    <span>{client.risk_grade}</span>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        )}
+        {selectedClient && (
+          <p className="mt-3 text-xs text-muted-foreground">
+            선택 고객: {selectedClient.client_name} ({selectedClient.client_id})
+          </p>
+        )}
+      </SectionCard>
+    );
+  }
+
+  if (hasOnlyCorruptedHoldings) {
+    return (
+      <div className="space-y-5">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight">{t("dashboard.title")}</h1>
+            <p className="mt-0.5 text-sm text-muted-foreground">
+              {t("dashboard.subtitle")}
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <PeriodTabs value={period} onChange={setPeriod} />
+            <span
+              className="rounded-md border bg-card px-3 py-1 text-xs text-muted-foreground tabular-nums"
+              data-testid="dashboard-date-range"
+            >
+              {dateRange}
+            </span>
+          </div>
+        </div>
+
+        {hasError && (
+          <div
+            role="alert"
+            className="rounded-md border border-destructive bg-destructive/10 p-3 text-sm text-destructive"
+          >
+            {error}
+          </div>
+        )}
+
+        {renderClientBook()}
+
+        <div className="rounded-md border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">
+          <p className="font-medium">{t("common.dataCorruptedTitle")}</p>
+          <p className="mt-1 text-xs text-amber-800">
+            보유 종목 {hiddenHoldingCount}건은 심볼 또는 통화 값이 손상되어 대시보드 요약에서 제외했습니다.
+          </p>
+        </div>
+
+        <section className="grid grid-cols-1 gap-4 lg:grid-cols-8">
+          <SectionCard
+            title={t("dashboard.latestNews")}
+            className="lg:col-span-5"
+            testId="section-news-card"
+            action={
+              <span className="text-xs text-muted-foreground">
+                {t("common.marketNewsFallback")}
+              </span>
+            }
+          >
+            <NewsPanel symbols={[]} limit={5} />
+          </SectionCard>
+          <SectionCard
+            title={t("dashboard.marketLeaders")}
+            className="lg:col-span-3"
+            testId="section-market-leaders"
+          >
+            <MarketLeaders limit={5} />
+          </SectionCard>
+        </section>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-5">
@@ -187,6 +366,8 @@ export default function DashboardHome() {
           {error}
         </div>
       )}
+
+      {renderClientBook()}
 
       {/* KPI 스트립 — 5번째: 오늘 손익 */}
       <section aria-label="핵심 지표" className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-6">
@@ -342,13 +523,20 @@ export default function DashboardHome() {
               ))}
             </div>
           ) : (
-            <TopHoldingsTable
-              holdings={summary.holdings}
-              limit={5}
-              totalValueKrw={Number(summary.total_value_krw)}
-              showAvgCost
-              showCurrentPrice
-            />
+            <>
+              {hiddenHoldingCount > 0 && (
+                <p className="mb-3 text-xs text-muted-foreground">
+                  일부 보유 종목은 심볼 또는 통화 데이터가 올바르지 않아 숨김 처리되었습니다.
+                </p>
+              )}
+              <TopHoldingsTable
+                holdings={displayHoldings}
+                limit={5}
+                totalValueKrw={Number(summary.total_value_krw)}
+                showAvgCost
+                showCurrentPrice
+              />
+            </>
           )}
         </SectionCard>
 
@@ -383,12 +571,8 @@ export default function DashboardHome() {
           }
         >
           <NewsPanel
-            symbols={summary?.holdings.map((h: { code: string }) => h.code) ?? []}
-            query={(() => {
-              if (!summary) return undefined;
-              const codes = summary.holdings.map((h: { code: string }) => h.code);
-              return codes.length > 0 ? codes.slice(0, 5).join(" OR ") : "market";
-            })()}
+            symbols={newsSymbols}
+            query={newsQuery ?? "market"}
             limit={5}
           />
         </SectionCard>

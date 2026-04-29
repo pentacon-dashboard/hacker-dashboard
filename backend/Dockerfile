@@ -21,6 +21,8 @@ RUN uv venv /opt/venv && \
 # 소스 복사 (alembic 마이그레이션 포함)
 COPY app/ ./app/
 COPY alembic/ ./alembic/
+COPY scripts/ ./scripts/
+COPY tests/fixtures/news/ ./tests/fixtures/news/
 COPY alembic.ini ./
 
 # ── 런타임 스테이지 ────────────────────────────────────────────────────────────
@@ -40,6 +42,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends curl && \
 COPY --from=builder /opt/venv /opt/venv
 COPY --from=builder /app/app ./app
 COPY --from=builder /app/alembic ./alembic
+COPY --from=builder /app/scripts ./scripts
+COPY --from=builder /app/tests/fixtures/news ./tests/fixtures/news
 COPY --from=builder /app/alembic.ini ./alembic.ini
 
 ENV PATH="/opt/venv/bin:$PATH" \

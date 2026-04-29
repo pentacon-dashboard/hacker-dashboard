@@ -12,6 +12,7 @@ from __future__ import annotations
 import json
 import os
 from datetime import UTC, datetime
+from pathlib import Path
 from typing import Any
 
 from app.services.news.chunking import split_text
@@ -251,21 +252,28 @@ def _ingest_stub_sync(
     }
 
 
+def _fixture_dir_candidates(fixture_dir: str | None) -> list[Path]:
+    if fixture_dir is not None:
+        return [Path(fixture_dir)]
+
+    current = Path(__file__).resolve()
+    candidates: list[Path] = []
+    for parent in current.parents:
+        candidates.append(parent / "backend" / "tests" / "fixtures" / "news")
+        candidates.append(parent / "tests" / "fixtures" / "news")
+    return candidates
+
+
 def load_fixture_corpus(fixture_dir: str | None = None) -> None:
     """tests/fixtures/news/*.json 를 stub 저장소에 사전 적재한다.
 
     동기 컨텍스트(lifespan 초기화, 테스트 setup 등)에서 안전하게 호출 가능.
     """
-    from pathlib import Path
-
-    if fixture_dir is None:
-        # backend/app/services/news/ → backend/ → repo root 탐색
-        base = Path(__file__).resolve().parents[4]  # → repo root
-        fixture_dir_path = base / "backend" / "tests" / "fixtures" / "news"
-    else:
-        fixture_dir_path = Path(fixture_dir)
-
-    if not fixture_dir_path.exists():
+    fixture_dir_path = next(
+        (candidate for candidate in _fixture_dir_candidates(fixture_dir) if candidate.exists()),
+        None,
+    )
+    if fixture_dir_path is None:
         return
 
     for json_file in sorted(fixture_dir_path.glob("*.json")):

@@ -10,16 +10,29 @@ import {
   createAlert,
   updateAlert,
   deleteAlert,
+  listWatchlist,
   type WatchlistAlert,
   type AlertCreate,
+  type WatchlistItemResponse,
 } from "@/lib/api/watchlist";
 import { useLocale } from "@/lib/i18n/locale-provider";
+import {
+  getSymbolDisplayParts,
+  isValidSymbolCode,
+} from "@/lib/market/display";
 
 const QUERY_KEY = ["watchlist", "alerts"] as const;
 
 function AlertRow({ alert }: { alert: WatchlistAlert }) {
   const { t } = useLocale();
   const qc = useQueryClient();
+  const hasValidSymbol = isValidSymbolCode(alert.market, alert.symbol);
+  const displayParts = hasValidSymbol
+    ? getSymbolDisplayParts(alert.market, alert.symbol)
+    : null;
+  const displayLabel = hasValidSymbol
+    ? displayParts?.primary ?? alert.symbol
+    : t("watchlist.alert.corrupted", { id: alert.id });
 
   const toggleMutation = useMutation({
     mutationFn: () =>
@@ -68,39 +81,45 @@ function AlertRow({ alert }: { alert: WatchlistAlert }) {
       data-testid={`alert-rule-${alert.id}`}
     >
       <div className="min-w-0 flex-1">
-        <p className="text-xs font-medium">{alert.symbol}</p>
+        <p className="text-xs font-medium">{displayLabel}</p>
+        {hasValidSymbol && displayParts?.secondary ? (
+          <p className="text-[10px] text-muted-foreground">
+            {displayParts.secondary}
+          </p>
+        ) : null}
         <p className="text-[10px] text-muted-foreground">
-          {alert.direction === "above" ? t("watchlist.direction.above") : t("watchlist.direction.below")}{" "}
-          {threshold.toLocaleString("ko-KR")}
+          {hasValidSymbol
+            ? `${alert.direction === "above" ? t("watchlist.direction.above") : t("watchlist.direction.below")} ${threshold.toLocaleString("ko-KR")}`
+            : t("watchlist.alert.corruptedHint")}
         </p>
       </div>
 
       <div className="flex items-center gap-1 shrink-0">
-        {/* 벨 토글 */}
-        <button
-          type="button"
-          onClick={() => toggleMutation.mutate()}
-          disabled={toggleMutation.isPending}
-          aria-label={`${alert.symbol} ${t(alert.enabled ? "watchlist.alert.toggleOff" : "watchlist.alert.toggleOn")}`}
-          className={`flex h-7 w-7 items-center justify-center rounded-full transition-colors ${
-            alert.enabled
-              ? "bg-primary/10 text-primary hover:bg-primary/20"
-              : "bg-muted text-muted-foreground hover:bg-muted/80"
-          }`}
-        >
-          {alert.enabled ? (
-            <Bell className="h-3.5 w-3.5" aria-hidden="true" />
-          ) : (
-            <BellOff className="h-3.5 w-3.5" aria-hidden="true" />
-          )}
-        </button>
+        {hasValidSymbol && (
+          <button
+            type="button"
+            onClick={() => toggleMutation.mutate()}
+            disabled={toggleMutation.isPending}
+            aria-label={`${displayLabel} ${t(alert.enabled ? "watchlist.alert.toggleOff" : "watchlist.alert.toggleOn")}`}
+            className={`flex h-7 w-7 items-center justify-center rounded-full transition-colors ${
+              alert.enabled
+                ? "bg-primary/10 text-primary hover:bg-primary/20"
+                : "bg-muted text-muted-foreground hover:bg-muted/80"
+            }`}
+          >
+            {alert.enabled ? (
+              <Bell className="h-3.5 w-3.5" aria-hidden="true" />
+            ) : (
+              <BellOff className="h-3.5 w-3.5" aria-hidden="true" />
+            )}
+          </button>
+        )}
 
-        {/* 삭제 버튼 */}
         <button
           type="button"
           onClick={() => deleteMutation.mutate()}
           disabled={deleteMutation.isPending}
-          aria-label={`${alert.symbol} ${t("watchlist.alert.delete")}`}
+          aria-label={`${displayLabel} ${t("watchlist.alert.delete")}`}
           className="flex h-7 w-7 items-center justify-center rounded-full text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors"
         >
           <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
@@ -112,13 +131,13 @@ function AlertRow({ alert }: { alert: WatchlistAlert }) {
 
 interface AddAlertFormProps {
   onClose: () => void;
+  watchlistItems: WatchlistItemResponse[];
 }
 
-function AddAlertForm({ onClose }: AddAlertFormProps) {
+function AddAlertForm({ onClose, watchlistItems }: AddAlertFormProps) {
   const { t } = useLocale();
   const qc = useQueryClient();
-  const [symbol, setSymbol] = useState("");
-  const [market, setMarket] = useState("yahoo");
+  const [selection, setSelection] = useState("");
   const [direction, setDirection] = useState<"above" | "below">("above");
   const [threshold, setThreshold] = useState("");
 
@@ -133,10 +152,12 @@ function AddAlertForm({ onClose }: AddAlertFormProps) {
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     const thresholdNum = Number(threshold);
-    if (!symbol.trim() || !Number.isFinite(thresholdNum) || thresholdNum <= 0)
+    if (!selection || !Number.isFinite(thresholdNum) || thresholdNum <= 0)
       return;
+    const [market, symbol] = selection.split("|");
+    if (!market || !symbol) return;
     createMutation.mutate({
-      symbol: symbol.trim().toUpperCase(),
+      symbol,
       market,
       direction,
       threshold: thresholdNum,
@@ -149,29 +170,22 @@ function AddAlertForm({ onClose }: AddAlertFormProps) {
       className="space-y-2 rounded-lg border bg-muted/30 p-3"
       data-testid="add-alert-form"
     >
-      <div className="flex gap-2">
-        <input
-          type="text"
-          placeholder={t("watchlist.alert.ticker")}
-          value={symbol}
-          onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-            setSymbol(e.target.value)
-          }
-          className="h-7 flex-1 rounded-md border bg-background px-2 text-xs focus:outline-none focus:ring-2 focus:ring-ring"
-          aria-label={t("watchlist.alert.ticker")}
-          required
-        />
-        <input
-          type="text"
-          placeholder={t("watchlist.alert.market")}
-          value={market}
-          onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-            setMarket(e.target.value)
-          }
-          className="h-7 w-24 rounded-md border bg-background px-2 text-xs focus:outline-none focus:ring-2 focus:ring-ring"
-          aria-label={t("watchlist.alert.market")}
-        />
-      </div>
+      <select
+        value={selection}
+        onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
+          setSelection(e.target.value)
+        }
+        className="h-7 w-full rounded-md border bg-background px-2 text-xs focus:outline-none focus:ring-2 focus:ring-ring"
+        aria-label={t("watchlist.alert.ticker")}
+        required
+      >
+        <option value="">{t("watchlist.alert.ticker")}</option>
+        {watchlistItems.map((item) => (
+          <option key={item.id} value={`${item.market}|${item.code}`}>
+            {getSymbolDisplayParts(item.market, item.code).primary}
+          </option>
+        ))}
+      </select>
 
       <div className="flex gap-2">
         <select
@@ -200,6 +214,12 @@ function AddAlertForm({ onClose }: AddAlertFormProps) {
         />
       </div>
 
+      {watchlistItems.length === 0 ? (
+        <p className="text-[10px] text-muted-foreground">
+          {t("watchlist.empty.desc")}
+        </p>
+      ) : null}
+
       {createMutation.isError && (
         <p className="text-[10px] text-destructive" role="alert">
           {t("watchlist.alertAddFail")}
@@ -220,7 +240,7 @@ function AddAlertForm({ onClose }: AddAlertFormProps) {
           type="submit"
           size="sm"
           className="h-6 text-xs"
-          disabled={createMutation.isPending}
+          disabled={createMutation.isPending || watchlistItems.length === 0}
         >
           {createMutation.isPending ? t("watchlist.alert.saving") : t("watchlist.alert.save")}
         </Button>
@@ -238,6 +258,19 @@ export function AlertSettingsCard() {
     queryFn: getAlerts,
     staleTime: 30_000,
   });
+  const watchlistQuery = useQuery({
+    queryKey: ["watchlist"],
+    queryFn: listWatchlist,
+    staleTime: 30_000,
+  });
+  const alerts = data ?? [];
+  const invalidAlertCount = alerts.filter(
+    (alert) => !isValidSymbolCode(alert.market, alert.symbol),
+  ).length;
+  const orderedAlerts = [
+    ...alerts.filter((alert) => isValidSymbolCode(alert.market, alert.symbol)),
+    ...alerts.filter((alert) => !isValidSymbolCode(alert.market, alert.symbol)),
+  ];
 
   return (
     <div className="space-y-3" data-testid="alert-settings-card">
@@ -256,7 +289,16 @@ export function AlertSettingsCard() {
       </div>
 
       {showForm && (
-        <AddAlertForm onClose={() => setShowForm(false)} />
+        <AddAlertForm
+          onClose={() => setShowForm(false)}
+          watchlistItems={watchlistQuery.data ?? []}
+        />
+      )}
+
+      {invalidAlertCount > 0 && (
+        <p className="text-[10px] text-amber-700">
+          {t("watchlist.alert.corruptedCount", { n: invalidAlertCount })}
+        </p>
       )}
 
       {isLoading ? (
@@ -273,7 +315,7 @@ export function AlertSettingsCard() {
         >
           {t("watchlist.alertsError")}
         </p>
-      ) : (data ?? []).length === 0 ? (
+      ) : alerts.length === 0 ? (
         <p
           className="text-xs text-muted-foreground"
           data-testid="alert-rules-empty"
@@ -282,7 +324,7 @@ export function AlertSettingsCard() {
         </p>
       ) : (
         <ul className="space-y-2" data-testid="alert-rules-list">
-          {(data ?? []).map((alert) => (
+          {orderedAlerts.map((alert) => (
             <AlertRow key={alert.id} alert={alert} />
           ))}
         </ul>

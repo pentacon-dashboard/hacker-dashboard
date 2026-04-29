@@ -4,13 +4,14 @@ import { render, screen, waitFor, fireEvent } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { LocaleProvider } from "@/lib/i18n/locale-provider";
 import { AlertSettingsCard } from "./alert-settings-card";
-import type { WatchlistAlert } from "@/lib/api/watchlist";
+import type { WatchlistAlert, WatchlistItemResponse } from "@/lib/api/watchlist";
 
 vi.mock("@/lib/api/watchlist", () => ({
   getAlerts: vi.fn(),
   createAlert: vi.fn(),
   updateAlert: vi.fn(),
   deleteAlert: vi.fn(),
+  listWatchlist: vi.fn(),
 }));
 
 import {
@@ -18,6 +19,7 @@ import {
   createAlert,
   updateAlert,
   deleteAlert,
+  listWatchlist,
 } from "@/lib/api/watchlist";
 
 const MOCK_ALERTS: WatchlistAlert[] = [
@@ -43,6 +45,15 @@ const MOCK_ALERTS: WatchlistAlert[] = [
   },
 ];
 
+const MOCK_WATCHLIST: WatchlistItemResponse[] = [
+  {
+    id: 1,
+    market: "yahoo",
+    code: "AAPL",
+    created_at: "2026-04-20T00:00:00Z",
+  },
+];
+
 function makeWrapper() {
   const qc = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
@@ -58,6 +69,7 @@ function makeWrapper() {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  vi.mocked(listWatchlist).mockResolvedValue(MOCK_WATCHLIST);
 });
 
 describe("AlertSettingsCard", () => {
@@ -77,8 +89,8 @@ describe("AlertSettingsCard", () => {
 
     expect(screen.getByTestId("alert-rule-1")).toBeInTheDocument();
     expect(screen.getByTestId("alert-rule-2")).toBeInTheDocument();
-    expect(screen.getByText("NVDA")).toBeInTheDocument();
-    expect(screen.getByText("KRW-BTC")).toBeInTheDocument();
+    expect(screen.getByText("NVIDIA")).toBeInTheDocument();
+    expect(screen.getByText("비트코인")).toBeInTheDocument();
   });
 
   it("빈 배열이면 empty state를 렌더한다", async () => {
@@ -133,7 +145,7 @@ describe("AlertSettingsCard", () => {
     );
 
     fireEvent.change(screen.getByLabelText("티커 (예: AAPL)"), {
-      target: { value: "AAPL" },
+      target: { value: "yahoo|AAPL" },
     });
     fireEvent.change(screen.getByLabelText("기준가"), {
       target: { value: "260" },
@@ -163,7 +175,7 @@ describe("AlertSettingsCard", () => {
       expect(screen.getByTestId("alert-rule-1")).toBeInTheDocument(),
     );
 
-    fireEvent.click(screen.getByLabelText("NVDA 끄기"));
+    fireEvent.click(screen.getByLabelText("NVIDIA 끄기"));
     await waitFor(() => {
       expect(updateAlert).toHaveBeenCalledWith(1, { enabled: false });
     });
@@ -178,9 +190,33 @@ describe("AlertSettingsCard", () => {
       expect(screen.getByTestId("alert-rule-1")).toBeInTheDocument(),
     );
 
-    fireEvent.click(screen.getByLabelText("NVDA 알림 삭제"));
+    fireEvent.click(screen.getByLabelText("NVIDIA 알림 삭제"));
     await waitFor(() => {
       expect(deleteAlert).toHaveBeenCalledWith(1);
     });
+  });
+
+  it("손상된 심볼은 복구용 라벨로 표시하고 토글을 숨긴다", async () => {
+    vi.mocked(getAlerts).mockResolvedValue([
+      {
+        id: 9,
+        user_id: "demo",
+        symbol: "􎦷󱳲µh",
+        market: "upbit",
+        direction: "above",
+        threshold: "4.2300",
+        enabled: true,
+        created_at: "2026-04-20T00:00:00Z",
+      },
+    ]);
+
+    render(<AlertSettingsCard />, { wrapper: makeWrapper() });
+    await waitFor(() =>
+      expect(screen.getByTestId("alert-rules-list")).toBeInTheDocument(),
+    );
+
+    expect(screen.getByText("손상된 알림 #9")).toBeInTheDocument();
+    expect(screen.queryByLabelText("손상된 알림 #9 끄기")).not.toBeInTheDocument();
+    expect(screen.getByLabelText("손상된 알림 #9 알림 삭제")).toBeInTheDocument();
   });
 });

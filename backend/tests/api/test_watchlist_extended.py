@@ -52,6 +52,16 @@ async def test_summary_with_items(client: AsyncClient) -> None:
     assert data["watched_count"] == 2
 
 
+@pytest.mark.asyncio
+async def test_summary_uses_user_friendly_symbol_name(client: AsyncClient) -> None:
+    await client.post("/market/watchlist/items", json={"market": "naver_kr", "code": "005930"})
+
+    resp = await client.get("/watchlist/summary")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["top_gainer_name"] == "삼성전자"
+
+
 # ──────────────── GET /watchlist/popular ────────────────
 
 
