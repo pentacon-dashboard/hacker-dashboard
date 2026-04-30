@@ -13,6 +13,29 @@ export type PortfolioSummary = components["schemas"]["PortfolioSummary"];
 export type SnapshotResponse = components["schemas"]["SnapshotResponse"];
 export type PortfolioClientsResponse = components["schemas"]["PortfolioClientsResponse"];
 
+export interface ReportEvidenceItem {
+  type: string;
+  ref: string;
+  description?: string;
+}
+
+export interface ClientBriefingSection {
+  title: string;
+  body: string;
+  evidence?: ReportEvidenceItem[];
+}
+
+export interface ClientBriefingReportResponse {
+  status: "success" | "warning" | "degraded" | "insufficient_data";
+  client_context: Record<string, unknown>;
+  metrics: Record<string, unknown>;
+  sections: ClientBriefingSection[];
+  evidence: ReportEvidenceItem[];
+  gate_results: Record<string, string>;
+  export_ready: boolean;
+  report_script: string | null;
+}
+
 type ListHoldingsResponse =
   paths["/portfolio/holdings"]["get"]["responses"]["200"]["content"]["application/json"];
 
@@ -94,6 +117,16 @@ export async function getSnapshots(
 
 export async function getPortfolioClients(): Promise<PortfolioClientsResponse> {
   return apiFetch<PortfolioClientsResponse>("/portfolio/clients");
+}
+
+export async function createClientBriefingReport(body: {
+  client_id: string;
+  target_allocation?: Record<string, number>;
+}): Promise<ClientBriefingReportResponse> {
+  return apiFetch<ClientBriefingReportResponse>("/portfolio/reports/client-briefing", {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
 }
 
 // --- Sprint-08 B-α 신규 엔드포인트 (BE 미구현 시 MSW fallback) ---

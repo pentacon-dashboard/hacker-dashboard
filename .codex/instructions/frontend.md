@@ -14,6 +14,14 @@
 - Show Router reason, gate status, evidence, and confidence for analysis outputs.
 - Keep operational dashboard density; avoid marketing-style landing pages.
 
+## Mock Boundaries
+
+- Browser MSW is for customer/portfolio demo endpoints only. Do not register market, symbol, quote, news, watchlist, notifications, settings, upload, or Copilot handlers in the app-level browser worker.
+- `NEXT_PUBLIC_COPILOT_MOCK` and `COPILOT_MOCK` are not valid app-runtime switches. Copilot should proxy to the backend by default.
+- Do not disable realtime WebSocket quotes because a customer demo mock is enabled. Use `NEXT_PUBLIC_DISABLE_REALTIME_WS=1` only for an explicit realtime test scenario.
+- If a route needs deterministic data for a test, keep that mock inside the test fixture or Playwright route, not the global app provider.
+- Before finishing mock-related frontend work, run the mock boundary tests in `frontend/tests/harness/mock-boundary.test.ts`.
+
 ## Tests
 
 - Run focused Vitest for changed components.

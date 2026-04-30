@@ -4,12 +4,17 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { Globe } from "lucide-react";
 import { useLocale } from "@/lib/i18n/locale-provider";
+import {
+  formatSignedPercent,
+  parsePercent,
+  type PercentValue,
+} from "@/components/market-analyze/percent";
 
 // BE /market/world-heatmap 실제 스키마 (나라별)
 export interface CountryHeatmapItem {
   country_code: string;
   country_name: string;
-  change_pct: string;
+  change_pct: PercentValue;
   market_cap_usd: string;
 }
 
@@ -18,8 +23,8 @@ interface WorldHeatmapProps {
   loading?: boolean;
 }
 
-function getHeatColor(pctStr: string): string {
-  const pct = parseFloat(pctStr);
+function getHeatColor(value: PercentValue): string {
+  const pct = parsePercent(value);
   if (isNaN(pct)) return "bg-muted text-muted-foreground";
   if (pct >= 2) return "bg-green-600/80 text-white dark:bg-green-600/70";
   if (pct >= 0.5) return "bg-green-500/50 text-green-900 dark:text-green-100";
@@ -54,7 +59,7 @@ export function WorldHeatmap({ data, loading }: WorldHeatmapProps) {
             {/* 지역별 히트맵 그리드 — 옵션 F-1 */}
             <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
               {data.map((country) => {
-                const positive = !country.change_pct.startsWith("-");
+                const changeLabel = formatSignedPercent(country.change_pct);
                 return (
                   <div
                     key={country.country_code}
@@ -62,12 +67,11 @@ export function WorldHeatmap({ data, loading }: WorldHeatmapProps) {
                       "rounded-lg px-3 py-2.5 transition-opacity hover:opacity-90",
                       getHeatColor(country.change_pct),
                     )}
-                    aria-label={`${country.country_name} ${country.change_pct}%`}
+                    aria-label={`${country.country_name} ${changeLabel}`}
                   >
                     <p className="text-xs font-bold">{country.country_name}</p>
                     <p className="mt-0.5 text-lg font-bold tabular-nums">
-                      {positive && !country.change_pct.startsWith("+") ? "+" : ""}
-                      {country.change_pct}%
+                      {changeLabel}
                     </p>
                     <p className="mt-0.5 truncate text-[10px] opacity-80">
                       {country.market_cap_usd}

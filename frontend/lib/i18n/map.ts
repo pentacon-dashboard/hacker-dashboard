@@ -42,6 +42,9 @@ const SECTOR_NAME_TO_KEY: Record<string, string> = {
   "Communication Services": "portfolio.sector.communication",
   "Crypto": "portfolio.sector.crypto",
   "Tech": "portfolio.sector.tech",
+  "KR Equity": "portfolio.sector.krEquity",
+  "US Equity": "portfolio.sector.usEquity",
+  "Cash": "portfolio.sector.cash",
   // market-analyze aliases (same keys, different Korean spelling)
   "IT / Technology": "portfolio.sector.technology",
   "IT": "portfolio.sector.technology",

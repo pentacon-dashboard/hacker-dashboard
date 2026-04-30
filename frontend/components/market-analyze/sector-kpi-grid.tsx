@@ -4,9 +4,30 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { TrendingUp, TrendingDown, BarChart3 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useLocale } from "@/lib/i18n/locale-provider";
+import {
+  formatSignedPercent,
+  isNonNegativePercent,
+  parsePercent,
+  type PercentValue,
+} from "@/components/market-analyze/percent";
 
 // BE가 한국어로 내려주는 섹터명 → i18n 키 매핑 테이블
 const SECTOR_KEY_MAP: Record<string, string> = {
+  "Information Technology": "market.sector.it",
+  Technology: "market.sector.it",
+  Semiconductor: "market.sector.semiconductor",
+  Financials: "market.sector.finance",
+  Healthcare: "market.sector.health",
+  Energy: "market.sector.energy",
+  "Consumer Disc.": "market.sector.consumer",
+  "Consumer Discretionary": "market.sector.consumer",
+  "Consumer Staples": "market.sector.consumer",
+  Industrials: "market.sector.industrial",
+  Materials: "market.sector.materials",
+  Utilities: "market.sector.utilities",
+  "Real Estate": "market.sector.realEstate",
+  Communication: "market.sector.telecom",
+  "Communication Services": "market.sector.telecom",
   "정보기술": "market.sector.it",
   "반도체": "market.sector.semiconductor",
   "금융": "market.sector.finance",
@@ -23,7 +44,7 @@ const SECTOR_KEY_MAP: Record<string, string> = {
 // BE /market/sectors 실제 스키마
 export interface SectorItem {
   name: string;
-  change_pct: string;
+  change_pct: PercentValue;
   constituents: number;
   leaders: string[];
 }
@@ -54,11 +75,12 @@ export function SectorKpiGrid({ sectors, loading }: SectorKpiGridProps) {
 
         {!loading &&
           sectors.map((sector) => {
-            const positive = !sector.change_pct.startsWith("-");
-            const numPct = parseFloat(sector.change_pct);
+            const positive = isNonNegativePercent(sector.change_pct);
+            const numPct = parsePercent(sector.change_pct);
             const barPct = Math.min(Math.abs(isNaN(numPct) ? 0 : numPct) * 25, 100);
             const sectorKey = SECTOR_KEY_MAP[sector.name];
             const sectorLabel = sectorKey ? t(sectorKey) : sector.name;
+            const changeLabel = formatSignedPercent(sector.change_pct);
             return (
               <div
                 key={sector.name}
@@ -91,8 +113,7 @@ export function SectorKpiGrid({ sectors, loading }: SectorKpiGridProps) {
                     positive ? "text-green-500" : "text-destructive",
                   )}
                 >
-                  {positive && !sector.change_pct.startsWith("+") ? "+" : ""}
-                  {sector.change_pct}%
+                  {changeLabel}
                 </span>
 
                 {positive ? (

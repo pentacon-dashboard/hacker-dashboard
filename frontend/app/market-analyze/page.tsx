@@ -41,7 +41,7 @@ function safeHostname(rawUrl: string | null | undefined): string {
 
 function mapNewsItem(item: NewsItem): MappedNewsItem {
   return {
-    id: String(item.chunk_id),
+    id: `${item.doc_id}-${item.chunk_id}`,
     title: item.title,
     source: safeHostname(item.source_url),
     published_at: item.published_at,

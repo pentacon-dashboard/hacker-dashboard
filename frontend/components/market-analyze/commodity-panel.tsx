@@ -4,13 +4,18 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { TrendingUp, TrendingDown, Layers } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useLocale } from "@/lib/i18n/locale-provider";
+import {
+  formatSignedPercent,
+  isNonNegativePercent,
+  type PercentValue,
+} from "@/components/market-analyze/percent";
 
 // BE /market/commodities 실제 스키마
 export interface CommodityItem {
   symbol: string;
   name: string;
   price: string;
-  change_pct: string;
+  change_pct: PercentValue;
   unit: string;
 }
 
@@ -41,7 +46,8 @@ export function CommodityPanel({ commodities, loading }: CommodityPanelProps) {
 
         {!loading &&
           commodities.map((c) => {
-            const positive = !c.change_pct.startsWith("-");
+            const positive = isNonNegativePercent(c.change_pct);
+            const changeLabel = formatSignedPercent(c.change_pct);
             return (
               <div
                 key={c.symbol}
@@ -68,8 +74,7 @@ export function CommodityPanel({ commodities, loading }: CommodityPanelProps) {
                     ) : (
                       <TrendingDown className="h-3 w-3" aria-hidden="true" />
                     )}
-                    {positive && !c.change_pct.startsWith("+") ? "+" : ""}
-                    {c.change_pct}%
+                    {changeLabel}
                   </p>
                 </div>
               </div>

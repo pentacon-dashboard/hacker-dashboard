@@ -1,0 +1,35 @@
+{
+  "run_id": "20260430-033602-frontend-regressions",
+  "sprint_id": "sprint-01",
+  "iteration": 1,
+  "status": "passed",
+  "normalized_score": 8.8,
+  "threshold": 8.0,
+  "blocking_findings": [],
+  "non_blocking_findings": [
+    {
+      "title": "Underlying API corruption still present",
+      "file": null,
+      "line": 0,
+      "details": "The UI now degrades safely, but the local API/database still returns corrupted holdings, alerts, and some news payloads."
+    }
+  ],
+  "missing_tests": [
+    "cd frontend && npm run lint",
+    "cd frontend && npm run test",
+    "cd frontend && npx playwright test e2e/smoke.spec.ts --config=e2e/playwright.config.ts"
+  ],
+  "commands_reviewed": [
+    "cd frontend && npm run test -- --run components/dashboard/news-panel.test.tsx components/dashboard/top-holdings-table.test.tsx components/watchlist/alert-settings-card.test.tsx components/watchlist/popular-top5.test.tsx lib/market/display.test.ts",
+    "cd frontend && npm run typecheck"
+  ],
+  "evidence": [
+    "Portfolio page now degrades to an empty-safe state instead of rendering corrupted holdings.",
+    "Dashboard now shows a corrupted-data banner and market-leaders fallback instead of broken holdings/news.",
+    "Watchlist alert settings now labels corrupted records as recovery rows with delete-only actions."
+  ],
+  "suggest_direction_pivot": false,
+  "next_actions": [
+    "Repair the local corrupted source data if a realistic demo dataset is required."
+  ]
+}

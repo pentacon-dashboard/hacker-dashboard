@@ -1,15 +1,15 @@
-import { describe, it, expect, vi } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { screen } from "@testing-library/react";
 import { renderWithProviders } from "@/tests/helpers/render-with-providers";
 import { Sidebar } from "./sidebar";
 
-// next/navigation mock
+let mockedPathname = "/";
+
 vi.mock("next/navigation", () => ({
-  usePathname: () => "/",
+  usePathname: () => mockedPathname,
   useRouter: () => ({ push: vi.fn() }),
 }));
 
-// zustand store mock — 기본 상태
 vi.mock("@/stores/ui", () => ({
   useUiStore: (selector?: (s: object) => unknown) => {
     const state = {
@@ -24,11 +24,11 @@ vi.mock("@/stores/ui", () => ({
 }));
 
 describe("Sidebar", () => {
-  it("8개 nav 항목이 모두 렌더된다 (ko 기본)", () => {
+  it("renders all primary nav items", () => {
+    mockedPathname = "/";
     renderWithProviders(<Sidebar />);
     const navLabels = [
-      "대시보드",
-      "포트폴리오",
+      "고객장부",
       "워치리스트",
       "종목 분석",
       "시장 분석",
@@ -36,29 +36,42 @@ describe("Sidebar", () => {
       "업로드 & 분석",
       "설정",
     ];
+
     for (const label of navLabels) {
       expect(screen.getByText(label)).toBeInTheDocument();
     }
+    expect(screen.queryByRole("link", { name: "대시보드" })).not.toBeInTheDocument();
   });
 
-  it("LogoBadge HACKER 텍스트가 렌더된다", () => {
+  it("renders the Hacker Dashboard logo", () => {
+    mockedPathname = "/";
     renderWithProviders(<Sidebar />);
     expect(screen.getByText("HACKER")).toBeInTheDocument();
   });
 
-  it("SidebarUserCard Demo User 텍스트가 렌더된다", () => {
+  it("renders the demo user card", () => {
+    mockedPathname = "/";
     renderWithProviders(<Sidebar />);
     expect(screen.getByText("Demo User")).toBeInTheDocument();
   });
 
-  it("MarketStatusCard '시장 상태' 텍스트가 렌더된다", () => {
+  it("renders the market status card", () => {
+    mockedPathname = "/";
     renderWithProviders(<Sidebar />);
     expect(screen.getByText("시장 상태")).toBeInTheDocument();
   });
 
-  it("대시보드 링크에 aria-current='page'가 적용된다 (pathname='/')", () => {
+  it("marks the client book link as current at the root route", () => {
+    mockedPathname = "/";
     renderWithProviders(<Sidebar />);
-    const dashLink = screen.getAllByRole("link", { name: "대시보드" })[0];
-    expect(dashLink).toHaveAttribute("aria-current", "page");
+    const clientBookLink = screen.getAllByRole("link", { name: "고객장부" })[0];
+    expect(clientBookLink).toHaveAttribute("aria-current", "page");
+  });
+
+  it("marks the client book link as current on client workspace routes", () => {
+    mockedPathname = "/clients/client-001";
+    renderWithProviders(<Sidebar />);
+    const clientBookLink = screen.getAllByRole("link", { name: "고객장부" })[0];
+    expect(clientBookLink).toHaveAttribute("aria-current", "page");
   });
 });

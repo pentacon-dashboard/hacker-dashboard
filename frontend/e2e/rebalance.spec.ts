@@ -97,13 +97,38 @@ const MOCK_REBALANCE_DEGRADED = {
 // ── Portfolio 페이지 mock 헬퍼 ─────────────────────────────────────────────────
 
 async function mockPortfolioApis(page: Page) {
-  // summary mock — holdings 있어야 리밸런싱 패널이 활성화됨
-  await page.route("**/portfolio/summary*", async (route) => {
+  await page.route("**/portfolio/clients**", async (route) => {
     await route.fulfill({
       status: 200,
       contentType: "application/json",
       body: JSON.stringify({
-        user_id: "demo",
+        user_id: "pb-demo",
+        aum_krw: "15000000.00",
+        client_count: 1,
+        clients: [
+          {
+            client_id: "client-001",
+            client_name: "Client A",
+            aum_krw: "15000000.00",
+            holdings_count: 1,
+            risk_grade: "medium",
+            risk_score_pct: "42.00",
+            total_pnl_pct: "25.00",
+          },
+        ],
+      }),
+    });
+  });
+
+  // summary mock — holdings 있어야 리밸런싱 패널이 활성화됨
+  await page.route("**/portfolio/summary**", async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        user_id: "pb-demo",
+        client_id: "client-001",
+        client_name: "Client A",
         total_value_krw: "15000000.00",
         total_cost_krw: "12000000.00",
         total_pnl_krw: "3000000.00",
@@ -120,7 +145,8 @@ async function mockPortfolioApis(page: Page) {
         holdings: [
           {
             id: 1,
-            user_id: "demo",
+            user_id: "pb-demo",
+            client_id: "client-001",
             market: "upbit",
             code: "KRW-BTC",
             quantity: "0.05",
@@ -145,6 +171,45 @@ async function mockPortfolioApis(page: Page) {
       status: 200,
       contentType: "application/json",
       body: JSON.stringify([]),
+    });
+  });
+
+  await page.route("**/portfolio/sectors/heatmap**", async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify([
+        {
+          sector: "Digital Assets",
+          weight_pct: "74.00",
+          pnl_pct: "11.76",
+          intensity: "0.12",
+        },
+      ]),
+    });
+  });
+
+  await page.route("**/portfolio/monthly-returns**", async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify([
+        { date: "2026-04-01", return_pct: "1.20", cell_level: 2 },
+      ]),
+    });
+  });
+
+  await page.route("**/portfolio/ai-insight**", async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        summary: "Mock insight",
+        bullets: ["Mock bullet"],
+        generated_at: "2026-04-30T00:00:00Z",
+        stub_mode: true,
+        gates: { schema: "pass", domain: "pass", critique: "pass" },
+      }),
     });
   });
 }
@@ -250,6 +315,8 @@ test.describe("Rebalance proposal", () => {
     await submitBtn.click();
 
     // "LLM 해석 실패" 배너 표시 확인
-    await expect(page.getByRole("heading", { name: "LLM 해석 실패" })).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: "LLM 해석 실패" }),
+    ).toBeVisible();
   });
 });

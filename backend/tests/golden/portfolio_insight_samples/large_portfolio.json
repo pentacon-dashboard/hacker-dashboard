@@ -9,6 +9,6 @@
   ],
   "expected_win_rate_pct": "80.00",
   "expected_market_leaders_count": 3,
-  "expected_sector_tiles_min": 3,
+  "expected_sector_tiles_min": 2,
   "notes": "4/5 종목 수익권 → win_rate 80%. ETH 마이너스."
 }

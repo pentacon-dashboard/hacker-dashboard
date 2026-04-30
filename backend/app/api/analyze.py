@@ -32,6 +32,7 @@ from app.core.errors import AppError
 from app.core.logging import log_analyze_event, logger
 from app.db.session import get_db
 from app.schemas.analyze import (
+    CLIENT_ID_PATTERN,
     AnalyzeMeta,
     AnalyzeRequest,
     AnalyzeResponse,
@@ -256,10 +257,21 @@ async def analyze(
         target_code = req.symbol.code if req.symbol else None
         pctx = await build_portfolio_context(
             db,
-            user_id="demo",
+            user_id="pb-demo",
+            client_id=req.client_id,
+            client_name=req.client_id,
             target_market=target_market,
             target_code=target_code,
         )
+        if pctx is None:
+            pctx = await build_portfolio_context(
+                db,
+                user_id="demo",
+                client_id=req.client_id,
+                client_name=req.client_id,
+                target_market=target_market,
+                target_code=target_code,
+            )
         if pctx is not None:
             pctx_json = json.dumps(pctx.model_dump(mode="json"), sort_keys=True)
             portfolio_hash = hashlib.sha256(pctx_json.encode()).hexdigest()[:16]
@@ -325,6 +337,12 @@ async def analyze_csv(
     user_note: str = Form(""),
     symbol_hint: str = Form(""),
     include_portfolio_context: bool = Form(False),
+    client_id: str = Form(
+        "client-001",
+        min_length=1,
+        max_length=64,
+        pattern=CLIENT_ID_PATTERN,
+    ),
     db: AsyncSession = Depends(get_db),
 ) -> AnalyzeResponse:
     """
@@ -396,7 +414,9 @@ async def analyze_csv(
     pctx_csv: PortfolioContext | None = None
     portfolio_hash_csv = ""
     if include_portfolio_context:
-        pctx_csv = await build_portfolio_context(db, user_id="demo")
+        pctx_csv = await build_portfolio_context(db, user_id="pb-demo", client_id=client_id)
+        if pctx_csv is None:
+            pctx_csv = await build_portfolio_context(db, user_id="demo", client_id=client_id)
         if pctx_csv is not None:
             pctx_json = json.dumps(pctx_csv.model_dump(mode="json"), sort_keys=True)
             portfolio_hash_csv = hashlib.sha256(pctx_json.encode()).hexdigest()[:16]

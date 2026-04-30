@@ -56,6 +56,15 @@ The Codex-readable skill lives at `.agents/skills/investment-dashboard/SKILL.md`
 - If Analyzer prompts or output contracts change, update golden samples/tests.
 - Do not commit `.env*`, secrets, local screenshots, Playwright reports, caches, or harness workspaces.
 
+## Live API and Mock Boundaries
+
+- Browser MSW may only be used for customer/portfolio demo data unless the user explicitly asks to mock another domain.
+- Do not let customer demo flags such as `NEXT_PUBLIC_CLIENT_MOCK` or `NEXT_PUBLIC_USE_MSW_WORKER` intercept market data, symbol search, quotes, news, watchlist, notifications, settings, uploads, or Copilot.
+- Copilot must use the real frontend proxy and backend route by default. Do not reintroduce `NEXT_PUBLIC_COPILOT_MOCK`, `COPILOT_MOCK`, `mock_scenario`, or route-level mock SSE responses into normal app code.
+- Realtime quote/WebSocket behavior must not be disabled by customer demo mock flags. Use an explicit realtime flag only when a test or user request requires it.
+- Docker Compose must pass repo-local API key env files into backend without printing secret values, and live news/Copilot checks must verify through backend endpoints rather than browser mocks.
+- Add or update boundary tests whenever changing `frontend/tests/mocks/browser.ts`, `frontend/components/providers/msw-provider.tsx`, `frontend/app/api/copilot/query/route.ts`, realtime ticker code, or Copilot news retrieval.
+
 ## Verification
 
 - Backend focused: `cd backend && uv run pytest tests/golden tests/unit/agents tests/services -q`.
