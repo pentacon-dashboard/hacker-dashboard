@@ -213,7 +213,11 @@ def run(step: CopilotStep) -> dict[str, Any]:
 
 async def run_async(state: AgentState) -> dict[str, Any]:
     rag_step = next(
-        (s for s in (state.get("copilot_plan") or {}).get("steps", []) if s.get("agent") == "news-rag"),
+        (
+            s
+            for s in (state.get("copilot_plan") or {}).get("steps", [])
+            if s.get("agent") == "news-rag"
+        ),
         None,
     )
     if rag_step is None:
