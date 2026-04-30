@@ -11,6 +11,7 @@
 from __future__ import annotations
 
 import asyncio
+import os
 import time
 from collections.abc import Awaitable
 from typing import Any, cast
@@ -20,7 +21,7 @@ from fastapi import APIRouter, Request
 from pydantic import BaseModel
 from sqlalchemy import text
 
-from app.core.config import settings
+from app.core.config import DEFAULT_REDIS_URL, settings
 from app.db.session import engine
 
 router = APIRouter(tags=["infra"])
@@ -53,9 +54,22 @@ async def _check_db() -> str:
         return "unreachable"
 
 
+def _configured_redis_url() -> str | None:
+    redis_url = settings.redis_url.strip()
+    if not redis_url:
+        return None
+    if redis_url == DEFAULT_REDIS_URL and "REDIS_URL" not in os.environ:
+        return None
+    return redis_url
+
+
 async def _ping_redis() -> None:
+    redis_url = _configured_redis_url()
+    if redis_url is None:
+        return
+
     client = aioredis.from_url(
-        settings.redis_url,
+        redis_url,
         socket_connect_timeout=_CHECK_TIMEOUT_SECONDS,
         socket_timeout=_CHECK_TIMEOUT_SECONDS,
     )
@@ -66,6 +80,9 @@ async def _ping_redis() -> None:
 
 
 async def _check_redis() -> str:
+    if _configured_redis_url() is None:
+        return "disabled"
+
     try:
         await asyncio.wait_for(_ping_redis(), timeout=_CHECK_TIMEOUT_SECONDS)
         return "ok"
@@ -77,7 +94,8 @@ async def _check_redis() -> str:
 async def health(request: Request) -> HealthResponse:
     db_status, redis_status = await asyncio.gather(_check_db(), _check_redis())
 
-    overall = "ok" if db_status == "ok" and redis_status == "ok" else "degraded"
+    redis_healthy = redis_status in {"ok", "disabled"}
+    overall = "ok" if db_status == "ok" and redis_healthy else "degraded"
 
     # uptime: lifespan 에서 저장한 started_at 사용
     started_at: float | None = getattr(request.app.state, "started_at", None)

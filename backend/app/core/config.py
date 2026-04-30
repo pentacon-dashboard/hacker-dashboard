@@ -1,5 +1,7 @@
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+DEFAULT_REDIS_URL = "redis://localhost:6379/0"
+
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
@@ -15,7 +17,7 @@ class Settings(BaseSettings):
     database_url: str = "postgresql+asyncpg://postgres:postgres@localhost:5432/hacker"
 
     # Redis
-    redis_url: str = "redis://localhost:6379/0"
+    redis_url: str = DEFAULT_REDIS_URL
 
     # LLM
     openai_api_key: str = ""

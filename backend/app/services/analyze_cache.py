@@ -16,13 +16,14 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 import time
 from collections import OrderedDict
 from typing import Any
 
 import redis.asyncio as aioredis
 
-from app.core.config import settings
+from app.core.config import DEFAULT_REDIS_URL, settings
 from app.core.logging import logger
 
 _TTL_SECONDS = 300
@@ -36,15 +37,29 @@ _redis_client: aioredis.Redis | None = None
 _redis_available: bool | None = None  # None = 아직 검사 안 함
 
 
+def _configured_redis_url() -> str | None:
+    redis_url = settings.redis_url.strip()
+    if not redis_url:
+        return None
+    if redis_url == DEFAULT_REDIS_URL and "REDIS_URL" not in os.environ:
+        return None
+    return redis_url
+
+
 async def _get_redis() -> aioredis.Redis | None:
     """Redis 연결 반환. 연결 불가 시 None."""
     global _redis_client, _redis_available
     if _redis_available is False:
         return None
     if _redis_client is None:
+        redis_url = _configured_redis_url()
+        if redis_url is None:
+            _redis_available = False
+            logger.info("analyze_cache: Redis not configured, using LRU")
+            return None
         try:
             client: aioredis.Redis = aioredis.from_url(
-                settings.redis_url,
+                redis_url,
                 socket_connect_timeout=1,
                 socket_timeout=1,
                 decode_responses=True,

@@ -46,11 +46,11 @@ jobs:
           for i in $(seq 1 12); do
             response=$(curl -s --max-time 10 https://hacker-dashboard-api.fly.dev/health || echo "FAIL")
             echo "attempt $i: $response"
-            if echo "$response" | grep -q '"status"'; then
-              echo "BE responding"
+            if echo "$response" | grep -q '"status":"ok"'; then
+              echo "BE healthy"
               exit 0
             fi
             sleep 10
           done
-          echo "BE did not respond after 2 minutes"
+          echo "BE did not become healthy after 2 minutes"
           exit 1

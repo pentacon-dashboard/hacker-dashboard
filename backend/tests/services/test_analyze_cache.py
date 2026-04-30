@@ -13,6 +13,7 @@ from unittest.mock import patch
 
 import pytest
 
+from app.core.config import DEFAULT_REDIS_URL
 from app.services import analyze_cache
 
 
@@ -46,6 +47,29 @@ async def test_cache_miss_on_empty() -> None:
     """캐시가 비어 있으면 MISS(None) 반환."""
     result = await analyze_cache.cache_get("nonexistent_key")
     assert result is None
+
+
+@pytest.mark.asyncio
+async def test_cache_uses_lru_without_redis_url(monkeypatch: pytest.MonkeyPatch) -> None:
+    """운영 Redis URL 이 없으면 기본 localhost 에 연결하지 않고 LRU 를 사용한다."""
+    analyze_cache.reset_for_testing()
+    analyze_cache._redis_available = None
+    calls = 0
+
+    def from_url(*args, **kwargs):
+        nonlocal calls
+        calls += 1
+        raise RuntimeError("should not connect to Redis")
+
+    monkeypatch.delenv("REDIS_URL", raising=False)
+    monkeypatch.setattr(analyze_cache.settings, "redis_url", DEFAULT_REDIS_URL)
+    monkeypatch.setattr(analyze_cache.aioredis, "from_url", from_url)
+
+    await analyze_cache.cache_set("no_redis_secret", {"ok": True})
+    result = await analyze_cache.cache_get("no_redis_secret")
+
+    assert result == {"ok": True}
+    assert calls == 0
 
 
 @pytest.mark.asyncio
