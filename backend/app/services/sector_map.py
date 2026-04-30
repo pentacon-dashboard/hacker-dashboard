@@ -77,7 +77,7 @@ _SECTOR_MAP: dict[str, str] = {
 def get_sector(ticker: str) -> str:
     """Return a deterministic GICS sector or explicit non-GICS bucket."""
     normalized = ticker.upper().strip()
-    return _SECTOR_MAP.get(normalized, _SECTOR_MAP.get(ticker.strip(), "Other"))
+    return _SECTOR_MAP.get(normalized, _SECTOR_MAP.get(ticker.strip(), "기타"))
 
 
 def get_sector_map() -> dict[str, str]:

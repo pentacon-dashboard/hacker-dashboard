@@ -50,6 +50,10 @@ def _step_query(step: CopilotStep) -> str:
     return "market news"
 
 
+def _stub_query(step: CopilotStep) -> str:
+    return str(step.inputs.get("query") or "").strip()
+
+
 def _check_schema(card_dict: dict[str, Any]) -> tuple[str, str]:
     citations = card_dict.get("citations", [])
     if not citations:
@@ -113,6 +117,18 @@ def _check_critique(card_dict: dict[str, Any]) -> tuple[str, str]:
 
 
 async def _retrieve_citations_async(step: CopilotStep) -> list[dict[str, Any]]:
+    if _is_stub_mode():
+        from app.services.news.search import search_news_stub
+
+        results = search_news_stub(
+            query=_stub_query(step),
+            symbols=_coerce_symbols(step.inputs.get("symbols")),
+            start_date=step.inputs.get("start_date"),
+            end_date=step.inputs.get("end_date"),
+            k=_coerce_k(step.inputs.get("k", 5)),
+        )
+        return [citation.model_dump() for citation in results]
+
     from app.services.news.search import search_news
 
     results = await search_news(
@@ -132,7 +148,7 @@ def _retrieve_citations(step: CopilotStep) -> list[dict[str, Any]]:
         from app.services.news.search import search_news_stub
 
         results = search_news_stub(
-            query=_step_query(step),
+            query=_stub_query(step),
             symbols=_coerce_symbols(step.inputs.get("symbols")),
             start_date=step.inputs.get("start_date"),
             end_date=step.inputs.get("end_date"),
@@ -149,6 +165,20 @@ def _build_card(step: CopilotStep, citations: list[dict[str, Any]]) -> dict[str,
             "type": "text",
             "content": "관련 뉴스 또는 공시를 찾지 못했습니다.",
             "citations": [],
+        }
+
+    if _is_stub_mode():
+        query = _stub_query(step)
+        lines = []
+        for citation in citations[:3]:
+            title = str(citation.get("title", "")).strip()
+            excerpt = str(citation.get("excerpt", "")).strip()[:200]
+            lines.append(f"Based on [{title}]: {excerpt}")
+
+        return {
+            "type": "text",
+            "content": f"Summary of news for query: '{query}'\n\n\n" + "\n\n".join(lines),
+            "citations": citations,
         }
 
     query = _step_query(step)
