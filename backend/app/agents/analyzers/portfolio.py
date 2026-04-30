@@ -33,6 +33,7 @@ from typing import Any
 from app.agents.analyzers.base import BaseAnalyzer
 from app.agents.llm import call_llm, extract_json, select_model
 from app.agents.state import AgentState
+from app.services.sector_map import get_sector
 
 # ──────────────────────── Pure metric helpers ────────────────────────
 
@@ -72,6 +73,14 @@ def _classify_holding_asset_class(h: dict[str, Any]) -> str:
     if currency and code == currency:
         return "cash"
     return "other"
+
+
+def _classify_gics_sector(h: dict[str, Any]) -> str:
+    """Map a holding to a GICS sector or explicit non-GICS bucket."""
+    code = str(h.get("code") or h.get("symbol") or "").strip()
+    if not code:
+        return "Other"
+    return get_sector(code)
 
 
 def _holding_value(h: dict[str, Any]) -> float | None:
@@ -308,6 +317,7 @@ def compute_portfolio_metrics(
 
     # 자산군·통화 가중치
     class_items: list[tuple[str, float]] = []
+    sector_items: list[tuple[str, float]] = []
     ccy_items: list[tuple[str, float]] = []
     total_value = 0.0
     total_cost = 0.0
@@ -318,10 +328,12 @@ def compute_portfolio_metrics(
         total_cost += c
         if v > 0:
             class_items.append((_classify_holding_asset_class(h), v))
+            sector_items.append((_classify_gics_sector(h), v))
             ccy = (h.get("currency") or "").upper() or "KRW"
             ccy_items.append((ccy, v))
 
     class_weights = _weights_by_key(class_items)
+    sector_weights = _weights_by_key(sector_items)
     currency_weights = _weights_by_key(ccy_items)
     hhi = compute_hhi(class_weights)
 
@@ -364,6 +376,7 @@ def compute_portfolio_metrics(
         "n_asset_classes": len(class_weights),
         "hhi": hhi,
         "asset_class_breakdown": class_weights,
+        "sector_breakdown": sector_weights,
         "currency_exposure": currency_weights,
         "total_value": round(total_value, 4) if total_value > 0 else None,
         "total_cost": round(total_cost, 4) if total_cost > 0 else None,

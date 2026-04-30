@@ -1,0 +1,33 @@
+{
+  "run_id": "20260430-075711-dashboard-restore",
+  "sprint_id": "sprint-01",
+  "iteration": 1,
+  "status": "passed",
+  "normalized_score": 8.7,
+  "threshold": 8.0,
+  "blocking_findings": [],
+  "non_blocking_findings": [
+    {
+      "title": "Active checkout used instead of isolated worktree",
+      "file": null,
+      "line": 0,
+      "details": "Accepted because overlapping dirty product changes already existed."
+    }
+  ],
+  "missing_tests": [
+    "No dedicated /dashboard E2E smoke test."
+  ],
+  "commands_reviewed": [
+    "cd frontend && npm run typecheck",
+    "cd frontend && npm run lint",
+    "cd frontend && npx vitest run components/layout/sidebar.test.tsx components/dashboard/market-leaders.test.tsx",
+    "cd frontend && npx playwright test e2e/dashboard.spec.ts --config=e2e/playwright.config.ts"
+  ],
+  "evidence": [
+    "/ renders client book data",
+    "/dashboard renders restored dashboard data",
+    "browser console errors/warnings 0 on both routes"
+  ],
+  "suggest_direction_pivot": false,
+  "next_actions": []
+}

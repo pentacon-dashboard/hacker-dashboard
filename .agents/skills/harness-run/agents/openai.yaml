@@ -1,0 +1,4 @@
+interface:
+  display_name: "Harness Run"
+  short_description: "Plan, work, review, compound, and repeat development harness"
+  default_prompt: "Use $harness-run to plan and run a bounded Codex development harness with sprint worktrees, review scoring, and compound learning."

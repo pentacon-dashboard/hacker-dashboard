@@ -16,7 +16,9 @@ import { test, expect, Page } from "@playwright/test";
 // ── Mock 데이터 ────────────────────────────────────────────────────────────────
 
 const MOCK_SUMMARY_EMPTY = {
-  user_id: "demo",
+  user_id: "pb-demo",
+  client_id: "client-001",
+  client_name: "고객 A",
   total_value_krw: "0.00",
   total_cost_krw: "0.00",
   total_pnl_krw: "0.00",
@@ -30,7 +32,8 @@ const MOCK_SUMMARY_EMPTY = {
 const MOCK_HOLDINGS = [
   {
     id: 1,
-    user_id: "demo",
+    user_id: "pb-demo",
+    client_id: "client-001",
     market: "upbit",
     code: "KRW-BTC",
     quantity: "1.50000000",
@@ -41,7 +44,8 @@ const MOCK_HOLDINGS = [
   },
   {
     id: 2,
-    user_id: "demo",
+    user_id: "pb-demo",
+    client_id: "client-001",
     market: "yahoo",
     code: "AAPL",
     quantity: "10.00000000",
@@ -52,7 +56,8 @@ const MOCK_HOLDINGS = [
   },
   {
     id: 3,
-    user_id: "demo",
+    user_id: "pb-demo",
+    client_id: "client-001",
     market: "binance",
     code: "ETHUSDT",
     quantity: "5.00000000",
@@ -64,7 +69,9 @@ const MOCK_HOLDINGS = [
 ];
 
 const MOCK_SUMMARY_WITH_HOLDINGS = {
-  user_id: "demo",
+  user_id: "pb-demo",
+  client_id: "client-001",
+  client_name: "고객 A",
   total_value_krw: "90000000.00",
   total_cost_krw: "80000000.00",
   total_pnl_krw: "10000000.00",
@@ -90,7 +97,9 @@ const MOCK_SNAPSHOTS = Array.from({ length: 7 }, (_, i) => {
   d.setDate(d.getDate() + i);
   return {
     id: i + 1,
-    user_id: "demo",
+    user_id: "pb-demo",
+    client_id: "client-001",
+    client_name: "고객 A",
     snapshot_date: d.toISOString().split("T")[0],
     total_value_krw: String((80000000 + i * 1000000).toFixed(4)),
     total_pnl_krw: String((i * 1000000).toFixed(4)),
@@ -102,7 +111,8 @@ const MOCK_SNAPSHOTS = Array.from({ length: 7 }, (_, i) => {
 
 const MOCK_NEW_HOLDING = {
   id: 4,
-  user_id: "demo",
+  user_id: "pb-demo",
+  client_id: "client-001",
   market: "upbit",
   code: "KRW-ETH",
   quantity: "2.00000000",
@@ -112,12 +122,38 @@ const MOCK_NEW_HOLDING = {
   updated_at: "2026-04-19T01:00:00Z",
 };
 
+const MOCK_CLIENTS = {
+  user_id: "pb-demo",
+  aum_krw: "135000000.00",
+  client_count: 2,
+  clients: [
+    {
+      client_id: "client-001",
+      client_name: "고객 A",
+      aum_krw: "90000000.00",
+      holdings_count: 3,
+      risk_grade: "medium",
+      risk_score_pct: "42.00",
+      total_pnl_pct: "12.50",
+    },
+    {
+      client_id: "client-002",
+      client_name: "고객 B",
+      aum_krw: "45000000.00",
+      holdings_count: 2,
+      risk_grade: "low",
+      risk_score_pct: "18.00",
+      total_pnl_pct: "-1.40",
+    },
+  ],
+};
+
 // ── 공통 라우트 헬퍼 ──────────────────────────────────────────────────────────
 
 async function setupEmptyPortfolioRoutes(page: Page) {
   let postCallCount = 0;
 
-  await page.route("**/portfolio/holdings", async (route) => {
+  await page.route("**/portfolio/holdings**", async (route) => {
     if (route.request().method() === "GET") {
       await route.fulfill({
         status: 200,
@@ -136,11 +172,56 @@ async function setupEmptyPortfolioRoutes(page: Page) {
     }
   });
 
-  await page.route("**/portfolio/summary", async (route) => {
+  await page.route("**/portfolio/clients**", async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        ...MOCK_CLIENTS,
+        aum_krw: "0.00",
+        client_count: 1,
+        clients: [
+          { ...MOCK_CLIENTS.clients[0], aum_krw: "0.00", holdings_count: 0 },
+        ],
+      }),
+    });
+  });
+
+  await page.route("**/portfolio/summary**", async (route) => {
     await route.fulfill({
       status: 200,
       contentType: "application/json",
       body: JSON.stringify(MOCK_SUMMARY_EMPTY),
+    });
+  });
+
+  await page.route("**/portfolio/sectors/heatmap**", async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify([]),
+    });
+  });
+
+  await page.route("**/portfolio/monthly-returns**", async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify([]),
+    });
+  });
+
+  await page.route("**/portfolio/ai-insight**", async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        summary: "No holdings yet.",
+        bullets: [],
+        generated_at: "2026-04-30T00:00:00Z",
+        stub_mode: true,
+        gates: { schema: "pass", domain: "pass", critique: "pass" },
+      }),
     });
   });
 
@@ -158,8 +239,20 @@ async function setupEmptyPortfolioRoutes(page: Page) {
       status: 200,
       contentType: "application/json",
       body: JSON.stringify([
-        { symbol: "KRW-ETH", name: "Ethereum", asset_class: "crypto", market: "upbit", currency: "KRW" },
-        { symbol: "KRW-BTC", name: "Bitcoin", asset_class: "crypto", market: "upbit", currency: "KRW" },
+        {
+          symbol: "KRW-ETH",
+          name: "Ethereum",
+          asset_class: "crypto",
+          market: "upbit",
+          currency: "KRW",
+        },
+        {
+          symbol: "KRW-BTC",
+          name: "Bitcoin",
+          asset_class: "crypto",
+          market: "upbit",
+          currency: "KRW",
+        },
       ]),
     });
   });
@@ -171,7 +264,7 @@ async function setupPopulatedPortfolioRoutes(page: Page) {
   let deleteCallCount = 0;
   let holdingsStore = [...MOCK_HOLDINGS];
 
-  await page.route("**/portfolio/holdings", async (route) => {
+  await page.route("**/portfolio/holdings**", async (route) => {
     if (route.request().method() === "GET") {
       await route.fulfill({
         status: 200,
@@ -202,11 +295,68 @@ async function setupPopulatedPortfolioRoutes(page: Page) {
     }
   });
 
-  await page.route("**/portfolio/summary", async (route) => {
+  await page.route("**/portfolio/clients**", async (route) => {
     await route.fulfill({
       status: 200,
       contentType: "application/json",
-      body: JSON.stringify(MOCK_SUMMARY_WITH_HOLDINGS),
+      body: JSON.stringify(MOCK_CLIENTS),
+    });
+  });
+
+  await page.route("**/portfolio/summary**", async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        ...MOCK_SUMMARY_WITH_HOLDINGS,
+        holdings: holdingsStore.map((h) => ({
+          ...h,
+          current_price: 60000000.0,
+          current_value_krw: "90000000.00",
+          pnl_krw: "10000000.00",
+          pnl_pct: "20.00",
+          asset_class: "crypto",
+        })),
+      }),
+    });
+  });
+
+  await page.route("**/portfolio/sectors/heatmap**", async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify([
+        {
+          sector: "Digital Assets",
+          weight_pct: "75.00",
+          pnl_pct: "20.00",
+          intensity: "0.20",
+        },
+      ]),
+    });
+  });
+
+  await page.route("**/portfolio/monthly-returns**", async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify([
+        { date: "2026-04-01", return_pct: "1.20", cell_level: 2 },
+      ]),
+    });
+  });
+
+  await page.route("**/portfolio/ai-insight**", async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        summary: "Mock insight",
+        bullets: ["Mock bullet"],
+        generated_at: "2026-04-30T00:00:00Z",
+        stub_mode: true,
+        gates: { schema: "pass", domain: "pass", critique: "pass" },
+      }),
     });
   });
 
@@ -221,13 +371,101 @@ async function setupPopulatedPortfolioRoutes(page: Page) {
   return { getDeleteCallCount: () => deleteCallCount };
 }
 
+test("client book opens 고객 B workspace with client_id scoped requests", async ({
+  page,
+}) => {
+  const summaryClientIds: string[] = [];
+
+  await page.route("**/portfolio/clients**", async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify(MOCK_CLIENTS),
+    });
+  });
+
+  await page.route("**/portfolio/summary**", async (route) => {
+    const url = new URL(route.request().url());
+    const clientId = url.searchParams.get("client_id") ?? "";
+    summaryClientIds.push(clientId);
+    const body =
+      clientId === "client-002"
+        ? {
+            ...MOCK_SUMMARY_WITH_HOLDINGS,
+            client_id: "client-002",
+            client_name: "고객 B",
+            total_value_krw: "45000000.00",
+            holdings_count: 2,
+            holdings: MOCK_SUMMARY_WITH_HOLDINGS.holdings.slice(0, 2),
+          }
+        : MOCK_SUMMARY_WITH_HOLDINGS;
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify(body),
+    });
+  });
+
+  await page.route("**/portfolio/sectors/heatmap**", async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify([
+        { sector: "Tech", weight_pct: "55.00", pnl_pct: "2.10", intensity: "0.21" },
+      ]),
+    });
+  });
+
+  await page.route("**/portfolio/monthly-returns**", async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify([{ date: "2026-04-01", return_pct: "1.20", cell_level: 2 }]),
+    });
+  });
+
+  await page.route("**/portfolio/ai-insight**", async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        summary: "고객 B 인사이트",
+        bullets: ["고객 B 점검 항목"],
+        generated_at: "2026-04-30T00:00:00Z",
+        stub_mode: true,
+        gates: { schema: "pass", domain: "pass", critique: "pass" },
+      }),
+    });
+  });
+
+  await page.goto("/");
+  await expect(page.locator("[data-testid='client-book']")).toBeVisible({
+    timeout: 10_000,
+  });
+
+  await page.locator("[data-testid='client-select-client-002']").click();
+  await expect(page).toHaveURL(/\/$/);
+  await expect(page.locator("[data-testid='dashboard-home']")).toContainText("고객 B");
+  expect(summaryClientIds).toContain("client-002");
+
+  await page.locator("[data-testid='client-workspace-link-client-002']").click();
+  await expect(page).toHaveURL(/\/clients\/client-002$/);
+  await expect(page.locator("[data-testid='client-workspace']")).toBeVisible({
+    timeout: 10_000,
+  });
+  await expect(page.locator("[data-testid^='client-card-']")).toHaveCount(0);
+
+  await page.locator("[data-testid='client-workspace-back']").click();
+  await expect(page).toHaveURL(/\/$/);
+});
+
 // ── 시나리오 1: 빈 상태 → 홀딩 추가 Dialog ───────────────────────────────────
 
 test("/portfolio 빈 상태에서 '보유자산 추가' 버튼이 보이고 Dialog가 열린다", async ({
   page,
 }) => {
   await setupEmptyPortfolioRoutes(page);
-  await page.goto("/portfolio");
+  await page.goto("/clients/client-001");
 
   // 빈 상태 렌더 확인
   const mainArea = page
@@ -245,7 +483,7 @@ test("/portfolio 빈 상태에서 '보유자산 추가' 버튼이 보이고 Dial
         "button:has-text('추가')",
         "button[aria-label*='추가']",
         "button[aria-label*='add']",
-      ].join(", ")
+      ].join(", "),
     )
     .first();
 
@@ -267,7 +505,7 @@ test("/portfolio 빈 상태에서 '보유자산 추가' 버튼이 보이고 Dial
         "[data-testid='add-holding-dialog']",
         ".dialog-content",
         "[aria-modal='true']",
-      ].join(", ")
+      ].join(", "),
     )
     .first();
 
@@ -278,7 +516,7 @@ test("Dialog에서 심볼 검색 후 수량·평단가·통화 입력 → 제출
   page,
 }) => {
   const { getPostCallCount } = await setupEmptyPortfolioRoutes(page);
-  await page.goto("/portfolio");
+  await page.goto("/clients/client-001");
 
   // 추가 버튼 클릭
   const addBtn = page
@@ -287,7 +525,7 @@ test("Dialog에서 심볼 검색 후 수량·평단가·통화 입력 → 제출
         "[data-testid='add-holding-button']",
         "button:has-text('보유자산 추가')",
         "button:has-text('추가')",
-      ].join(", ")
+      ].join(", "),
     )
     .first();
 
@@ -300,7 +538,9 @@ test("Dialog에서 심볼 검색 후 수량·평단가·통화 입력 → 제출
 
   // Dialog 대기
   const dialog = page
-    .locator("[role='dialog'], [aria-modal='true'], [data-testid='add-holding-dialog']")
+    .locator(
+      "[role='dialog'], [aria-modal='true'], [data-testid='add-holding-dialog']",
+    )
     .first();
   await expect(dialog).toBeVisible({ timeout: 5_000 });
 
@@ -315,7 +555,7 @@ test("Dialog에서 심볼 검색 후 수량·평단가·통화 입력 → 제출
         "input[placeholder*='Symbol']",
         "[role='dialog'] input[type='text']:first-of-type",
         "[role='dialog'] input:first-of-type",
-      ].join(", ")
+      ].join(", "),
     )
     .first();
 
@@ -327,6 +567,9 @@ test("Dialog에서 심볼 검색 후 수량·평단가·통화 입력 → 제출
 
   await symbolSearch.fill("ETH");
   await page.waitForTimeout(400); // debounce
+  const firstSymbolResult = page.locator("[role='option']").first();
+  await expect(firstSymbolResult).toBeVisible({ timeout: 5_000 });
+  await firstSymbolResult.click();
 
   // 수량 입력 (testid 우선, fallback 으로 두 번째 number input)
   const quantityInput = page
@@ -336,7 +579,7 @@ test("Dialog에서 심볼 검색 후 수량·평단가·통화 입력 → 제출
         "input[name='quantity']",
         "input[placeholder*='수량']",
         "[role='dialog'] input[type='number']:nth-of-type(1)",
-      ].join(", ")
+      ].join(", "),
     )
     .first();
 
@@ -354,7 +597,7 @@ test("Dialog에서 심볼 검색 후 수량·평단가·통화 입력 → 제출
         "input[placeholder*='평균']",
         "input[placeholder*='단가']",
         "[role='dialog'] input[type='number']:nth-of-type(2)",
-      ].join(", ")
+      ].join(", "),
     )
     .first();
 
@@ -363,15 +606,15 @@ test("Dialog에서 심볼 검색 후 수량·평단가·통화 입력 → 제출
   }
 
   // 제출 버튼
-  const submitBtn = page
+  const submitBtn = dialog
     .locator(
       [
         "[data-testid='holding-submit']",
-        "[role='dialog'] button[type='submit']",
+        "button[type='submit']",
         "button:has-text('저장')",
         "button:has-text('추가')",
         "button:has-text('확인')",
-      ].join(", ")
+      ].join(", "),
     )
     .first();
 
@@ -393,7 +636,7 @@ test("holdings 존재 시 summary-card 3개 + asset-pie + networth-chart + holdi
   page,
 }) => {
   await setupPopulatedPortfolioRoutes(page);
-  await page.goto("/portfolio");
+  await page.goto("/clients/client-001");
 
   // summary-card 3개 (총 자산, 손익, 일간변동)
   const summaryCards = page.locator("[data-testid='summary-card']");
@@ -419,7 +662,7 @@ test("holdings 존재 시 summary-card 3개 + asset-pie + networth-chart + holdi
         ".recharts-pie",
         "svg.recharts-surface",
         "[data-testid='pie-chart']",
-      ].join(", ")
+      ].join(", "),
     )
     .first();
 
@@ -436,7 +679,7 @@ test("holdings 존재 시 summary-card 3개 + asset-pie + networth-chart + holdi
         "canvas",
         ".recharts-wrapper",
         ".tv-lightweight-charts",
-      ].join(", ")
+      ].join(", "),
     )
     .first();
 
@@ -452,7 +695,7 @@ test("holdings 존재 시 summary-card 3개 + asset-pie + networth-chart + holdi
         "table",
         "[role='table']",
         "[data-testid='holding-row']",
-      ].join(", ")
+      ].join(", "),
     )
     .first();
 
@@ -472,7 +715,7 @@ test("홀딩 삭제 버튼 클릭 시 DELETE /portfolio/holdings/{id} 가 호출
   page,
 }) => {
   const { getDeleteCallCount } = await setupPopulatedPortfolioRoutes(page);
-  await page.goto("/portfolio");
+  await page.goto("/clients/client-001");
 
   // 홀딩 행 탐색
   const holdingRow = page
@@ -482,7 +725,7 @@ test("홀딩 삭제 버튼 클릭 시 DELETE /portfolio/holdings/{id} 가 호출
         "[data-testid='holdings-table'] tr:not(:first-child)",
         "table tbody tr",
         "[role='row']:not([role='columnheader'])",
-      ].join(", ")
+      ].join(", "),
     )
     .first();
 
@@ -504,7 +747,7 @@ test("홀딩 삭제 버튼 클릭 시 DELETE /portfolio/holdings/{id} 가 호출
         "button[aria-label*='Delete']",
         "button[aria-label*='remove']",
         "button[aria-label*='Remove']",
-      ].join(", ")
+      ].join(", "),
     )
     .first();
 
@@ -520,7 +763,7 @@ test("홀딩 삭제 버튼 클릭 시 DELETE /portfolio/holdings/{id} 가 호출
         "[data-testid='holding-row']",
         "[data-testid='holdings-table'] tr:not(:first-child)",
         "table tbody tr",
-      ].join(", ")
+      ].join(", "),
     )
     .count();
 
@@ -538,7 +781,7 @@ test("홀딩 삭제 버튼 클릭 시 DELETE /portfolio/holdings/{id} 가 호출
           "[data-testid='holding-row']",
           "[data-testid='holdings-table'] tr:not(:first-child)",
           "table tbody tr",
-        ].join(", ")
+        ].join(", "),
       )
       .count();
     expect(afterCount).toBeLessThan(initialRowCount);

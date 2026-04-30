@@ -1,22 +1,31 @@
 /**
- * browser.ts — MSW browser worker 설정
+ * Browser MSW setup.
  *
- * NEXT_PUBLIC_COPILOT_MOCK=1 환경에서 브라우저 내 서비스 워커가
- * API 엔드포인트를 가로채 결정론적 응답을 반환한다.
+ * This worker only registers customer/portfolio demo handlers. Market indices,
+ * symbol search/quotes, market leaders, news, watchlist, and Copilot are left
+ * to the real backend/API.
  */
 import { setupWorker } from "msw/browser";
-import { copilotSseHandler } from "./copilot-sse";
-import { dashboardHandlers } from "./dashboard";
-import { uploadHandlers } from "./upload";
-import { marketHandlers } from "./market";
-import { copilotSessionHandlers } from "./copilot-sessions";
-import { settingsHandlers } from "./settings";
+import {
+  portfolioAiInsightHandler,
+  portfolioClientsHandler,
+  portfolioCreateHoldingHandler,
+  portfolioHoldingsHandler,
+  portfolioMonthlyReturnsHandler,
+  portfolioRebalanceHandler,
+  portfolioSectorHeatmapHandler,
+  portfolioSnapshotsHandler,
+  portfolioSummaryHandler,
+} from "./dashboard";
 
 export const worker = setupWorker(
-  copilotSseHandler,
-  ...dashboardHandlers,
-  ...uploadHandlers,
-  ...marketHandlers,
-  ...copilotSessionHandlers,
-  ...settingsHandlers,
+  portfolioClientsHandler,
+  portfolioHoldingsHandler,
+  portfolioCreateHoldingHandler,
+  portfolioSummaryHandler,
+  portfolioSnapshotsHandler,
+  portfolioSectorHeatmapHandler,
+  portfolioMonthlyReturnsHandler,
+  portfolioAiInsightHandler,
+  portfolioRebalanceHandler,
 );

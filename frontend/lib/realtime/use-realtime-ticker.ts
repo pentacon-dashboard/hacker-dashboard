@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useCallback } from "react";
+import { useEffect, useRef, useCallback, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { WS_BASE } from "@/lib/api/client";
 import { getQuote } from "@/lib/api/symbols";
@@ -8,6 +8,8 @@ import { useTickersStore, type TickerData } from "@/stores/tickers";
 
 const MAX_RETRIES = 3;
 const BASE_DELAY_MS = 1000;
+const REALTIME_WS_DISABLED =
+  process.env["NEXT_PUBLIC_DISABLE_REALTIME_WS"] === "1";
 
 interface SymbolSpec {
   market: string;
@@ -47,45 +49,51 @@ export function useRealtimeTicker(symbols: SymbolSpec[]) {
   const retriesRef = useRef(0);
   const wsFailed = useRef(false);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [useFallback, setUseFallback] = useState(REALTIME_WS_DISABLED);
 
   // caller 가 매 렌더마다 새 배열을 넘겨도 useEffect 가 재실행되지 않도록
   // 내용 기반 primitive key 로 참조 안정화.
   const symbolsKey = symbols.map((s) => `${s.market}:${s.code}`).join(",");
-  const fallbackMarket = symbols[0]?.market;
-  const fallbackCode = symbols[0]?.code;
 
-  const { data: fallbackQuote } = useQuery({
-    queryKey: ["quote-fallback", fallbackMarket, fallbackCode],
+  const { data: fallbackQuotes } = useQuery({
+    queryKey: ["quote-fallback", symbolsKey],
     queryFn: () =>
-      fallbackMarket && fallbackCode
-        ? getQuote(fallbackMarket, fallbackCode)
-        : null,
+      Promise.all(
+        symbols.map(({ market, code }) =>
+          getQuote(market, code).catch(() => null),
+        ),
+      ),
     refetchInterval: 5000,
-    enabled: wsFailed.current && Boolean(fallbackMarket && fallbackCode),
+    enabled: useFallback && Boolean(symbolsKey),
   });
 
-  // fallback 데이터를 store 에 반영 — primitive deps 로만 트리거
-  const fbPrice = fallbackQuote?.price;
-  const fbChange = fallbackQuote?.change_pct;
-  const fbVolume = fallbackQuote?.volume;
-  const fbTs = fallbackQuote?.timestamp;
-  const fbSymbol = fallbackQuote?.symbol;
-  const fbMarket = fallbackQuote?.market;
+  // fallback 데이터를 store 에 반영
   useEffect(() => {
-    if (!wsFailed.current || fbPrice == null || !fbSymbol || !fbMarket || !fbTs) return;
-    const tick: TickerData = {
-      market: fbMarket,
-      symbol: fbSymbol,
-      price: fbPrice,
-      change_pct: fbChange ?? 0,
-      volume: fbVolume ?? 0,
-      ts: fbTs,
-    };
-    upsert(tick);
-  }, [fbPrice, fbChange, fbVolume, fbTs, fbSymbol, fbMarket, upsert]);
+    if (!useFallback || !fallbackQuotes) return;
+    for (const quote of fallbackQuotes) {
+      if (
+        quote?.price == null ||
+        !quote.symbol ||
+        !quote.market ||
+        !quote.timestamp
+      ) {
+        continue;
+      }
+      const tick: TickerData = {
+        market: quote.market,
+        symbol: quote.symbol,
+        price: quote.price,
+        change_pct: quote.change_pct ?? 0,
+        volume: quote.volume ?? 0,
+        ts: quote.timestamp,
+      };
+      upsert(tick);
+    }
+  }, [fallbackQuotes, upsert, useFallback]);
 
   const connect = useCallback(() => {
     if (!symbolsKey) return;
+    if (REALTIME_WS_DISABLED) return;
 
     const url = `${WS_BASE}/ws/ticks?markets=${encodeURIComponent(symbolsKey)}`;
 
@@ -120,6 +128,7 @@ export function useRealtimeTicker(symbols: SymbolSpec[]) {
         }, delay);
       } else {
         wsFailed.current = true;
+        setUseFallback(true);
       }
     };
   }, [symbolsKey, upsert]);

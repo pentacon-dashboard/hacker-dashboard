@@ -24,19 +24,18 @@ describe("AiInsightCard", () => {
     expect(bullets.children.length).toBe(3);
   });
 
-  it("stub_mode=true이면 STUB 배지를 표시한다", () => {
+  it("stub_mode=true이면 목업 배지를 표시한다", () => {
     render(<AiInsightCard insight={MOCK_INSIGHT} />);
-    expect(screen.getByText("STUB")).toBeInTheDocument();
+    expect(screen.getByText("목업")).toBeInTheDocument();
   });
 
   it("3개 gates 배지를 렌더한다", () => {
     render(<AiInsightCard insight={MOCK_INSIGHT} />);
     const gatesContainer = screen.getByTestId("ai-insight-gates");
     expect(gatesContainer).toBeInTheDocument();
-    // Schema, Domain, Critique
-    expect(screen.getByText("Schema")).toBeInTheDocument();
-    expect(screen.getByText("Domain")).toBeInTheDocument();
-    expect(screen.getByText("Critique")).toBeInTheDocument();
+    expect(screen.getByText("스키마")).toBeInTheDocument();
+    expect(screen.getByText("도메인")).toBeInTheDocument();
+    expect(screen.getByText("검토")).toBeInTheDocument();
   });
 
   it("insight=null이면 empty state를 렌더한다", () => {

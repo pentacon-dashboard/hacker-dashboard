@@ -107,7 +107,7 @@ export function SymbolNewsPanel({ symbol, limit = 5 }: SymbolNewsPanelProps) {
   return (
     <ul className="space-y-1" data-testid="symbol-news-panel">
       {data.map((item) => (
-        <NewsItem key={item.chunk_id} item={item} />
+        <NewsItem key={`${item.doc_id}-${item.chunk_id}`} item={item} />
       ))}
     </ul>
   );

@@ -81,7 +81,7 @@ export function AiInsightCard({ insight, isLoading = false }: AiInsightCardProps
         <div className="flex items-center gap-2">
           {insight.stub_mode && (
             <Badge variant="outline" className="text-[10px] text-muted-foreground">
-              STUB
+              목업
             </Badge>
           )}
           <span className="text-[10px] text-muted-foreground">
@@ -95,9 +95,9 @@ export function AiInsightCard({ insight, isLoading = false }: AiInsightCardProps
         </div>
         {/* 3 gates 배지 */}
         <div className="flex items-center gap-1" data-testid="ai-insight-gates">
-          <GateBadge name="Schema" status={insight.gates["schema"]} />
-          <GateBadge name="Domain" status={insight.gates["domain"]} />
-          <GateBadge name="Critique" status={insight.gates["critique"]} />
+          <GateBadge name="스키마" status={insight.gates["schema"]} />
+          <GateBadge name="도메인" status={insight.gates["domain"]} />
+          <GateBadge name="검토" status={insight.gates["critique"]} />
         </div>
       </div>
 

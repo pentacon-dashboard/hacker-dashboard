@@ -27,6 +27,7 @@ export default defineConfig({
 
   use: {
     baseURL,
+    serviceWorkers: "block",
     trace: "on-first-retry",
     screenshot: "only-on-failure",
     video: "retain-on-failure",
@@ -56,7 +57,8 @@ export default defineConfig({
       reuseExistingServer: !process.env.CI,
       timeout: 120_000,
       env: {
-        NEXT_PUBLIC_COPILOT_MOCK: "1",
+        NEXT_PUBLIC_COPILOT_MOCK: "0",
+        NEXT_PUBLIC_USE_MSW_WORKER: "0",
       },
     },
   }),

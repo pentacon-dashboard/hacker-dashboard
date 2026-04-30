@@ -6,15 +6,141 @@
  */
 import { http, HttpResponse } from "msw";
 
+interface MockWatchlistItem {
+  id: number;
+  market: string;
+  code: string;
+  memo: string | null;
+  created_at: string;
+}
+
+const WATCHLIST_ITEMS: MockWatchlistItem[] = [
+  {
+    id: 1,
+    market: "yahoo",
+    code: "NVDA",
+    memo: "AI 반도체 대표 종목",
+    created_at: "2026-04-19T00:00:00Z",
+  },
+  {
+    id: 2,
+    market: "yahoo",
+    code: "AAPL",
+    memo: "서비스 매출 모니터링",
+    created_at: "2026-04-19T00:00:00Z",
+  },
+  {
+    id: 3,
+    market: "naver_kr",
+    code: "005930.KS",
+    memo: "국내 반도체 대형주",
+    created_at: "2026-04-19T00:00:00Z",
+  },
+  {
+    id: 4,
+    market: "upbit",
+    code: "KRW-BTC",
+    memo: "디지털 자산 대표",
+    created_at: "2026-04-19T00:00:00Z",
+  },
+];
+
+const SYMBOL_RESULTS = [
+  {
+    symbol: "NVDA",
+    name: "NVIDIA",
+    asset_class: "stock",
+    market: "yahoo",
+    currency: "USD",
+  },
+  {
+    symbol: "AAPL",
+    name: "Apple",
+    asset_class: "stock",
+    market: "yahoo",
+    currency: "USD",
+  },
+  {
+    symbol: "005930.KS",
+    name: "삼성전자",
+    asset_class: "stock",
+    market: "naver_kr",
+    currency: "KRW",
+  },
+  {
+    symbol: "KRW-BTC",
+    name: "비트코인",
+    asset_class: "crypto",
+    market: "upbit",
+    currency: "KRW",
+  },
+  {
+    symbol: "KRW-ETH",
+    name: "이더리움",
+    asset_class: "crypto",
+    market: "upbit",
+    currency: "KRW",
+  },
+];
+
+let watchlistItems: MockWatchlistItem[] = [...WATCHLIST_ITEMS];
+let nextWatchlistId = 100;
+
 // ---------- 워치리스트 summary ----------
 export const watchlistSummaryHandler = http.get(/\/watchlist\/summary/, () => {
   return HttpResponse.json({
-    watched_count: 10,
+    watched_count: watchlistItems.length,
     up_avg_pct: "4.62",
     down_avg_pct: "-2.38",
-    top_gainer: "삼성전자 +6.12%",
+    top_gainer_name: "삼성전자",
+    top_gainer_pct: "+6.12",
   });
 });
+
+export const watchlistItemsHandler = http.get(
+  /\/market\/watchlist\/items$/,
+  () => HttpResponse.json(watchlistItems),
+);
+
+export const watchlistCreateItemHandler = http.post(
+  /\/market\/watchlist\/items$/,
+  async ({ request }) => {
+    const body = (await request.json().catch(() => ({}))) as Record<string, unknown>;
+    const item = {
+      id: nextWatchlistId++,
+      market: String(body["market"] ?? "yahoo"),
+      code: String(body["code"] ?? "NVDA"),
+      memo: body["memo"] == null ? null : String(body["memo"]),
+      created_at: new Date().toISOString(),
+    };
+    watchlistItems = [...watchlistItems, item];
+    return HttpResponse.json(item, { status: 201 });
+  },
+);
+
+export const watchlistDeleteItemHandler = http.delete(
+  /\/market\/watchlist\/items\/\d+$/,
+  ({ request }) => {
+    const id = Number(new URL(request.url).pathname.split("/").pop());
+    watchlistItems = watchlistItems.filter((item) => item.id !== id);
+    return new HttpResponse(null, { status: 204 });
+  },
+);
+
+export const symbolSearchHandler = http.get(
+  /\/market\/symbols\/search/,
+  ({ request }) => {
+    const q = new URL(request.url).searchParams.get("q")?.toLowerCase() ?? "";
+    const filtered = q
+      ? SYMBOL_RESULTS.filter(
+          (item) =>
+            item.symbol.toLowerCase().includes(q) ||
+            item.name.toLowerCase().includes(q),
+        )
+      : SYMBOL_RESULTS;
+    return HttpResponse.json(filtered);
+  },
+);
 
 // ---------- 인기 TOP 5 ----------
 const POPULAR: object[] = [
@@ -49,6 +175,86 @@ export const watchlistGainersLosersHandler = http.get(
         { rank: 5, ticker: "META", name: "Meta", change_pct: "-0.22" },
       ],
     });
+  },
+);
+
+let alertRules = [
+  {
+    id: 1,
+    user_id: "demo",
+    symbol: "NVDA",
+    market: "yahoo",
+    direction: "above",
+    threshold: "520.0000",
+    enabled: true,
+    created_at: "2026-04-19T00:00:00Z",
+  },
+  {
+    id: 2,
+    user_id: "demo",
+    symbol: "KRW-BTC",
+    market: "upbit",
+    direction: "below",
+    threshold: "70000000.0000",
+    enabled: false,
+    created_at: "2026-04-19T00:00:00Z",
+  },
+];
+let nextAlertId = 100;
+
+export const watchlistAlertsListHandler = http.get(
+  /\/watchlist\/alerts$/,
+  () => HttpResponse.json(alertRules),
+);
+
+export const watchlistAlertsCreateHandler = http.post(
+  /\/watchlist\/alerts$/,
+  async ({ request }) => {
+    const body = (await request.json().catch(() => ({}))) as Record<string, unknown>;
+    const alert = {
+      id: nextAlertId++,
+      user_id: "demo",
+      symbol: String(body["symbol"] ?? "NVDA"),
+      market: String(body["market"] ?? "yahoo"),
+      direction: body["direction"] === "below" ? "below" : "above",
+      threshold: Number(body["threshold"] ?? 0).toFixed(4),
+      enabled: true,
+      created_at: new Date().toISOString(),
+    };
+    alertRules = [...alertRules, alert];
+    return HttpResponse.json(alert, { status: 201 });
+  },
+);
+
+export const watchlistAlertsUpdateHandler = http.patch(
+  /\/watchlist\/alerts\/\d+$/,
+  async ({ request }) => {
+    const id = Number(new URL(request.url).pathname.split("/").pop());
+    const patch = (await request.json().catch(() => ({}))) as Record<string, unknown>;
+    const current = alertRules.find((alert) => alert.id === id);
+    if (!current) {
+      return HttpResponse.json({ detail: "Not found" }, { status: 404 });
+    }
+    const updated = {
+      ...current,
+      enabled:
+        typeof patch["enabled"] === "boolean" ? patch["enabled"] : current.enabled,
+      threshold:
+        typeof patch["threshold"] === "number"
+          ? patch["threshold"].toFixed(4)
+          : current.threshold,
+    };
+    alertRules = alertRules.map((alert) => (alert.id === id ? updated : alert));
+    return HttpResponse.json(updated);
+  },
+);
+
+export const watchlistAlertsDeleteHandler = http.delete(
+  /\/watchlist\/alerts\/\d+$/,
+  ({ request }) => {
+    const id = Number(new URL(request.url).pathname.split("/").pop());
+    alertRules = alertRules.filter((alert) => alert.id !== id);
+    return new HttpResponse(null, { status: 204 });
   },
 );
 
@@ -123,9 +329,17 @@ export const portfolioAiInsightHandler = http.get(
 
 // ---------- 핸들러 통합 ----------
 export const watchlistHandlers = [
+  symbolSearchHandler,
+  watchlistItemsHandler,
+  watchlistCreateItemHandler,
+  watchlistDeleteItemHandler,
   watchlistSummaryHandler,
   watchlistPopularHandler,
   watchlistGainersLosersHandler,
+  watchlistAlertsListHandler,
+  watchlistAlertsCreateHandler,
+  watchlistAlertsUpdateHandler,
+  watchlistAlertsDeleteHandler,
   portfolioSectorHeatmapHandler,
   portfolioMonthlyReturnsHandler,
   portfolioAiInsightHandler,

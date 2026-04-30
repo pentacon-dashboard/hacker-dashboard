@@ -1,58 +1,85 @@
-"""섹터 매핑 테이블 — 티커 → 섹터 (하드코드 stub).
+"""Deterministic ticker to GICS sector mapping.
 
-20~30 종목 매핑. 미매핑 종목은 "기타" 반환.
-sprint-08 Phase B-1.
+The map is intentionally small and fixture-like. Unknown stock tickers fall
+back to ``Other`` so reports can stay honest instead of inventing sectors.
+Crypto and cash-like instruments are kept outside GICS as explicit buckets.
 """
 
 from __future__ import annotations
 
+GICS_SECTORS: tuple[str, ...] = (
+    "Communication Services",
+    "Consumer Discretionary",
+    "Consumer Staples",
+    "Energy",
+    "Financials",
+    "Health Care",
+    "Industrials",
+    "Information Technology",
+    "Materials",
+    "Real Estate",
+    "Utilities",
+)
+
 _SECTOR_MAP: dict[str, str] = {
-    # 한국 주식
-    "005930": "반도체",
-    "000660": "반도체",
-    "035420": "인터넷",
-    "035720": "인터넷",
-    "005380": "자동차",
-    "000270": "자동차",
-    "068270": "바이오",
-    "207940": "바이오",
-    "006400": "2차전지",
-    "051910": "2차전지",
-    "028260": "금융",
-    "055550": "금융",
-    # 미국 주식
-    "AAPL": "Tech",
-    "MSFT": "Tech",
-    "GOOGL": "Tech",
-    "GOOG": "Tech",
-    "NVDA": "반도체",
-    "AMD": "반도체",
-    "TSLA": "EV/에너지",
-    "AMZN": "커머스/클라우드",
-    "META": "소셜미디어",
-    "NFLX": "스트리밍",
-    "JPM": "금융",
-    "BAC": "금융",
-    "V": "금융",
-    "JNJ": "헬스케어",
-    "UNH": "헬스케어",
-    "XOM": "에너지",
-    "CVX": "에너지",
-    # 암호화폐
-    "KRW-BTC": "Crypto",
-    "KRW-ETH": "Crypto",
-    "KRW-SOL": "Crypto",
-    "KRW-XRP": "Crypto",
-    "BTCUSDT": "Crypto",
-    "ETHUSDT": "Crypto",
+    # Korean equities
+    "005930": "Information Technology",
+    "000660": "Information Technology",
+    "035420": "Communication Services",
+    "035720": "Communication Services",
+    "005380": "Consumer Discretionary",
+    "000270": "Consumer Discretionary",
+    "068270": "Health Care",
+    "207940": "Health Care",
+    "006400": "Industrials",
+    "051910": "Materials",
+    "028260": "Industrials",
+    "055550": "Financials",
+    # US equities
+    "AAPL": "Information Technology",
+    "MSFT": "Information Technology",
+    "NVDA": "Information Technology",
+    "AMD": "Information Technology",
+    "GOOGL": "Communication Services",
+    "GOOG": "Communication Services",
+    "META": "Communication Services",
+    "NFLX": "Communication Services",
+    "AMZN": "Consumer Discretionary",
+    "TSLA": "Consumer Discretionary",
+    "JPM": "Financials",
+    "BAC": "Financials",
+    "V": "Financials",
+    "MA": "Financials",
+    "JNJ": "Health Care",
+    "UNH": "Health Care",
+    "PFE": "Health Care",
+    "XOM": "Energy",
+    "CVX": "Energy",
+    "NEE": "Utilities",
+    "PLD": "Real Estate",
+    "CAT": "Industrials",
+    "LIN": "Materials",
+    "PG": "Consumer Staples",
+    "KO": "Consumer Staples",
+    # Non-GICS buckets
+    "KRW-BTC": "Digital Assets",
+    "KRW-ETH": "Digital Assets",
+    "KRW-SOL": "Digital Assets",
+    "KRW-XRP": "Digital Assets",
+    "BTCUSDT": "Digital Assets",
+    "ETHUSDT": "Digital Assets",
+    "CASH": "Cash",
+    "KRW": "Cash",
+    "USD": "Cash",
 }
 
 
 def get_sector(ticker: str) -> str:
-    """ticker 로 섹터 조회. 미매핑은 '기타' 반환."""
-    return _SECTOR_MAP.get(ticker.upper(), _SECTOR_MAP.get(ticker, "기타"))
+    """Return a deterministic GICS sector or explicit non-GICS bucket."""
+    normalized = ticker.upper().strip()
+    return _SECTOR_MAP.get(normalized, _SECTOR_MAP.get(ticker.strip(), "Other"))
 
 
 def get_sector_map() -> dict[str, str]:
-    """전체 섹터 맵 반환 (읽기 전용 복사본)."""
+    """Return a copy of the static sector mapping."""
     return dict(_SECTOR_MAP)

@@ -17,6 +17,7 @@ export const DICT: Dict = {
   },
 
   // Sidebar
+  "sidebar.clients": { ko: "고객장부", en: "Clients" },
   "sidebar.dashboard": { ko: "대시보드", en: "Dashboard" },
   "sidebar.portfolio": { ko: "포트폴리오", en: "Portfolio" },
   "sidebar.watchlist": { ko: "워치리스트", en: "Watchlist" },
@@ -38,6 +39,8 @@ export const DICT: Dict = {
 
   // Header
   "header.apiOk": { ko: "API 정상", en: "API OK" },
+  "header.apiError": { ko: "API 오류", en: "API Error" },
+  "header.apiChecking": { ko: "API 확인 중", en: "Checking API" },
   "header.env": { ko: "DEV", en: "DEV" },
   "header.darkMode": { ko: "다크 모드로 전환", en: "Switch to dark mode" },
   "header.lightMode": { ko: "라이트 모드로 전환", en: "Switch to light mode" },
@@ -601,6 +604,9 @@ export const DICT: Dict = {
   "portfolio.sector.communication": { ko: "통신", en: "Communication" },
   "portfolio.sector.crypto": { ko: "암호화폐", en: "Crypto" },
   "portfolio.sector.tech": { ko: "기술", en: "Tech" },
+  "portfolio.sector.krEquity": { ko: "국내주식", en: "KR Equity" },
+  "portfolio.sector.usEquity": { ko: "해외주식", en: "US Equity" },
+  "portfolio.sector.cash": { ko: "현금", en: "Cash" },
 
   // Symbol names — Korean ↔ English for watchlist popular items
   "symbol.name.005930": { ko: "삼성전자", en: "Samsung Electronics" },

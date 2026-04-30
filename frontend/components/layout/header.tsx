@@ -46,6 +46,12 @@ export function Header() {
   const healthStatus = useHealthPolling(10000);
   const toggleMobileMenu = useUiStore((s) => s.toggleMobileMenu);
   const { t } = useLocale();
+  const healthLabel =
+    healthStatus === "ok"
+      ? t("header.apiOk")
+      : healthStatus === "error"
+        ? t("header.apiError")
+        : t("header.apiChecking");
 
   function handleToggle() {
     setTheme(isDark ? "light" : "dark");
@@ -93,8 +99,8 @@ export function Header() {
         {/* API Health dot */}
         <div
           className="flex items-center gap-1.5"
-          aria-label={`${t("header.apiOk")}: ${healthStatus === "ok" ? t("settings.system.healthy") : healthStatus === "error" ? t("settings.system.error") : t("common.loading")}`}
-          title={`${t("header.apiOk")} ${healthStatus === "ok" ? t("settings.system.healthy") : healthStatus === "error" ? t("settings.system.error") : t("common.loading")}`}
+          aria-label={healthLabel}
+          title={healthLabel}
         >
           <span
             className={`inline-block h-2 w-2 rounded-full ${
@@ -107,7 +113,7 @@ export function Header() {
             aria-hidden="true"
           />
           <span className="hidden text-xs text-muted-foreground sm:inline">
-            {healthStatus === "ok" ? t("header.apiOk") : healthStatus === "error" ? `${t("header.apiOk")} ${t("common.error")}` : t("common.loading")}
+            {healthLabel}
           </span>
         </div>
 

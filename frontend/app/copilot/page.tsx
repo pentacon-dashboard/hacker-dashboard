@@ -1,14 +1,16 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { SessionSidebar, type CopilotSession } from "@/components/copilot/full/session-sidebar";
+import {
+  SessionSidebar,
+  type CopilotSession,
+} from "@/components/copilot/full/session-sidebar";
 import { ThreadView } from "@/components/copilot/full/thread-view";
 import { ReferencePanel } from "@/components/copilot/full/reference-panel";
 import { useCopilotStream, type CopilotCard } from "@/hooks/use-copilot-stream";
 import { API_BASE } from "@/lib/api/client";
 import { useLocale } from "@/lib/i18n/locale-provider";
 
-// TODO: BE γ-sprint 완료 후 실 엔드포인트로 swap (현재 MSW stub 사용)
 async function fetchSessions(): Promise<CopilotSession[]> {
   try {
     const res = await fetch(`${API_BASE}/copilot/sessions`);
@@ -29,8 +31,12 @@ interface HistoryMessage {
 
 function finalCardToMessage(card: CopilotCard | null): string {
   if (!card) return "";
-  if (typeof card.content === "string" && card.content.trim()) return normalizeAssistantText(card.content);
-  if (typeof card.body === "string" && card.body.trim()) return normalizeAssistantText(card.body);
+  if (typeof card.content === "string" && card.content.trim()) {
+    return normalizeAssistantText(card.content);
+  }
+  if (typeof card.body === "string" && card.body.trim()) {
+    return normalizeAssistantText(card.body);
+  }
   return "분석 결과를 정리했습니다.";
 }
 
@@ -49,7 +55,14 @@ function normalizeAssistantText(text: string): string {
     const parsed = JSON.parse(cleaned) as unknown;
     if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
       const data = parsed as Record<string, unknown>;
-      for (const key of ["answer", "response", "content", "summary", "message", "analysis"]) {
+      for (const key of [
+        "answer",
+        "response",
+        "content",
+        "summary",
+        "message",
+        "analysis",
+      ]) {
         const value = data[key];
         if (typeof value === "string" && value.trim()) return value.trim();
       }
@@ -69,7 +82,10 @@ function normalizeAssistantText(text: string): string {
 
   cleaned = cleaned.replace(/^\[[^\]]+\]\s*/gm, "");
   cleaned = cleaned.replace(/\s*\((?:sync fallback|degraded)\)\s*/gi, " ");
-  cleaned = cleaned.replace(/(?:stock|crypto|fx|macro|portfolio|rebalance|포트폴리오)\s*분석\s*결과\s*:\s*/gi, "");
+  cleaned = cleaned.replace(
+    /(?:stock|crypto|fx|macro|portfolio|rebalance)\s*analysis\s*:\s*/gi,
+    "",
+  );
   cleaned = cleaned.replace(/sync fallback\s*:\s*/gi, "");
 
   return cleaned.trim() || "분석 결과를 정리했습니다.";
@@ -101,7 +117,6 @@ export default function CopilotPage() {
       setLiveMessages([]);
       appendedTurnRef.current = null;
 
-      // TODO: BE γ-sprint — 세션 상세 페치
       try {
         const res = await fetch(`${API_BASE}/copilot/sessions/${sessionId}`);
         if (!res.ok) return;
@@ -130,7 +145,7 @@ export default function CopilotPage() {
         }
         setHistoryMessages(msgs);
       } catch {
-        // 실패 시 빈 상태 유지
+        // Keep the thread empty when the session fetch fails.
       }
     },
     [reset],
@@ -181,7 +196,6 @@ export default function CopilotPage() {
 
   return (
     <div className="flex flex-col gap-4">
-      {/* 헤더 */}
       <div>
         <h1 className="flex items-center gap-2 text-2xl font-bold tracking-tight">
           {t("copilot.title")}
@@ -192,12 +206,10 @@ export default function CopilotPage() {
         <p className="mt-1 text-sm text-muted-foreground">{t("copilot.subtitle")}</p>
       </div>
 
-      {/* 3 컬럼 레이아웃 */}
       <div
         className="grid h-[calc(100vh-200px)] min-h-[500px] grid-cols-1 gap-4 md:grid-cols-12"
         data-testid="copilot-layout"
       >
-        {/* 좌: 세션 사이드바 (3/12) */}
         <div className="overflow-hidden rounded-xl border border-border bg-card p-3 md:col-span-3">
           <SessionSidebar
             sessions={sessions}
@@ -208,7 +220,6 @@ export default function CopilotPage() {
           />
         </div>
 
-        {/* 중앙: 대화 스레드 (6/12) */}
         <div className="flex flex-col overflow-hidden rounded-xl border border-border bg-card p-3 md:col-span-6">
           <ThreadView
             sessionId={activeSessionId}
@@ -219,7 +230,6 @@ export default function CopilotPage() {
           />
         </div>
 
-        {/* 우: 레퍼런스 패널 (3/12) */}
         <div className="overflow-hidden rounded-xl border border-border bg-card p-3 md:col-span-3">
           <ReferencePanel onQuickQuestion={handleQuickQuestion} />
         </div>

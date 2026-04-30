@@ -125,7 +125,7 @@ export function DateRangePicker() {
           aria-label={t("header.dateRangePicker")}
           className={cn(
             "absolute right-0 top-full z-50 mt-1.5 rounded-2xl border border-border bg-popover shadow-lg",
-            "animate-in fade-in duration-200",
+            "w-[min(32rem,calc(100vw-2rem))] overflow-x-auto animate-in fade-in duration-200 sm:w-auto",
           )}
         >
           <DayPicker
@@ -134,27 +134,30 @@ export function DateRangePicker() {
             selected={range}
             onSelect={handleSelect}
             numberOfMonths={2}
+            fixedWeeks
             className="p-3"
             classNames={{
               root: "rdp",
-              months: "flex gap-4",
-              month: "flex flex-col gap-1",
-              caption: "flex items-center justify-between py-1 mb-1",
+              months: "flex flex-col gap-4 sm:flex-row",
+              month: "w-56 space-y-2",
+              month_caption: "relative flex h-8 items-center justify-center",
               caption_label: "text-sm font-semibold text-foreground",
-              nav: "flex items-center gap-1",
-              button_previous: "h-6 w-6 rounded-lg hover:bg-muted flex items-center justify-center text-muted-foreground",
-              button_next: "h-6 w-6 rounded-lg hover:bg-muted flex items-center justify-center text-muted-foreground",
-              table: "w-full border-collapse",
-              head_row: "flex",
-              head_cell: "w-8 text-center text-[10px] text-muted-foreground font-normal py-1",
-              row: "flex mt-0.5",
-              cell: "w-8 text-center text-sm p-0",
-              day: "h-7 w-7 rounded-lg text-xs font-medium hover:bg-muted flex items-center justify-center mx-auto transition-colors",
-              day_selected: "bg-primary text-primary-foreground hover:bg-primary/90",
-              day_range_middle: "rounded-none bg-primary/20 text-primary",
-              day_today: "font-bold text-primary",
-              day_outside: "text-muted-foreground/40",
-              day_disabled: "text-muted-foreground/30 cursor-not-allowed",
+              nav: "absolute inset-x-3 top-3 flex items-center justify-between",
+              button_previous: "h-7 w-7 rounded-lg hover:bg-muted flex items-center justify-center text-muted-foreground",
+              button_next: "h-7 w-7 rounded-lg hover:bg-muted flex items-center justify-center text-muted-foreground",
+              month_grid: "w-56 table-fixed border-collapse",
+              weekdays: "",
+              weekday: "h-7 w-8 text-center text-[10px] font-medium leading-7 text-muted-foreground",
+              week: "",
+              day: "h-8 w-8 p-0 text-center text-sm",
+              day_button: "mx-auto flex h-7 w-7 items-center justify-center rounded-lg text-xs font-medium transition-colors hover:bg-muted",
+              selected: "bg-primary text-primary-foreground hover:bg-primary/90",
+              range_start: "rounded-l-lg bg-primary text-primary-foreground",
+              range_middle: "rounded-none bg-primary/20 text-primary",
+              range_end: "rounded-r-lg bg-primary text-primary-foreground",
+              today: "font-bold text-primary",
+              outside: "text-muted-foreground/40",
+              disabled: "cursor-not-allowed text-muted-foreground/30",
             }}
           />
         </div>

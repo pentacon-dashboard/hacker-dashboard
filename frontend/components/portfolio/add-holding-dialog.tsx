@@ -139,6 +139,8 @@ export function AddHoldingDialog({ clientId = "client-001" }: AddHoldingDialogPr
             </label>
             <input
               id="holding-quantity"
+              name="quantity"
+              data-testid="holding-quantity"
               type="number"
               step="any"
               min="0"
@@ -161,6 +163,8 @@ export function AddHoldingDialog({ clientId = "client-001" }: AddHoldingDialogPr
             </label>
             <input
               id="holding-avg-cost"
+              name="avg_cost"
+              data-testid="holding-avg-cost"
               type="number"
               step="any"
               min="0"

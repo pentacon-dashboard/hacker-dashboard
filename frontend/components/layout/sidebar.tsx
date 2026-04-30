@@ -11,21 +11,19 @@ import { MarketStatusCard } from "@/components/layout/market-status-card";
 import { useLocale } from "@/lib/i18n/locale-provider";
 
 import {
-  LayoutDashboard,
-  Briefcase,
   Eye,
   LineChart,
   Globe,
   Sparkles,
   Upload,
   Settings,
+  Users,
 } from "lucide-react";
 
 const ICON_CLASS = "h-[18px] w-[18px] shrink-0";
 
 const navItems = [
-  { href: "/", labelKey: "sidebar.dashboard", icon: <LayoutDashboard className={ICON_CLASS} aria-hidden="true" /> },
-  { href: "/portfolio", labelKey: "sidebar.portfolio", icon: <Briefcase className={ICON_CLASS} aria-hidden="true" /> },
+  { href: "/", labelKey: "sidebar.clients", icon: <Users className={ICON_CLASS} aria-hidden="true" /> },
   { href: "/watchlist", labelKey: "sidebar.watchlist", icon: <Eye className={ICON_CLASS} aria-hidden="true" /> },
   { href: "/symbol", labelKey: "sidebar.symbol", icon: <LineChart className={ICON_CLASS} aria-hidden="true" /> },
   { href: "/market-analyze", labelKey: "sidebar.market", icon: <Globe className={ICON_CLASS} aria-hidden="true" /> },
@@ -49,7 +47,7 @@ function NavContent({
       {navItems.map((item) => {
         const isActive =
           item.href === "/"
-            ? pathname === "/"
+            ? pathname === "/" || pathname.startsWith("/clients")
             : pathname.startsWith(item.href);
         return (
           <Link

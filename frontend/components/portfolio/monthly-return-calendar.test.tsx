@@ -34,10 +34,10 @@ describe("MonthlyReturnCalendar", () => {
     expect(calCells.length).toBeGreaterThan(300);
   });
 
-  it("월 라벨 Jan이 렌더된다", () => {
+  it("한국어 월 라벨이 렌더된다", () => {
     const cells = buildCells(365);
     render(<MonthlyReturnCalendar cells={cells} year={2026} />);
-    expect(screen.getByText("Jan")).toBeInTheDocument();
+    expect(screen.getByText("1월")).toBeInTheDocument();
   });
 
   it("낮음/높음 범례가 렌더된다", () => {

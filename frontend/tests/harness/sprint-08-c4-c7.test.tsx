@@ -136,9 +136,9 @@ describe("C-4: SectorKpiGrid", () => {
 
   it("3개 섹터 모두 표시한다", () => {
     render(<SectorKpiGrid sectors={SAMPLE_SECTORS} />);
-    expect(screen.getAllByText("Technology").length).toBeGreaterThan(0);
-    expect(screen.getAllByText("Healthcare").length).toBeGreaterThan(0);
-    expect(screen.getAllByText("Financials").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("정보기술").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("헬스케어").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("금융").length).toBeGreaterThan(0);
   });
 
   it("빈 상태에서 에러 없이 렌더한다", () => {

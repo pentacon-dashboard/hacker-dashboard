@@ -419,6 +419,17 @@ async def _execute_step(
                 }
             )
         )
+        if forced_fail:
+            gate_events.append(
+                _sse(
+                    {
+                        "type": "error",
+                        "step_id": step.step_id,
+                        "code": "STEP_FORCED_FAILURE",
+                        "message": "step execution was forced to fail",
+                    }
+                )
+            )
         degraded = True
     else:
         if gate_policy.schema_check:
@@ -696,6 +707,14 @@ async def stream_copilot_query(
 
         for step, result in sorted_pairs:
             if isinstance(result, Exception):
+                yield _sse(
+                    {
+                        "type": "error",
+                        "step_id": step.step_id,
+                        "code": "STEP_EXECUTION_ERROR",
+                        "message": str(result)[:200],
+                    }
+                )
                 step_results[step.step_id] = {
                     "card": {
                         "type": "text",

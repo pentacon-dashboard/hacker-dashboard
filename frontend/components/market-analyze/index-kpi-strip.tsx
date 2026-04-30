@@ -2,14 +2,19 @@
 
 import { TrendingUp, TrendingDown } from "lucide-react";
 import { cn } from "@/lib/utils";
+import {
+  formatSignedPercent,
+  isNonNegativePercent,
+  type PercentValue,
+} from "@/components/market-analyze/percent";
 
 // BE /market/indices 실제 스키마
 export interface IndexSnapshot {
   ticker: string;
   display_name: string;
-  value: string;
-  change_pct: string;
-  change_abs: string;
+  value: string | number;
+  change_pct: PercentValue;
+  change_abs: string | number;
   sparkline_7d: number[];
 }
 
@@ -53,9 +58,10 @@ function Sparkline({ data, positive }: { data: number[]; positive: boolean }) {
   );
 }
 
-function formatValue(ticker: string, value: string): string {
-  const num = parseFloat(value.replace(/,/g, ""));
-  if (isNaN(num)) return value;
+function formatValue(ticker: string, value: string | number): string {
+  const rawValue = String(value ?? "");
+  const num = parseFloat(rawValue.replace(/,/g, ""));
+  if (isNaN(num)) return rawValue;
   if (ticker === "USDKRW" || num >= 1000) {
     return num.toLocaleString("ko-KR", { maximumFractionDigits: 2 });
   }
@@ -84,7 +90,8 @@ export function IndexKpiStrip({ indices, loading }: IndexKpiStripProps) {
       data-testid="index-kpi-strip"
     >
       {indices.map((idx) => {
-        const positive = !idx.change_pct.startsWith("-");
+        const positive = isNonNegativePercent(idx.change_pct);
+        const changeLabel = formatSignedPercent(idx.change_pct);
         return (
           <div
             key={idx.ticker}
@@ -103,10 +110,10 @@ export function IndexKpiStrip({ indices, loading }: IndexKpiStripProps) {
                 ) : (
                   <TrendingDown className="h-3 w-3" aria-hidden="true" />
                 )}
-                {idx.change_pct}%
+                {changeLabel}
               </div>
             </div>
-            <Sparkline data={idx.sparkline_7d} positive={positive} />
+            <Sparkline data={idx.sparkline_7d ?? []} positive={positive} />
           </div>
         );
       })}

@@ -1,9 +1,11 @@
 from decimal import Decimal
 from typing import Any, Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, StrictBool
 
 from app.schemas.market import OhlcBar
+
+CLIENT_ID_PATTERN = r"^[A-Za-z0-9][A-Za-z0-9._:-]{0,63}$"
 
 
 class PortfolioHolding(BaseModel):
@@ -21,9 +23,12 @@ class PortfolioHolding(BaseModel):
 class PortfolioContext(BaseModel):
     """분석 요청에 주입되는 개인화 포트폴리오 컨텍스트."""
 
+    client_id: str | None = None
+    client_name: str | None = None
     holdings: list[PortfolioHolding]
     total_value_krw: Decimal
     asset_class_breakdown: dict[str, float]  # {"stock": 0.6, "crypto": 0.4}
+    sector_breakdown: dict[str, float] = Field(default_factory=dict)
     matched_holding: PortfolioHolding | None = None  # 분석 대상 심볼과 일치하는 보유
 
 
@@ -67,9 +72,16 @@ class AnalyzeRequest(BaseModel):
     context: AnalyzeContext | None = Field(
         None, description="클라이언트가 선계산해 넘기는 OHLC 등 부가 컨텍스트"
     )
-    include_portfolio_context: bool = Field(
+    include_portfolio_context: StrictBool = Field(
         False,
         description="True면 서버가 DB에서 holdings를 조회해 AgentState에 주입. LLM이 개인화된 분석 수행.",
+    )
+    client_id: str = Field(
+        "client-001",
+        min_length=1,
+        max_length=64,
+        pattern=CLIENT_ID_PATTERN,
+        description="Portfolio client context id",
     )
 
 
@@ -94,6 +106,8 @@ class AnalyzerOutput(BaseModel):
     metrics: dict[str, Any] = Field(default_factory=dict)
     signals: list[AnalyzerSignal] = Field(default_factory=list)
     evidence: list[dict[str, Any]] = Field(default_factory=list)
+    client_context: dict[str, str] | None = None
+    report_script: str | None = Field(None, description="PB briefing report in markdown")
     confidence: float = Field(0.0, ge=0.0, le=1.0)
 
 

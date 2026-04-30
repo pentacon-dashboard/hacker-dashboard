@@ -1,3 +1,5 @@
+model_context_window = 1000000
+model_auto_compact_token_limit = 900000
 approval_policy = "on-request"
 project_doc_fallback_filenames = [
     ".codex/project.md",
@@ -22,7 +24,7 @@ exclude = [
     "DATABASE_URL",
     "NEXT_PUBLIC_COPILOT_MOCK",
 ]
-inherit = "core"
+inherit = "all"
 
 [shell_environment_policy.set]
 CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS = "1"

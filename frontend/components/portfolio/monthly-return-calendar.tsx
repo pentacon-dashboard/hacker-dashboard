@@ -14,12 +14,18 @@ interface MonthlyReturnCalendarProps {
   year?: number;
 }
 
-const MONTH_LABELS = [
+const MONTH_LABELS_EN = [
   "Jan", "Feb", "Mar", "Apr", "May", "Jun",
   "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
 ];
 
-const WEEK_LABELS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+const MONTH_LABELS_KO = [
+  "1월", "2월", "3월", "4월", "5월", "6월",
+  "7월", "8월", "9월", "10월", "11월", "12월",
+];
+
+const WEEK_LABELS_EN = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+const WEEK_LABELS_KO = ["일", "월", "화", "수", "목", "금", "토"];
 
 /** cell_level 0~4 + 부호 → GitHub 스타일 색상 */
 function levelToColor(level: number, returnPct: number): string {
@@ -49,8 +55,10 @@ interface CellMap {
 }
 
 export function MonthlyReturnCalendar({ cells, year }: MonthlyReturnCalendarProps) {
-  const { t } = useLocale();
+  const { locale, t } = useLocale();
   const [hovered, setHovered] = useState<MonthlyReturnCell | null>(null);
+  const monthLabels = locale === "en" ? MONTH_LABELS_EN : MONTH_LABELS_KO;
+  const weekLabels = locale === "en" ? WEEK_LABELS_EN : WEEK_LABELS_KO;
 
   if (cells.length === 0) {
     return (
@@ -102,7 +110,7 @@ export function MonthlyReturnCalendar({ cells, year }: MonthlyReturnCalendarProp
       (firstOfMonth.getTime() - firstDay.getTime()) / 86400000,
     );
     const weekIdx = Math.floor((dayOfYear + startOffset) / 7);
-    monthPositions.push({ label: MONTH_LABELS[m] ?? "", weekIdx });
+    monthPositions.push({ label: monthLabels[m] ?? "", weekIdx });
   }
 
   return (
@@ -124,7 +132,7 @@ export function MonthlyReturnCalendar({ cells, year }: MonthlyReturnCalendarProp
         <div className="flex gap-[3px]">
           {/* 요일 라벨 */}
           <div className="flex flex-col gap-[3px] pr-1">
-            {WEEK_LABELS.map((d, i) => (
+            {weekLabels.map((d, i) => (
               <span
                 key={d}
                 className="h-[11px] text-[9px] leading-[11px] text-muted-foreground"

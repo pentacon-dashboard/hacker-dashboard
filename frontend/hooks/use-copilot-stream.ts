@@ -2,8 +2,6 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 
-// ── 타입 정의 ────────────────────────────────────────────────────────────────
-
 export interface CopilotPlan {
   plan_id: string;
   session_id: string;
@@ -20,7 +18,14 @@ export interface CopilotPlanStep {
 }
 
 export interface CopilotCard {
-  type: "text" | "chart" | "scorecard" | "citation" | "comparison_table" | "simulator_result" | "news_rag_list";
+  type:
+    | "text"
+    | "chart"
+    | "scorecard"
+    | "citation"
+    | "comparison_table"
+    | "simulator_result"
+    | "news_rag_list";
   degraded?: boolean;
   body?: string;
   content?: string;
@@ -31,13 +36,17 @@ export type CopilotEvent =
   | { type: "plan.ready"; plan: CopilotPlan }
   | { type: "step.start"; step_id: string }
   | { type: "step.token"; step_id: string; text: string }
-  | { type: "step.gate"; step_id: string; gate: "schema" | "domain" | "critique"; status: "pass" | "fail" | "retry"; reason?: string | null }
+  | {
+      type: "step.gate";
+      step_id: string;
+      gate: "schema" | "domain" | "critique";
+      status: "pass" | "fail" | "retry";
+      reason?: string | null;
+    }
   | { type: "step.result"; step_id: string; card: CopilotCard }
   | { type: "final.card"; card: CopilotCard }
   | { type: "error"; step_id?: string; code: string; message: string }
   | { type: "done"; session_id: string; turn_id: string };
-
-// ── 리듀서 상태 ─────────────────────────────────────────────────────────────
 
 export interface StepState {
   buffer: string;
@@ -57,7 +66,6 @@ export interface CopilotStreamState {
   finalCard: CopilotCard | null;
   sessionId: string | null;
   turnId: string | null;
-  /** 가장 최근 degraded 이벤트 1건 (다중 degraded 는 마지막 것만). */
   degraded: { step_id: string; reason: string } | null;
   error: string | null;
 }
@@ -72,8 +80,6 @@ export const initialCopilotState: CopilotStreamState = {
   degraded: null,
   error: null,
 };
-
-// ── 순수 리듀서 (export: vitest 테스트용) ─────────────────────────────────
 
 export function copilotStreamReducer(
   state: CopilotStreamState,
@@ -202,8 +208,6 @@ export function copilotStreamReducer(
   }
 }
 
-// ── SSE 클라이언트 훅 ─────────────────────────────────────────────────────
-
 export interface UseCopilotStreamOptions {
   onEvent?: (event: CopilotEvent) => void;
 }
@@ -213,7 +217,6 @@ export function useCopilotStream(options?: UseCopilotStreamOptions) {
   const eventSourceRef = useRef<EventSource | null>(null);
   const abortRef = useRef<AbortController | null>(null);
 
-  // EventSource 정리 함수
   const cleanup = useCallback(() => {
     if (eventSourceRef.current) {
       eventSourceRef.current.close();
@@ -225,7 +228,6 @@ export function useCopilotStream(options?: UseCopilotStreamOptions) {
     }
   }, []);
 
-  // 구독 해제
   useEffect(() => {
     return cleanup;
   }, [cleanup]);
@@ -239,16 +241,7 @@ export function useCopilotStream(options?: UseCopilotStreamOptions) {
       abortRef.current = controller;
 
       try {
-        // mock_scenario 파라미터가 URL에 있으면 그대로 전달 (MSW degraded 시나리오용)
-        const mockScenario =
-          typeof window !== "undefined"
-            ? new URLSearchParams(window.location.search).get("mock_scenario")
-            : null;
-        const fetchUrl = mockScenario
-          ? `/api/copilot/query?mock_scenario=${encodeURIComponent(mockScenario)}`
-          : "/api/copilot/query";
-
-        const res = await fetch(fetchUrl, {
+        const res = await fetch("/api/copilot/query", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ query: queryText, session_id: sessionId }),
@@ -271,24 +264,21 @@ export function useCopilotStream(options?: UseCopilotStreamOptions) {
           if (done) break;
 
           buffer += decoder.decode(value, { stream: true });
-
-          // SSE 블록 파싱: `\n\n` 구분
           const blocks = buffer.split("\n\n");
           buffer = blocks.pop() ?? "";
 
           for (const block of blocks) {
             if (!block.trim()) continue;
             for (const line of block.split("\n")) {
-              if (line.startsWith("data:")) {
-                const payload = line.slice("data:".length).trim();
-                if (!payload) continue;
-                try {
-                  const event = JSON.parse(payload) as CopilotEvent;
-                  options?.onEvent?.(event);
-                  setState((s) => copilotStreamReducer(s, event));
-                } catch {
-                  // JSON 파싱 실패 무시
-                }
+              if (!line.startsWith("data:")) continue;
+              const payload = line.slice("data:".length).trim();
+              if (!payload) continue;
+              try {
+                const event = JSON.parse(payload) as CopilotEvent;
+                options?.onEvent?.(event);
+                setState((s) => copilotStreamReducer(s, event));
+              } catch {
+                // Ignore malformed SSE frames and continue reading.
               }
             }
           }
