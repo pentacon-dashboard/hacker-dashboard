@@ -53,6 +53,35 @@ class AiInsightResponse(BaseModel):
     gates: dict[str, str]  # {schema:"pass", domain:"pass", critique:"pass"}
 
 
+class ReportEvidenceItem(BaseModel):
+    """Evidence item attached to a deterministic client briefing section."""
+
+    type: str
+    ref: str
+    description: str | None = None
+
+
+class ClientBriefingSection(BaseModel):
+    """One section of the PB client briefing report."""
+
+    title: str
+    body: str
+    evidence: list[ReportEvidenceItem] = Field(default_factory=list)
+
+
+class ClientBriefingReportResponse(BaseModel):
+    """Evidence-backed PB client briefing response."""
+
+    status: Literal["success", "warning", "degraded", "insufficient_data"]
+    client_context: dict[str, Any]
+    metrics: dict[str, Any]
+    sections: list[ClientBriefingSection]
+    evidence: list[ReportEvidenceItem]
+    gate_results: dict[str, str]
+    export_ready: bool
+    report_script: str | None = None
+
+
 class HoldingCreate(BaseModel):
     client_id: str = Field(
         "client-001",
