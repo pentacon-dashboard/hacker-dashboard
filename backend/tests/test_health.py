@@ -45,6 +45,32 @@ async def test_db_check_times_out(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 @pytest.mark.asyncio
+async def test_db_check_reports_schema_mismatch(monkeypatch: pytest.MonkeyPatch) -> None:
+    async def schema_mismatch() -> None:
+        raise health_module._DbSchemaError("missing table: holdings")
+
+    monkeypatch.setattr(health_module, "_ping_db", schema_mismatch)
+
+    assert await health_module._check_db() == "schema_mismatch"
+
+
+def test_db_schema_validation_requires_core_tables(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(health_module, "_expected_alembic_head", lambda: "head")
+
+    with pytest.raises(health_module._DbSchemaError, match="missing tables"):
+        health_module._validate_db_schema({"alembic_version", "holdings"}, "head")
+
+
+def test_db_schema_validation_requires_current_alembic_head(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(health_module, "_expected_alembic_head", lambda: "head")
+
+    with pytest.raises(health_module._DbSchemaError, match="alembic version mismatch"):
+        health_module._validate_db_schema(health_module._REQUIRED_DB_TABLES, "old")
+
+
+@pytest.mark.asyncio
 async def test_redis_check_times_out(monkeypatch: pytest.MonkeyPatch) -> None:
     async def slow_ping() -> None:
         await asyncio.sleep(1)
@@ -91,3 +117,21 @@ async def test_health_ok_when_optional_redis_disabled(monkeypatch: pytest.Monkey
 
     assert response.status == "ok"
     assert response.services.redis == "disabled"
+
+
+@pytest.mark.asyncio
+async def test_health_degraded_when_db_schema_mismatch(monkeypatch: pytest.MonkeyPatch) -> None:
+    async def schema_mismatch_db() -> str:
+        return "schema_mismatch"
+
+    async def disabled_redis() -> str:
+        return "disabled"
+
+    monkeypatch.setattr(health_module, "_check_db", schema_mismatch_db)
+    monkeypatch.setattr(health_module, "_check_redis", disabled_redis)
+
+    request = SimpleNamespace(app=SimpleNamespace(state=SimpleNamespace(started_at=time.time())))
+    response = await health_module.health(request)
+
+    assert response.status == "degraded"
+    assert response.services.db == "schema_mismatch"
