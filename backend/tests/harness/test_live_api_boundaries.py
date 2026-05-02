@@ -10,6 +10,8 @@ REPO_ROOT = Path(__file__).resolve().parents[3]
 
 @pytest.mark.asyncio
 async def test_news_rag_uses_live_search_service(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("COPILOT_NEWS_MODE", "live")
+
     from app.agents.analyzers.news_rag import _retrieve_citations_async
     from app.schemas.copilot import CopilotStep, GatePolicy
     from app.schemas.news import Citation

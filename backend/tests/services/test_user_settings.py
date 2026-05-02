@@ -42,6 +42,45 @@ async def test_get_settings_returns_existing_row(db_session: AsyncSession) -> No
 
 
 @pytest.mark.asyncio
+async def test_get_settings_repairs_blank_timezone(db_session: AsyncSession) -> None:
+    """Legacy rows with a blank timezone are normalized before response validation."""
+    import datetime
+
+    from app.db.models import UserSettings as UserSettingsRow
+    from app.services.user_settings import get_settings
+
+    db_session.add(
+        UserSettingsRow(
+            user_id="blank-timezone-user",
+            name="Demo User",
+            email="demo@demo.com",
+            language="ko",
+            timezone="",
+            theme={"mode": "system", "accent": "violet"},
+            notifications={
+                "email_alerts": True,
+                "push_alerts": False,
+                "price_threshold_pct": 5.0,
+                "daily_digest": True,
+            },
+            data={
+                "refresh_interval_sec": 60,
+                "auto_refresh": True,
+                "auto_backup": False,
+                "cache_size_mb": 256,
+            },
+            connected_accounts=[],
+            updated_at=datetime.datetime.now(datetime.UTC),
+        )
+    )
+    await db_session.commit()
+
+    result = await get_settings(db_session, "blank-timezone-user")
+
+    assert result.timezone == "Asia/Seoul"
+
+
+@pytest.mark.asyncio
 async def test_patch_settings_updates_language(db_session: AsyncSession) -> None:
     """language 패치 후 DB 에서 'en' 으로 반환되어야 한다."""
     from app.schemas.user import UserSettingsPatch

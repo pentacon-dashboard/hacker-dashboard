@@ -37,18 +37,20 @@ function agentLabel(agent?: string): string {
   }
 }
 
-/**
- * CopilotDrawer — 우측 오프캔버스 drawer.
- *
- * progressive 렌더:
- * - step.start → skeleton
- * - step.token → 타이핑 버퍼 (텍스트 미리보기)
- * - step.result → 카드 swap (degraded 포함)
- * - final.card → 통합 응답
- * Esc 키로 닫힘.
- */
+function visibleCard(stepId: string, stepState: StepState, state: CopilotStreamState) {
+  if (!stepState.card) return null;
+  return {
+    ...stepState.card,
+    degraded: stepState.card.degraded === true || stepState.degraded,
+    degraded_reason:
+      (stepState.card.degraded_reason as string | undefined) ??
+      (state.degraded?.step_id === stepId ? state.degraded.reason : undefined),
+  };
+}
+
 export function CopilotDrawer({ open, onClose, state }: CopilotDrawerProps) {
   const { t } = useLocale();
+
   useEffect(() => {
     if (!open) return;
     function handleKey(e: KeyboardEvent) {
@@ -64,14 +66,12 @@ export function CopilotDrawer({ open, onClose, state }: CopilotDrawerProps) {
 
   return (
     <>
-      {/* 배경 오버레이 */}
       <div
         className="fixed inset-0 z-40 bg-black/30"
         onClick={onClose}
         aria-hidden="true"
       />
 
-      {/* Drawer 패널 */}
       <div
         role="dialog"
         aria-label="Copilot"
@@ -79,7 +79,6 @@ export function CopilotDrawer({ open, onClose, state }: CopilotDrawerProps) {
         data-testid="copilot-drawer"
         className="fixed right-0 top-0 z-50 flex h-full w-full max-w-md flex-col overflow-hidden border-l bg-background shadow-xl"
       >
-        {/* 헤더 */}
         <div className="flex items-center justify-between border-b px-4 py-3">
           <h2 className="text-sm font-semibold">{t("copilot.analysis")}</h2>
           <button
@@ -105,34 +104,31 @@ export function CopilotDrawer({ open, onClose, state }: CopilotDrawerProps) {
           </button>
         </div>
 
-        {/* 스크롤 가능 콘텐츠 */}
-        <div className="flex-1 overflow-y-auto px-4 py-3 space-y-4">
-          {/* Plan 카드 */}
+        <div className="flex-1 space-y-4 overflow-y-auto px-4 py-3">
           {state.plan && (
             <div className="flex items-center gap-2 rounded-md border bg-muted/30 px-3 py-2 text-xs text-muted-foreground">
               <Loader2 className="h-3 w-3 animate-spin text-primary" aria-hidden="true" />
-              <span>질문을 이해하고 답변을 구성하고 있습니다.</span>
+              <span>질의를 분석하고 필요한 작업을 구성하고 있습니다.</span>
             </div>
           )}
 
-          {/* Step별 카드 */}
           {stepEntries.map(([stepId, stepState]) => {
             const stepMeta = state.plan?.steps.find((step) => step.step_id === stepId);
+            const card = visibleCard(stepId, stepState, state);
 
             return (
               <div key={stepId} className="space-y-2">
                 <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
                   <Loader2 className="h-3 w-3 animate-spin text-primary" aria-hidden="true" />
-                  <span>{agentLabel(stepMeta?.agent)} 분석 중</span>
+                  <span>{agentLabel(stepMeta?.agent)} 분석</span>
                   {stepState.degraded && (
-                    <span className="rounded bg-destructive/10 px-1 text-destructive text-[10px]">
+                    <span className="rounded bg-destructive/10 px-1 text-[10px] text-destructive">
                       일부 제한
                     </span>
                   )}
                 </div>
 
-                {/* 버퍼 (step.token 타이핑 미리보기) — card 수신 전까지만 표시 */}
-                {!stepState.card && stepState.buffer && (
+                {!card && stepState.buffer && (
                   <div
                     className="rounded border bg-card p-3 text-sm text-muted-foreground"
                     aria-live="polite"
@@ -142,40 +138,35 @@ export function CopilotDrawer({ open, onClose, state }: CopilotDrawerProps) {
                   </div>
                 )}
 
-                {/* 스켈레톤 — 버퍼도 카드도 없으면 */}
-                {!stepState.card && !stepState.buffer && (
-                  <div className="h-16 rounded border bg-muted animate-pulse" aria-label={t("copilot.loading")} />
+                {!card && !stepState.buffer && (
+                  <div
+                    className="h-16 animate-pulse rounded border bg-muted"
+                    aria-label={t("copilot.loading")}
+                  />
                 )}
 
-                {/* step.result 는 내부 실행 결과이므로 최종 답변 전에는 요약 상태만 보여준다. */}
-                {stepState.card && !state.finalCard && (
-                  <div className="rounded border bg-card p-3 text-sm text-muted-foreground">
-                    분석 결과를 대화형 답변으로 정리하고 있습니다.
-                  </div>
-                )}
+                {card && <CardRenderer card={card} stepId={stepId} />}
               </div>
             );
           })}
 
-          {/* Final 카드 */}
           {state.finalCard && (
             <div className="space-y-1" data-testid="copilot-card-final">
-              <div className="text-xs font-semibold text-muted-foreground">{t("copilot.finalResponse")}</div>
-              {/* Final card 는 step 카드에서 이미 degraded 배너를 표시했으므로 중복 방지 */}
+              <div className="text-xs font-semibold text-muted-foreground">
+                {t("copilot.finalResponse")}
+              </div>
               <CardRenderer card={state.finalCard} suppressDegradedBanner />
             </div>
           )}
 
-          {/* 에러 */}
           {state.error && (
             <div className="rounded border border-destructive/50 bg-destructive/10 p-3 text-sm text-destructive">
               {t("copilot.error")}: {state.error}
             </div>
           )}
 
-          {/* 완료 */}
           {state.status === "completed" && state.turnId && (
-            <div className="text-xs text-muted-foreground text-right">
+            <div className="text-right text-xs text-muted-foreground">
               대화가 저장되었습니다.
             </div>
           )}

@@ -43,7 +43,7 @@ interface AnalyzeProgressCardProps {
   file?: File | null;
   config: AnalyzerConfig;
   disabled?: boolean;
-  onComplete?: () => void;
+  onComplete?: () => void | Promise<void>;
 }
 
 function statusFromGateValue(value: string | undefined): GateStatus {
@@ -149,7 +149,7 @@ export function AnalyzeProgressCard({
         }
 
         setStatus("done");
-        setTimeout(() => onComplete?.(), 2500);
+        setTimeout(() => void onComplete?.(), 2500);
         return;
       }
 
@@ -243,7 +243,7 @@ export function AnalyzeProgressCard({
                 if (evtStatus === "pass") {
                   setGates((prev) => ({ ...prev, done: true }));
                   setStatus("done");
-                  setTimeout(() => onComplete?.(), 2500);
+                  setTimeout(() => void onComplete?.(), 2500);
                 }
                 continue;
               }
@@ -284,7 +284,7 @@ export function AnalyzeProgressCard({
               setGates((prev) => ({ ...prev, done: true }));
               setStatus("done");
               // 3초 후 대시보드 리다이렉트
-              setTimeout(() => onComplete?.(), 2500);
+              setTimeout(() => void onComplete?.(), 2500);
             } else if (evt["type"] === "error") {
               throw new Error((evt["message"] as string) ?? "분석 중 오류");
             }

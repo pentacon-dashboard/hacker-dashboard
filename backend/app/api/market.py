@@ -49,6 +49,27 @@ _watchlist: dict[int, dict[str, Any]] = {}
 _next_id: int = 1
 _KR_STOCK_SYMBOL_RE = re.compile(r"^(?P<code>\d{6})(?:\.(?:KS|KQ))?$", re.IGNORECASE)
 
+
+def _bar_value(bar: Any, field: str) -> Any:
+    if isinstance(bar, dict):
+        return bar.get(field)
+    return getattr(bar, field, None)
+
+
+def _is_complete_ohlc_bar(bar: Any) -> bool:
+    """Return true only when a live candle has complete numeric OHLC prices."""
+    values = (
+        _bar_value(bar, "open"),
+        _bar_value(bar, "high"),
+        _bar_value(bar, "low"),
+        _bar_value(bar, "close"),
+    )
+    return all(isinstance(value, int | float) and math.isfinite(float(value)) for value in values)
+
+
+def _complete_ohlc_bars(bars: list[Any]) -> list[Any]:
+    return [bar for bar in bars if _is_complete_ohlc_bar(bar)]
+
 _SAMPLE_SYMBOLS: list[Symbol] = [
     Symbol(
         symbol="AAPL", name="Apple Inc.", asset_class="stock", exchange="NASDAQ", market="yahoo"
@@ -228,7 +249,7 @@ async def get_ohlc(
     cache_k = ohlc_key(market, code, interval, limit)
     cached = await cache_get(cache_k)
     if cached is not None:
-        return [OhlcBar(**bar) for bar in cached]
+        return [OhlcBar(**bar) for bar in _complete_ohlc_bars(cached)]
 
     try:
         adapter = get_adapter(market)
@@ -243,8 +264,9 @@ async def get_ohlc(
             detail={"code": "UPSTREAM_ERROR", "detail": str(exc)},
         ) from exc
 
-    await cache_set(cache_k, [b.model_dump() for b in bars], ttl=60)
-    return bars
+    complete_bars = _complete_ohlc_bars(bars)
+    await cache_set(cache_k, [b.model_dump() for b in complete_bars], ttl=60)
+    return complete_bars
 
 
 # ─────────────────────── Watchlist CRUD ───────────────────────────────
@@ -390,6 +412,7 @@ async def get_symbol_indicators(
         bars = await adapter.fetch_ohlc(code, interval=ohlc_interval, limit=n)
     except Exception:
         bars = _generate_stub_ohlc(market, code, interval, n)
+    bars = _complete_ohlc_bars(bars)
 
     closes = [b.close for b in bars]
     highs = [b.high for b in bars]

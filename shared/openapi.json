@@ -1834,6 +1834,51 @@
         }
       }
     },
+    "/upload/import": {
+      "post": {
+        "tags": [
+          "upload"
+        ],
+        "summary": "업로드 CSV 보유자산 확정 저장",
+        "description": "upload_id 로 캐시된 CSV를 다시 스키마 감지/정규화한 뒤, 자동 확정 가능한 holdings 만 포트폴리오 DB에 저장한다. 매핑 충돌이나 필수 값 부족은 needs_confirmation/insufficient_data 상태로 반환하고 DB에는 쓰지 않는다.",
+        "operationId": "import_upload_upload_import_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UploadImportRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UploadImportResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "upload_id 미존재 또는 만료"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/upload/analyze": {
       "post": {
         "tags": [
@@ -3093,6 +3138,47 @@
         "title": "CopilotStep",
         "description": "플랜의 단일 실행 단계."
       },
+      "CsvFieldMapping": {
+        "properties": {
+          "standard_field": {
+            "type": "string",
+            "title": "Standard Field"
+          },
+          "source_column": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Column"
+          },
+          "confidence": {
+            "type": "number",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Confidence"
+          },
+          "needs_review": {
+            "type": "boolean",
+            "title": "Needs Review",
+            "default": false
+          },
+          "mapping_reason": {
+            "type": "string",
+            "title": "Mapping Reason"
+          }
+        },
+        "type": "object",
+        "required": [
+          "standard_field",
+          "confidence",
+          "mapping_reason"
+        ],
+        "title": "CsvFieldMapping"
+      },
       "DataSettings": {
         "properties": {
           "refresh_interval_sec": {
@@ -3899,6 +3985,103 @@
         ],
         "title": "MonthlyReturnCell",
         "description": "월간(일간) 수익률 캘린더 셀."
+      },
+      "NormalizedCsvHolding": {
+        "properties": {
+          "client_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Client Id"
+          },
+          "account": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Account"
+          },
+          "market": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Market"
+          },
+          "code": {
+            "type": "string",
+            "title": "Code"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "quantity": {
+            "type": "string",
+            "title": "Quantity"
+          },
+          "avg_cost": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Avg Cost"
+          },
+          "currency": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Currency"
+          },
+          "source_row": {
+            "type": "integer",
+            "title": "Source Row"
+          },
+          "source_columns": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object",
+            "title": "Source Columns"
+          }
+        },
+        "type": "object",
+        "required": [
+          "code",
+          "quantity",
+          "source_row",
+          "source_columns"
+        ],
+        "title": "NormalizedCsvHolding"
       },
       "Notification": {
         "properties": {
@@ -5235,6 +5418,91 @@
         ],
         "title": "UploadErrorDetail"
       },
+      "UploadImportRequest": {
+        "properties": {
+          "upload_id": {
+            "type": "string",
+            "title": "Upload Id"
+          },
+          "client_id": {
+            "type": "string",
+            "maxLength": 64,
+            "minLength": 1,
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,63}$",
+            "title": "Client Id",
+            "description": "CSV row에 고객 ID가 없을 때 사용할 PB 선택 고객 ID",
+            "default": "client-001"
+          }
+        },
+        "type": "object",
+        "required": [
+          "upload_id"
+        ],
+        "title": "UploadImportRequest"
+      },
+      "UploadImportResponse": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "imported",
+              "needs_confirmation",
+              "insufficient_data"
+            ],
+            "title": "Status"
+          },
+          "client_id": {
+            "type": "string",
+            "title": "Client Id"
+          },
+          "imported_count": {
+            "type": "integer",
+            "title": "Imported Count"
+          },
+          "holdings": {
+            "items": {
+              "$ref": "#/components/schemas/HoldingResponse"
+            },
+            "type": "array",
+            "title": "Holdings"
+          },
+          "field_mappings": {
+            "items": {
+              "$ref": "#/components/schemas/CsvFieldMapping"
+            },
+            "type": "array",
+            "title": "Field Mappings"
+          },
+          "unmapped_columns": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Unmapped Columns"
+          },
+          "normalized_holdings": {
+            "items": {
+              "$ref": "#/components/schemas/NormalizedCsvHolding"
+            },
+            "type": "array",
+            "title": "Normalized Holdings"
+          },
+          "normalization_warnings": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Normalization Warnings"
+          }
+        },
+        "type": "object",
+        "required": [
+          "status",
+          "client_id",
+          "imported_count"
+        ],
+        "title": "UploadImportResponse"
+      },
       "UploadValidationResult": {
         "properties": {
           "upload_id": {
@@ -5279,6 +5547,44 @@
           "created_at": {
             "type": "string",
             "title": "Created At"
+          },
+          "import_status": {
+            "type": "string",
+            "enum": [
+              "imported",
+              "needs_confirmation",
+              "insufficient_data"
+            ],
+            "title": "Import Status",
+            "default": "insufficient_data"
+          },
+          "field_mappings": {
+            "items": {
+              "$ref": "#/components/schemas/CsvFieldMapping"
+            },
+            "type": "array",
+            "title": "Field Mappings"
+          },
+          "unmapped_columns": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Unmapped Columns"
+          },
+          "normalized_holdings": {
+            "items": {
+              "$ref": "#/components/schemas/NormalizedCsvHolding"
+            },
+            "type": "array",
+            "title": "Normalized Holdings"
+          },
+          "normalization_warnings": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Normalization Warnings"
           }
         },
         "type": "object",

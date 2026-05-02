@@ -717,6 +717,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/upload/import": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * 업로드 CSV 보유자산 확정 저장
+         * @description upload_id 로 캐시된 CSV를 다시 스키마 감지/정규화한 뒤, 자동 확정 가능한 holdings 만 포트폴리오 DB에 저장한다. 매핑 충돌이나 필수 값 부족은 needs_confirmation/insufficient_data 상태로 반환하고 DB에는 쓰지 않는다.
+         */
+        post: operations["import_upload_upload_import_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/upload/analyze": {
         parameters: {
             query?: never;
@@ -1330,6 +1350,22 @@ export interface components {
             depends_on?: string[];
             gate_policy?: components["schemas"]["GatePolicy"];
         };
+        /** CsvFieldMapping */
+        CsvFieldMapping: {
+            /** Standard Field */
+            standard_field: string;
+            /** Source Column */
+            source_column?: string | null;
+            /** Confidence */
+            confidence: number;
+            /**
+             * Needs Review
+             * @default false
+             */
+            needs_review: boolean;
+            /** Mapping Reason */
+            mapping_reason: string;
+        };
         /** DataSettings */
         DataSettings: {
             /**
@@ -1728,6 +1764,31 @@ export interface components {
             return_pct: string;
             /** Cell Level */
             cell_level: number;
+        };
+        /** NormalizedCsvHolding */
+        NormalizedCsvHolding: {
+            /** Client Id */
+            client_id?: string | null;
+            /** Account */
+            account?: string | null;
+            /** Market */
+            market?: string | null;
+            /** Code */
+            code: string;
+            /** Name */
+            name?: string | null;
+            /** Quantity */
+            quantity: string;
+            /** Avg Cost */
+            avg_cost?: string | null;
+            /** Currency */
+            currency?: string | null;
+            /** Source Row */
+            source_row: number;
+            /** Source Columns */
+            source_columns: {
+                [key: string]: string;
+            };
         };
         /**
          * Notification
@@ -2408,6 +2469,39 @@ export interface components {
             /** Message */
             message: string;
         };
+        /** UploadImportRequest */
+        UploadImportRequest: {
+            /** Upload Id */
+            upload_id: string;
+            /**
+             * Client Id
+             * @description CSV row에 고객 ID가 없을 때 사용할 PB 선택 고객 ID
+             * @default client-001
+             */
+            client_id: string;
+        };
+        /** UploadImportResponse */
+        UploadImportResponse: {
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "imported" | "needs_confirmation" | "insufficient_data";
+            /** Client Id */
+            client_id: string;
+            /** Imported Count */
+            imported_count: number;
+            /** Holdings */
+            holdings?: components["schemas"]["HoldingResponse"][];
+            /** Field Mappings */
+            field_mappings?: components["schemas"]["CsvFieldMapping"][];
+            /** Unmapped Columns */
+            unmapped_columns?: string[];
+            /** Normalized Holdings */
+            normalized_holdings?: components["schemas"]["NormalizedCsvHolding"][];
+            /** Normalization Warnings */
+            normalization_warnings?: string[];
+        };
         /** UploadValidationResult */
         UploadValidationResult: {
             /** Upload Id */
@@ -2430,6 +2524,20 @@ export interface components {
             schema_fingerprint: string;
             /** Created At */
             created_at: string;
+            /**
+             * Import Status
+             * @default insufficient_data
+             * @enum {string}
+             */
+            import_status: "imported" | "needs_confirmation" | "insufficient_data";
+            /** Field Mappings */
+            field_mappings?: components["schemas"]["CsvFieldMapping"][];
+            /** Unmapped Columns */
+            unmapped_columns?: string[];
+            /** Normalized Holdings */
+            normalized_holdings?: components["schemas"]["NormalizedCsvHolding"][];
+            /** Normalization Warnings */
+            normalization_warnings?: string[];
         };
         /** UserMe */
         UserMe: {
@@ -3930,6 +4038,46 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["UploadValidationResult"];
                 };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    import_upload_upload_import_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UploadImportRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UploadImportResponse"];
+                };
+            };
+            /** @description upload_id 미존재 또는 만료 */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Validation Error */
             422: {

@@ -2,9 +2,14 @@
 
 from __future__ import annotations
 
-import pytest
-from httpx import AsyncClient
+from collections.abc import AsyncGenerator
 
+import pytest
+from httpx import ASGITransport, AsyncClient
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.db.session import get_db
+from app.main import app
 from app.services import user_settings as svc
 
 
@@ -13,6 +18,17 @@ def reset_store():
     svc.reset_store()
     yield
     svc.reset_store()
+
+
+@pytest.fixture
+async def client(db_session: AsyncSession) -> AsyncGenerator[AsyncClient, None]:
+    async def override_get_db() -> AsyncGenerator[AsyncSession, None]:
+        yield db_session
+
+    app.dependency_overrides[get_db] = override_get_db
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
+        yield ac
+    app.dependency_overrides.pop(get_db, None)
 
 
 class TestGetMe:

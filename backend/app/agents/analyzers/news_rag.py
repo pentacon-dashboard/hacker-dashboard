@@ -17,7 +17,7 @@ from app.schemas.copilot import CopilotStep, TextCard
 
 
 def _is_stub_mode() -> bool:
-    return os.environ.get("COPILOT_NEWS_MODE", "stub").lower() == "stub"
+    return os.environ.get("COPILOT_NEWS_MODE", "live").lower() == "stub"
 
 
 def _coerce_symbols(raw: Any) -> list[str] | None:

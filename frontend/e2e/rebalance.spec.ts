@@ -228,7 +228,7 @@ test.describe("Rebalance proposal", () => {
       });
     });
 
-    await page.goto("/portfolio");
+    await page.goto("/clients/client-001");
 
     // "제안 받기" 버튼 클릭
     const submitBtn = page.getByRole("button", { name: /제안 받기/ });
@@ -256,7 +256,7 @@ test.describe("Rebalance proposal", () => {
       });
     });
 
-    await page.goto("/portfolio");
+    await page.goto("/clients/client-001");
 
     // 공격형 프리셋 버튼 클릭
     await page.getByRole("button", { name: /공격형/ }).click();
@@ -276,7 +276,7 @@ test.describe("Rebalance proposal", () => {
       });
     });
 
-    await page.goto("/portfolio");
+    await page.goto("/clients/client-001");
 
     // 안정형 프리셋(합계 100%)을 먼저 선택해 기준선을 맞춘 뒤
     // 슬라이더 중 하나를 JS로 조작해 합계를 100이 아니게 만든다.
@@ -308,7 +308,7 @@ test.describe("Rebalance proposal", () => {
       });
     });
 
-    await page.goto("/portfolio");
+    await page.goto("/clients/client-001");
 
     const submitBtn = page.getByRole("button", { name: /제안 받기/ });
     await expect(submitBtn).toBeVisible();

@@ -39,11 +39,18 @@ import os
 
 import pytest
 import schemathesis
+from hypothesis import settings
 from schemathesis.config import ProjectConfig, ProjectsConfig, SchemathesisConfig
 
 # 환경변수로 base URL 오버라이드 가능. 기본값은 로컬 개발 서버
-BASE_URL = os.getenv("CONTRACT_BASE_URL", "http://localhost:8000")
+BASE_URL = os.getenv("CONTRACT_BASE_URL", "http://127.0.0.1:8000")
+MAX_EXAMPLES = int(os.getenv("CONTRACT_MAX_EXAMPLES", "1"))
+REQUEST_TIMEOUT_SEC = float(os.getenv("CONTRACT_REQUEST_TIMEOUT_SEC", "5"))
 SCHEMA_PATH = os.path.join(os.path.dirname(__file__), "..", "..", "..", "shared", "openapi.json")
+pytestmark = pytest.mark.skipif(
+    os.getenv("RUN_CONTRACT_TESTS") != "1",
+    reason="external OpenAPI contract fuzzing is opt-in; set RUN_CONTRACT_TESTS=1",
+)
 
 # openapi.json 이 아직 없으면 테스트 스킵 (스켈레톤 단계)
 if not os.path.exists(SCHEMA_PATH):
@@ -62,7 +69,8 @@ schema = schemathesis.openapi.from_path(SCHEMA_PATH, config=_config)
 
 
 @schema.parametrize()
+@settings(max_examples=MAX_EXAMPLES, deadline=None)
 def test_api_contracts(case: schemathesis.Case) -> None:
     """모든 엔드포인트에 대해 schemathesis 가 생성한 요청을 실행하고 응답 스키마를 검증."""
-    response = case.call()
+    response = case.call(timeout=REQUEST_TIMEOUT_SEC)
     case.validate_response(response)

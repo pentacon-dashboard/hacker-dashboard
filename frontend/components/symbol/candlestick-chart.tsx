@@ -33,7 +33,27 @@ type ChartModule = {
   CrosshairMode: { Normal: number };
 };
 
-function computeMA(data: OhlcBar[], period: number): { time: string; value: number }[] {
+type ValidOhlcBar = OhlcBar & {
+  open: number;
+  high: number;
+  low: number;
+  close: number;
+};
+
+function isFiniteNumber(value: unknown): value is number {
+  return typeof value === "number" && Number.isFinite(value);
+}
+
+function isValidOhlcBar(bar: OhlcBar): bar is ValidOhlcBar {
+  return (
+    isFiniteNumber(bar.open) &&
+    isFiniteNumber(bar.high) &&
+    isFiniteNumber(bar.low) &&
+    isFiniteNumber(bar.close)
+  );
+}
+
+function computeMA(data: ValidOhlcBar[], period: number): { time: string; value: number }[] {
   const result: { time: string; value: number }[] = [];
   for (let i = period - 1; i < data.length; i++) {
     let sum = 0;
@@ -53,7 +73,8 @@ export function CandlestickChart({ data, market: _market, code: _code }: Candles
   const chartRef = useRef<ReturnType<ChartModule["createChart"]> | null>(null);
 
   useEffect(() => {
-    if (!containerRef.current || data.length === 0) return;
+    const validData = data.filter(isValidOhlcBar);
+    if (!containerRef.current || validData.length === 0) return;
 
     let cancelled = false;
     let ro: ResizeObserver | null = null;
@@ -96,7 +117,7 @@ export function CandlestickChart({ data, market: _market, code: _code }: Candles
         wickDownColor: "#ef4444",
       });
 
-      const candleData = data.map((bar) => ({
+      const candleData = validData.map((bar) => ({
         time: bar.ts.split("T")[0] ?? bar.ts,
         open: bar.open,
         high: bar.high,
@@ -114,8 +135,8 @@ export function CandlestickChart({ data, market: _market, code: _code }: Candles
       volumeSeries.applyOptions({
         scaleMargins: { top: 0.8, bottom: 0 },
       });
-      const volumeData = data
-        .filter((bar) => bar.volume != null)
+      const volumeData = validData
+        .filter((bar) => isFiniteNumber(bar.volume))
         .map((bar) => ({
           time: bar.ts.split("T")[0] ?? bar.ts,
           value: bar.volume ?? 0,
@@ -131,7 +152,7 @@ export function CandlestickChart({ data, market: _market, code: _code }: Candles
         lastValueVisible: false,
         crosshairMarkerVisible: false,
       });
-      ma20.setData(computeMA(data, 20));
+      ma20.setData(computeMA(validData, 20));
 
       // MA60
       const ma60 = chart.addLineSeries({
@@ -141,7 +162,7 @@ export function CandlestickChart({ data, market: _market, code: _code }: Candles
         lastValueVisible: false,
         crosshairMarkerVisible: false,
       });
-      ma60.setData(computeMA(data, 60));
+      ma60.setData(computeMA(validData, 60));
 
       chart.timeScale().fitContent();
 

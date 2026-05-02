@@ -448,7 +448,7 @@ test("client book opens 고객 B workspace with client_id scoped requests", asyn
   await expect(page.locator("[data-testid='dashboard-home']")).toContainText("고객 B");
   expect(summaryClientIds).toContain("client-002");
 
-  await page.locator("[data-testid='client-workspace-link-client-002']").click();
+  await page.locator("[data-testid='selected-client-workspace-link']").click();
   await expect(page).toHaveURL(/\/clients\/client-002$/);
   await expect(page.locator("[data-testid='client-workspace']")).toBeVisible({
     timeout: 10_000,
@@ -472,6 +472,9 @@ test("/portfolio 빈 상태에서 '보유자산 추가' 버튼이 보이고 Dial
     .locator("main, [id='main-content'], [role='main']")
     .first();
   await expect(mainArea).toBeVisible({ timeout: 10_000 });
+  await expect(page.locator("[data-testid='client-workspace']")).toBeVisible({
+    timeout: 10_000,
+  });
 
   // "보유자산 추가" 버튼 탐색
   const addBtn = page
@@ -485,7 +488,7 @@ test("/portfolio 빈 상태에서 '보유자산 추가' 버튼이 보이고 Dial
         "button[aria-label*='add']",
       ].join(", "),
     )
-    .first();
+    .last();
 
   const addBtnExists = await addBtn.count();
   if (addBtnExists === 0) {
@@ -517,6 +520,9 @@ test("Dialog에서 심볼 검색 후 수량·평단가·통화 입력 → 제출
 }) => {
   const { getPostCallCount } = await setupEmptyPortfolioRoutes(page);
   await page.goto("/clients/client-001");
+  await expect(page.locator("[data-testid='client-workspace']")).toBeVisible({
+    timeout: 10_000,
+  });
 
   // 추가 버튼 클릭
   const addBtn = page
@@ -527,13 +533,14 @@ test("Dialog에서 심볼 검색 후 수량·평단가·통화 입력 → 제출
         "button:has-text('추가')",
       ].join(", "),
     )
-    .first();
+    .last();
 
   if ((await addBtn.count()) === 0) {
     test.skip();
     return;
   }
 
+  await expect(addBtn).toBeVisible({ timeout: 10_000 });
   await addBtn.click();
 
   // Dialog 대기

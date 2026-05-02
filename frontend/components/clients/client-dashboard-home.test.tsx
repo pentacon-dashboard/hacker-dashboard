@@ -3,6 +3,16 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { renderWithProviders } from "@/tests/helpers/render-with-providers";
 import { ClientDashboardHome } from "./client-dashboard-home";
 
+const navMocks = vi.hoisted(() => ({
+  search: "",
+  replace: vi.fn(),
+}));
+
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ replace: navMocks.replace }),
+  useSearchParams: () => new URLSearchParams(navMocks.search),
+}));
+
 const mocks = vi.hoisted(() => ({
   getPortfolioClients: vi.fn(),
 }));
@@ -21,6 +31,12 @@ vi.mock("@/components/dashboard/dashboard-home", () => ({
   }) => (
     <div data-testid="mock-selected-dashboard">
       선택 대시보드 {clientName} {clientId}
+      <a
+        data-testid="selected-client-workspace-link"
+        href={`/clients/${clientId}`}
+      >
+        워크스페이스 열기
+      </a>
     </div>
   ),
 }));
@@ -53,23 +69,30 @@ const CLIENTS_RESPONSE = {
 
 describe("ClientDashboardHome", () => {
   beforeEach(() => {
+    navMocks.search = "";
+    navMocks.replace.mockReset();
     mocks.getPortfolioClients.mockReset();
     mocks.getPortfolioClients.mockResolvedValue(CLIENTS_RESPONSE);
   });
 
-  it("renders client book summary and selected client dashboard", async () => {
+  it("renders image-style client book summary with first client selected by default", async () => {
     renderWithProviders(<ClientDashboardHome />, { withQuery: true });
 
     expect(await screen.findByTestId("client-dashboard-home")).toBeInTheDocument();
     expect(screen.getByTestId("client-book-total-aum")).toBeInTheDocument();
-    expect(screen.getByTestId("client-card-client-001")).toBeInTheDocument();
-    expect(screen.getByTestId("client-card-client-002")).toBeInTheDocument();
+    expect(screen.getByTestId("client-select-client-001")).toBeInTheDocument();
+    expect(screen.getByTestId("client-select-client-002")).toBeInTheDocument();
+    expect(screen.getByTestId("client-search-input")).toBeInTheDocument();
+    expect(screen.getByTestId("new-client-upload-link")).toHaveAttribute(
+      "href",
+      "/upload",
+    );
     expect(screen.getByTestId("mock-selected-dashboard")).toHaveTextContent(
       "고객 A client-001",
     );
   });
 
-  it("selects another client without navigating and keeps workspace link explicit", async () => {
+  it("selects another client in-place and updates the URL query", async () => {
     renderWithProviders(<ClientDashboardHome />, { withQuery: true });
 
     await screen.findByTestId("client-dashboard-home");
@@ -78,13 +101,35 @@ describe("ClientDashboardHome", () => {
     expect(screen.getByTestId("mock-selected-dashboard")).toHaveTextContent(
       "고객 B client-002",
     );
+    expect(navMocks.replace).toHaveBeenCalledWith("/?client=client-002", {
+      scroll: false,
+    });
     expect(screen.getByTestId("selected-client-workspace-link")).toHaveAttribute(
       "href",
       "/clients/client-002",
     );
-    expect(screen.getByTestId("client-workspace-link-client-002")).toHaveAttribute(
-      "href",
-      "/clients/client-002",
+  });
+
+  it("uses the client query parameter when present", async () => {
+    navMocks.search = "client=client-002";
+    renderWithProviders(<ClientDashboardHome />, { withQuery: true });
+
+    await screen.findByTestId("client-dashboard-home");
+
+    expect(screen.getByTestId("mock-selected-dashboard")).toHaveTextContent(
+      "고객 B client-002",
     );
+  });
+
+  it("filters clients locally by name or id", async () => {
+    renderWithProviders(<ClientDashboardHome />, { withQuery: true });
+
+    await screen.findByTestId("client-dashboard-home");
+    fireEvent.change(screen.getByTestId("client-search-input"), {
+      target: { value: "client-002" },
+    });
+
+    expect(screen.queryByTestId("client-select-client-001")).not.toBeInTheDocument();
+    expect(screen.getByTestId("client-select-client-002")).toBeInTheDocument();
   });
 });

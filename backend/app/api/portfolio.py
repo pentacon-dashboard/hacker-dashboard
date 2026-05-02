@@ -67,7 +67,15 @@ _CLIENT_NAMES: dict[str, str] = {
 
 
 def _client_name(client_id: str) -> str:
-    return _CLIENT_NAMES.get(client_id, client_id)
+    if client_id in _CLIENT_NAMES:
+        return _CLIENT_NAMES[client_id]
+    if client_id.startswith("client-"):
+        suffix = client_id.removeprefix("client-")
+        if suffix.isdigit():
+            index = int(suffix) - 1
+            if 0 <= index < 26:
+                return f"Client {chr(ord('A') + index)}"
+    return client_id
 
 
 def _risk_grade(score_pct: str) -> str:

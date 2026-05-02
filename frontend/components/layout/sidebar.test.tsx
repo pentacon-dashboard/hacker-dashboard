@@ -29,17 +29,17 @@ describe("Sidebar", () => {
     renderWithProviders(<Sidebar />);
     const navLabels = [
       "고객장부",
-      "워치리스트",
-      "종목 분석",
       "시장 분석",
-      "코파일럿",
+      "종목 분석",
       "업로드 & 분석",
+      "코파일럿",
       "설정",
     ];
 
     for (const label of navLabels) {
       expect(screen.getByText(label)).toBeInTheDocument();
     }
+    expect(screen.queryByText("워치리스트")).not.toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "대시보드" })).not.toBeInTheDocument();
   });
 

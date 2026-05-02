@@ -6,25 +6,19 @@
  * - 실 FastAPI 기동 불필요
  */
 import { test, expect } from "@playwright/test";
+import { mockBaseApis, mockCopilotSse, submitCopilotQuery } from "../fixtures/api";
 
 test.describe("Copilot single-turn", () => {
   test.beforeEach(async ({ page }) => {
+    await mockBaseApis(page);
+    await mockCopilotSse(page);
     await page.goto("/?copilot=1");
   });
 
   test("TSLA vs NVDA 비교 쿼리 → comparison_table + chart + final 카드 렌더", async ({
     page,
   }) => {
-    // Copilot 커맨드바 입력
-    const input = page.getByRole("textbox", { name: "copilot-input" });
-    await expect(input).toBeVisible({ timeout: 10_000 });
-    await input.fill("TSLA vs NVDA 비교");
-    await page.keyboard.press("Enter");
-
-    // Drawer 표시
-    await expect(page.getByTestId("copilot-drawer")).toBeVisible({
-      timeout: 15_000,
-    });
+    await submitCopilotQuery(page, "TSLA vs NVDA 비교");
 
     // comparison_table 카드
     await expect(

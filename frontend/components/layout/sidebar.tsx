@@ -11,7 +11,6 @@ import { MarketStatusCard } from "@/components/layout/market-status-card";
 import { useLocale } from "@/lib/i18n/locale-provider";
 
 import {
-  Eye,
   LineChart,
   Globe,
   Sparkles,
@@ -24,11 +23,10 @@ const ICON_CLASS = "h-[18px] w-[18px] shrink-0";
 
 const navItems = [
   { href: "/", labelKey: "sidebar.clients", icon: <Users className={ICON_CLASS} aria-hidden="true" /> },
-  { href: "/watchlist", labelKey: "sidebar.watchlist", icon: <Eye className={ICON_CLASS} aria-hidden="true" /> },
-  { href: "/symbol", labelKey: "sidebar.symbol", icon: <LineChart className={ICON_CLASS} aria-hidden="true" /> },
   { href: "/market-analyze", labelKey: "sidebar.market", icon: <Globe className={ICON_CLASS} aria-hidden="true" /> },
-  { href: "/copilot", labelKey: "sidebar.copilot", icon: <Sparkles className={ICON_CLASS} aria-hidden="true" /> },
+  { href: "/symbol", labelKey: "sidebar.symbol", icon: <LineChart className={ICON_CLASS} aria-hidden="true" /> },
   { href: "/upload", labelKey: "sidebar.upload", icon: <Upload className={ICON_CLASS} aria-hidden="true" /> },
+  { href: "/copilot", labelKey: "sidebar.copilot", icon: <Sparkles className={ICON_CLASS} aria-hidden="true" /> },
   { href: "/settings", labelKey: "sidebar.settings", icon: <Settings className={ICON_CLASS} aria-hidden="true" /> },
 ];
 

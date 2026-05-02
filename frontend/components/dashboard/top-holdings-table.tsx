@@ -22,6 +22,7 @@ interface TopHoldingsTableProps {
   holdings: HoldingDetail[];
   limit?: number;
   totalValueKrw?: number;
+  compact?: boolean;
   /** 평균가 컬럼 표시 여부 (7컬럼 모드) */
   showAvgCost?: boolean;
   /** 현재가 컬럼 표시 여부 (7컬럼 모드) */
@@ -32,6 +33,7 @@ export function TopHoldingsTable({
   holdings,
   limit = 5,
   totalValueKrw,
+  compact = false,
   showAvgCost = false,
   showCurrentPrice = false,
 }: TopHoldingsTableProps) {
@@ -54,21 +56,58 @@ export function TopHoldingsTable({
 
   return (
     <div className="w-full" data-testid="top-holdings-table">
-      <Table>
+      <Table className={compact ? "table-fixed" : undefined}>
         <TableHeader>
           <TableRow className="hover:bg-transparent">
-            <TableHead className="h-7 w-6 px-1 text-[10px]">#</TableHead>
-            <TableHead className="h-7 px-1 text-[10px]">{t("table.symbol")}</TableHead>
-            <TableHead className="h-7 px-1 text-[10px]">{t("table.market")}</TableHead>
-            {showAvgCost && (
+            {compact ? null : (
+              <TableHead className="h-7 w-6 px-1 text-[10px]">#</TableHead>
+            )}
+            <TableHead
+              className={
+                compact
+                  ? "h-7 w-[54%] px-1 text-[10px]"
+                  : "h-7 px-1 text-[10px]"
+              }
+            >
+              {t("table.symbol")}
+            </TableHead>
+            {compact ? null : (
+              <TableHead className="h-7 px-1 text-[10px]">
+                {t("table.market")}
+              </TableHead>
+            )}
+            {showAvgCost && !compact && (
               <TableHead className="h-7 px-1 text-right text-[10px]">{t("table.avgCost")}</TableHead>
             )}
-            {showCurrentPrice && (
+            {showCurrentPrice && !compact && (
               <TableHead className="h-7 px-1 text-right text-[10px]">{t("table.currentPrice")}</TableHead>
             )}
-            <TableHead className="h-7 px-1 text-right text-[10px]">{t("table.value")}</TableHead>
-            <TableHead className="h-7 px-1 text-right text-[10px]">{t("table.return")}</TableHead>
-            <TableHead className="h-7 px-1 text-right text-[10px]">{t("table.weight")}</TableHead>
+            <TableHead
+              className={
+                compact
+                  ? "h-7 w-[46%] px-1 text-right text-[10px]"
+                  : "h-7 px-1 text-right text-[10px]"
+              }
+            >
+              {compact ? (
+                <span className="inline-flex flex-col items-end leading-tight">
+                  <span>{t("table.value")}</span>
+                  <span>{t("table.return")}</span>
+                </span>
+              ) : (
+                t("table.value")
+              )}
+            </TableHead>
+            {compact ? null : (
+              <TableHead className="h-7 px-1 text-right text-[10px]">
+                {t("table.return")}
+              </TableHead>
+            )}
+            {compact ? null : (
+              <TableHead className="h-7 px-1 text-right text-[10px]">
+                {t("table.weight")}
+              </TableHead>
+            )}
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -84,43 +123,73 @@ export function TopHoldingsTable({
             });
             return (
               <TableRow key={h.id}>
-                <TableCell className="px-1 py-1.5 text-[11px] text-muted-foreground">
-                  {idx + 1}
-                </TableCell>
+                {compact ? null : (
+                  <TableCell className="px-1 py-1.5 text-[11px] text-muted-foreground">
+                    {idx + 1}
+                  </TableCell>
+                )}
                 <TableCell className="px-1 py-1.5">
-                  <Link
-                    href={`/symbol/${h.market}/${encodeURIComponent(h.code)}`}
-                    className="block truncate text-xs font-medium hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                    title={fullSymbolLabel}
-                    aria-label={fullSymbolLabel}
-                  >
-                    {shortSymbolLabel}
-                  </Link>
+                  <div className={compact ? "flex min-w-0 items-center gap-2" : undefined}>
+                    {compact ? (
+                      <span className="shrink-0 text-[11px] text-muted-foreground">
+                        {idx + 1}
+                      </span>
+                    ) : null}
+                    <Link
+                      href={`/symbol/${h.market}/${encodeURIComponent(h.code)}`}
+                      className={
+                        compact
+                          ? "min-w-0 break-keep text-xs font-medium leading-tight hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                          : "block truncate text-xs font-medium hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                      }
+                      title={fullSymbolLabel}
+                      aria-label={fullSymbolLabel}
+                    >
+                      {shortSymbolLabel}
+                    </Link>
+                  </div>
                 </TableCell>
-                <TableCell className="px-1 py-1.5 text-[11px] uppercase text-muted-foreground">
-                  {h.market}
-                </TableCell>
-                {showAvgCost && (
+                {compact ? null : (
+                  <TableCell className="px-1 py-1.5 text-[11px] uppercase text-muted-foreground">
+                    {h.market}
+                  </TableCell>
+                )}
+                {showAvgCost && !compact && (
                   <TableCell className="px-1 py-1.5 text-right text-[11px] tabular-nums text-muted-foreground">
                     {formatKRWCompact(h.avg_cost)}
                   </TableCell>
                 )}
-                {showCurrentPrice && (
+                {showCurrentPrice && !compact && (
                   <TableCell className="px-1 py-1.5 text-right text-[11px] tabular-nums">
                     {formatKRWCompact(h.current_price_krw)}
                   </TableCell>
                 )}
                 <TableCell className="px-1 py-1.5 text-right text-[11px] tabular-nums">
-                  {formatKRWCompact(h.value_krw)}
+                  {compact ? (
+                    <div className="flex flex-col items-end gap-0.5">
+                      <span>{formatKRWCompact(h.value_krw)}</span>
+                      <span
+                        className={`font-semibold ${signedColorClass(pnlNum)}`}
+                      >
+                        {formatPct(h.pnl_pct, { signed: true })}
+                      </span>
+                    </div>
+                  ) : (
+                    formatKRWCompact(h.value_krw)
+                  )}
                 </TableCell>
-                <TableCell
-                  className={`px-1 py-1.5 text-right text-[11px] font-semibold tabular-nums ${signedColorClass(pnlNum)}`}
-                >
-                  {formatPct(h.pnl_pct, { signed: true })}
-                </TableCell>
-                <TableCell className="px-1 py-1.5 text-right text-[11px] tabular-nums text-muted-foreground">
-                  {weight.toFixed(1)}%
-                </TableCell>
+                {compact ? null : (
+                  <TableCell
+                    className={`px-1 py-1.5 text-right text-[11px] font-semibold tabular-nums ${signedColorClass(pnlNum)}`}
+                  >
+                    {formatPct(h.pnl_pct, { signed: true })}
+                  </TableCell>
+                )}
+                {compact ? null : (
+                  <TableCell className="px-1 py-1.5 text-right text-[11px] tabular-nums text-muted-foreground">
+                    {weight.toFixed(1)}%
+                  </TableCell>
+                )}
               </TableRow>
             );
           })}

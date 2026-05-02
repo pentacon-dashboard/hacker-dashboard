@@ -193,7 +193,7 @@ const CLIENT_SUMMARIES: Record<string, typeof SUMMARY> = {
 const CLIENT_A_SUMMARY = CLIENT_SUMMARIES["client-001"]!;
 const CLIENT_B_SUMMARY = CLIENT_SUMMARIES["client-002"]!;
 
-const CLIENTS = [
+const BASE_CLIENTS = [
   {
     client_id: "client-001",
     client_name: "고객 A",
@@ -213,6 +213,214 @@ const CLIENTS = [
     total_pnl_pct: CLIENT_B_SUMMARY.total_pnl_pct,
   },
 ];
+
+type SummaryFixture = typeof SUMMARY;
+type HoldingFixture = SummaryFixture["holdings"][number];
+
+const UPLOADED_HOLDINGS: Record<string, HoldingFixture[]> = {};
+const UPLOADED_HOLDINGS_STORAGE_KEY = "hacker-dashboard.uploaded-holdings.v1";
+let nextUploadedHoldingId = 10_000;
+
+function fixed(value: number): string {
+  return Number.isFinite(value) ? value.toFixed(2) : "0.00";
+}
+
+function assetClassForMarket(market: string): string {
+  const normalized = market.toLowerCase();
+  if (normalized === "upbit" || normalized === "binance") return "crypto";
+  if (normalized === "naver_kr" || normalized === "krx") return "stock_kr";
+  if (normalized === "yahoo" || normalized === "nasdaq" || normalized === "nyse") {
+    return "stock_us";
+  }
+  return "other";
+}
+
+function krwRateFor(currency: string): number {
+  const normalized = currency.toUpperCase();
+  if (normalized === "KRW") return 1;
+  if (normalized === "USD" || normalized === "USDT") return 1350;
+  if (normalized === "JPY") return 9;
+  if (normalized === "EUR") return 1450;
+  return 1;
+}
+
+function clientNameFor(clientId: string): string {
+  const known = BASE_CLIENTS.find((client) => client.client_id === clientId);
+  if (known) return known.client_name;
+  const match = /^client-(\d+)$/i.exec(clientId);
+  if (!match) return clientId;
+  const index = Number(match[1]) - 1;
+  const letter = String.fromCharCode("A".charCodeAt(0) + index);
+  return index >= 0 && index < 26 ? `고객 ${letter}` : clientId;
+}
+
+function riskGradeFromScore(scorePct: string): "low" | "medium" | "high" {
+  const score = Number(scorePct);
+  if (score >= 66) return "high";
+  if (score >= 33) return "medium";
+  return "low";
+}
+
+function getBrowserStorage(): Storage | null {
+  try {
+    if (typeof window === "undefined") return null;
+    return window.localStorage;
+  } catch {
+    return null;
+  }
+}
+
+function readUploadedHoldings(): Record<string, HoldingFixture[]> {
+  const storage = getBrowserStorage();
+  if (!storage) return UPLOADED_HOLDINGS;
+
+  try {
+    const raw = storage.getItem(UPLOADED_HOLDINGS_STORAGE_KEY);
+    if (!raw) return UPLOADED_HOLDINGS;
+    const parsed = JSON.parse(raw) as Record<string, HoldingFixture[]>;
+    return parsed && typeof parsed === "object" ? parsed : UPLOADED_HOLDINGS;
+  } catch {
+    return UPLOADED_HOLDINGS;
+  }
+}
+
+function writeUploadedHoldings(next: Record<string, HoldingFixture[]>): void {
+  Object.keys(UPLOADED_HOLDINGS).forEach((key) => {
+    delete UPLOADED_HOLDINGS[key];
+  });
+  Object.assign(UPLOADED_HOLDINGS, next);
+
+  const storage = getBrowserStorage();
+  if (!storage) return;
+
+  try {
+    storage.setItem(UPLOADED_HOLDINGS_STORAGE_KEY, JSON.stringify(next));
+  } catch {
+    // Storage can be unavailable in hardened browser contexts.
+  }
+}
+
+function buildUploadedSummary(clientId: string): SummaryFixture | null {
+  const holdings = readUploadedHoldings()[clientId] ?? [];
+  if (holdings.length === 0) return null;
+
+  const totalValue = holdings.reduce((sum, holding) => sum + Number(holding.value_krw), 0);
+  const totalCost = holdings.reduce((sum, holding) => sum + Number(holding.cost_krw), 0);
+  const classValues = holdings.reduce<Record<string, number>>((acc, holding) => {
+    const assetClass = assetClassForMarket(holding.market);
+    acc[assetClass] = (acc[assetClass] ?? 0) + Number(holding.value_krw);
+    return acc;
+  }, {});
+
+  const asset_class_breakdown = {
+    stock_us: "0.0000",
+    stock_kr: "0.0000",
+    crypto: "0.0000",
+    cash: "0.0000",
+    fx: "0.0000",
+    ...Object.fromEntries(
+      Object.entries(classValues).map(([assetClass, value]) => [
+        assetClass,
+        totalValue > 0 ? (value / totalValue).toFixed(4) : "0.0000",
+      ]),
+    ),
+  };
+  const dimension_breakdown = Object.entries(classValues)
+    .sort((a, b) => b[1] - a[1])
+    .map(([label, value]) => ({
+      label,
+      weight_pct: totalValue > 0 ? fixed((value / totalValue) * 100) : "0.00",
+      pnl_pct: "0.00",
+    }));
+  const riskScore = Object.values(classValues).reduce(
+    (sum, value) => sum + (totalValue > 0 ? (value / totalValue) ** 2 : 0),
+    0,
+  ) * 100;
+
+  return {
+    ...SUMMARY,
+    client_id: clientId,
+    client_name: clientNameFor(clientId),
+    total_value_krw: fixed(totalValue),
+    total_cost_krw: fixed(totalCost),
+    total_pnl_krw: "0.00",
+    total_pnl_pct: "0.00",
+    daily_change_krw: "0.00",
+    daily_change_pct: "0.00",
+    asset_class_breakdown,
+    holdings,
+    holdings_count: holdings.length,
+    worst_asset_pct: "0.00",
+    risk_score_pct: fixed(riskScore),
+    period_change_pct: "0.00",
+    dimension_breakdown,
+    market_leaders: holdings.slice(0, 3).map((holding, index) => ({
+      rank: index + 1,
+      name: holding.code,
+      ticker: holding.code,
+      logo_url: null,
+      price_display:
+        holding.currency.toUpperCase() === "KRW"
+          ? `₩${Number(holding.current_price).toLocaleString("ko-KR")}`
+          : `$${Number(holding.current_price).toLocaleString("en-US")}`,
+      change_pct: "0.00",
+      change_krw: null,
+    })),
+  };
+}
+
+function getMockClients() {
+  const uploadedHoldings = readUploadedHoldings();
+  const uploadedClients = Object.keys(uploadedHoldings)
+    .sort()
+    .map((clientId) => buildUploadedSummary(clientId))
+    .filter((summary): summary is SummaryFixture => Boolean(summary))
+    .map((summary) => ({
+      client_id: summary.client_id,
+      client_name: summary.client_name,
+      aum_krw: summary.total_value_krw,
+      holdings_count: summary.holdings_count,
+      risk_grade: riskGradeFromScore(summary.risk_score_pct),
+      risk_score_pct: summary.risk_score_pct,
+      total_pnl_pct: summary.total_pnl_pct,
+    }));
+
+  return [...BASE_CLIENTS, ...uploadedClients];
+}
+
+function addUploadedHolding(body: Record<string, unknown>): HoldingFixture {
+  const clientId = String(body["client_id"] ?? "client-001");
+  const market = String(body["market"] ?? "upbit");
+  const code = String(body["code"] ?? "KRW-BTC");
+  const currency = String(body["currency"] ?? "KRW").toUpperCase();
+  const quantity = Number(body["quantity"] ?? 0);
+  const avgCost = Number(body["avg_cost"] ?? 0);
+  const rate = krwRateFor(currency);
+  const currentPriceKrw = avgCost * rate;
+  const valueKrw = currentPriceKrw * quantity;
+
+  const holding: HoldingFixture = {
+    id: nextUploadedHoldingId++,
+    market,
+    code,
+    quantity: quantity.toFixed(8),
+    avg_cost: avgCost.toFixed(4),
+    currency,
+    current_price: avgCost.toFixed(4),
+    current_price_krw: fixed(currentPriceKrw),
+    value_krw: fixed(valueKrw),
+    cost_krw: fixed(valueKrw),
+    pnl_krw: "0.00",
+    pnl_pct: "0.00",
+  };
+
+  const uploadedHoldings = readUploadedHoldings();
+  writeUploadedHoldings({
+    ...uploadedHoldings,
+    [clientId]: [...(uploadedHoldings[clientId] ?? []), holding],
+  });
+  return holding;
+}
 
 // period_days → (누적 수익률 %, 시작 평가액)
 // 심사 시연 시 기간 탭 전환이 "살아 있음"을 보여주기 위해 구간별 다른 수치 반환.
@@ -234,7 +442,8 @@ function profileFor(periodDays: number): { changePct: string; startKrw: number }
 
 function summaryFor(clientId: string) {
   return (
-    CLIENT_SUMMARIES[clientId] ?? {
+    CLIENT_SUMMARIES[clientId] ??
+    buildUploadedSummary(clientId) ?? {
       ...SUMMARY,
       client_id: clientId,
       client_name: clientId,
@@ -337,12 +546,13 @@ const NEWS_FIXTURES = [
 ];
 
 export const portfolioClientsHandler = http.get(/\/portfolio\/clients/, () => {
-  const totalAum = CLIENTS.reduce((sum, client) => sum + Number(client.aum_krw), 0);
+  const clients = getMockClients();
+  const totalAum = clients.reduce((sum, client) => sum + Number(client.aum_krw), 0);
   return HttpResponse.json({
     user_id: "demo",
     aum_krw: totalAum.toFixed(2),
-    client_count: CLIENTS.length,
-    clients: CLIENTS,
+    client_count: clients.length,
+    clients,
   });
 });
 
@@ -368,16 +578,19 @@ export const portfolioHoldingsHandler = http.get(/\/portfolio\/holdings$/, ({ re
 
 export const portfolioCreateHoldingHandler = http.post(/\/portfolio\/holdings$/, async ({ request }) => {
   const body = (await request.json().catch(() => ({}))) as Record<string, unknown>;
+  const holding = addUploadedHolding(body);
+  const clientId = String(body["client_id"] ?? "client-001");
   return HttpResponse.json(
     {
-      id: 999,
+      id: holding.id,
       user_id: "demo",
-      client_id: body["client_id"] ?? "client-001",
-      market: body["market"] ?? "upbit",
-      code: body["code"] ?? "KRW-BTC",
-      quantity: body["quantity"] ?? "0",
-      avg_cost: body["avg_cost"] ?? "0",
-      currency: body["currency"] ?? "KRW",
+      client_id: clientId,
+      client_name: clientNameFor(clientId),
+      market: holding.market,
+      code: holding.code,
+      quantity: holding.quantity,
+      avg_cost: holding.avg_cost,
+      currency: holding.currency,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     },

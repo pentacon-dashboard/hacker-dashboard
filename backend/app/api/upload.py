@@ -13,18 +13,24 @@ import logging
 from collections.abc import AsyncGenerator
 from pathlib import Path
 
-from fastapi import APIRouter, HTTPException, UploadFile
+from fastapi import APIRouter, Depends, HTTPException, UploadFile
 from fastapi.responses import FileResponse, StreamingResponse
+from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.db.session import get_db
 from app.schemas.upload import (
     AnalyzeStartRequest,
+    UploadImportRequest,
+    UploadImportResponse,
     UploadValidationResult,
 )
 from app.services.upload import (
     build_validation_result,
+    get_cached_df,
     parse_csv,
     run_analyze_stream,
 )
+from app.services.upload_import import import_holdings_from_df
 
 logger = logging.getLogger(__name__)
 
@@ -80,6 +86,35 @@ async def upload_csv(
         result.error_rows,
     )
     return result
+
+
+@router.post(
+    "/import",
+    response_model=UploadImportResponse,
+    summary="업로드 CSV 보유자산 확정 저장",
+    description=(
+        "upload_id 로 캐시된 CSV를 다시 스키마 감지/정규화한 뒤, 자동 확정 가능한 holdings 만 "
+        "포트폴리오 DB에 저장한다. 매핑 충돌이나 필수 값 부족은 needs_confirmation/insufficient_data "
+        "상태로 반환하고 DB에는 쓰지 않는다."
+    ),
+    responses={404: {"description": "upload_id 미존재 또는 만료"}},
+)
+async def import_upload(
+    body: UploadImportRequest,
+    db: AsyncSession = Depends(get_db),
+) -> UploadImportResponse:
+    """업로드된 CSV holdings 를 PB 선택 고객 포트폴리오에 반영한다."""
+    df = get_cached_df(body.upload_id)
+    if df is None:
+        raise HTTPException(
+            status_code=404,
+            detail={
+                "code": "UPLOAD_NOT_FOUND",
+                "detail": "upload_id 를 찾을 수 없습니다. 먼저 /upload/csv 를 호출하세요.",
+            },
+        )
+
+    return await import_holdings_from_df(df, db=db, client_id=body.client_id)
 
 
 # ──────────────────────────────────────────────────────────────────────────────

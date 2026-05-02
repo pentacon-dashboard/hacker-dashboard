@@ -5,19 +5,19 @@
  * URL: /?copilot=1&mock_scenario=degraded
  */
 import { test, expect } from "@playwright/test";
+import { mockBaseApis, mockCopilotSse, submitCopilotQuery } from "../fixtures/api";
 
 test.describe("Copilot degraded mode", () => {
   test.beforeEach(async ({ page }) => {
+    await mockBaseApis(page);
+    await mockCopilotSse(page);
     await page.goto("/?copilot=1&mock_scenario=degraded");
   });
 
   test("AAPL 최근 뉴스 → degraded 배너 + news_rag_list 카드 렌더", async ({
     page,
   }) => {
-    const input = page.getByRole("textbox", { name: "copilot-input" });
-    await expect(input).toBeVisible({ timeout: 10_000 });
-    await input.fill("AAPL 최근 뉴스");
-    await page.keyboard.press("Enter");
+    await submitCopilotQuery(page, "AAPL 최근 뉴스");
 
     // degraded 카드 표시
     await expect(page.getByTestId("copilot-degraded-card")).toBeVisible({
@@ -30,7 +30,7 @@ test.describe("Copilot degraded mode", () => {
     ).toBeVisible({ timeout: 20_000 });
 
     // "stub 모드" 또는 "degraded" 배너 텍스트 확인
-    await expect(page.getByText(/stub 모드|degraded/i)).toBeVisible({
+    await expect(page.getByTestId("copilot-degraded-card")).toContainText(/degraded/i, {
       timeout: 5_000,
     });
   });

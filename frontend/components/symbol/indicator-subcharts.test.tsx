@@ -56,4 +56,22 @@ describe("IndicatorSubcharts", () => {
     const macdHeader = screen.getByTestId("indicator-subchart-macd");
     expect(macdHeader.textContent).toMatch(/MACD:/);
   });
+
+  it("MACD latest 값이 null이면 최신 유효 포인트로 헤더를 렌더한다", () => {
+    const macdWithNullLatest: MacdPoint[] = [
+      ...MOCK_MACD,
+      {
+        t: "2026-04-30T00:00:00",
+        macd: null,
+        signal: null,
+        histogram: null,
+      },
+    ];
+
+    render(<IndicatorSubcharts rsi={[]} macd={macdWithNullLatest} />);
+
+    const macdHeader = screen.getByTestId("indicator-subchart-macd");
+    expect(macdHeader.textContent).toContain("3.00");
+    expect(macdHeader.textContent).toContain("2.40");
+  });
 });

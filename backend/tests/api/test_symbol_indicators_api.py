@@ -9,7 +9,31 @@ from __future__ import annotations
 import pytest
 from httpx import AsyncClient
 
+from app.api import market as market_api
+from app.schemas.market import OhlcBar
+
 _VALID_INTERVALS = ["1m", "5m", "15m", "60m", "day", "week", "month"]
+
+
+def test_complete_ohlc_bars_filters_incomplete_live_candle() -> None:
+    complete = OhlcBar(
+        ts="2026-04-29T00:00:00+09:00",
+        open=219500.0,
+        high=228000.0,
+        low=218500.0,
+        close=226000.0,
+        volume=20363756.0,
+    )
+    incomplete = {
+        "ts": "2026-04-30T00:00:00+09:00",
+        "open": None,
+        "high": None,
+        "low": None,
+        "close": None,
+        "volume": 25294554.0,
+    }
+
+    assert market_api._complete_ohlc_bars([complete, incomplete]) == [complete]
 
 
 @pytest.mark.asyncio

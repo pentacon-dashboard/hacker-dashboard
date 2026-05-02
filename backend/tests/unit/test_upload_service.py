@@ -8,7 +8,9 @@ import pytest
 
 from app.services.upload import (
     build_validation_result,
+    detect_portfolio_schema,
     get_cached_df,
+    normalize_holdings_from_csv,
     parse_csv,
 )
 
@@ -226,6 +228,72 @@ class TestBuildValidationResult:
         result = build_validation_result(df, errors)
         dt = datetime.fromisoformat(result.created_at)
         assert dt.year >= 2024
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# 임의 broker CSV schema detection / normalization
+# ──────────────────────────────────────────────────────────────────────────────
+
+
+class TestBrokerCsvIntake:
+    def test_korean_broker_columns_normalize_to_holdings(self):
+        """한국어 broker CSV 컬럼을 표준 holdings 로 정규화한다."""
+        content = (
+            "고객ID,계좌번호,종목코드,종목명,보유수량,평균단가,통화\n"
+            "client-777,123-45,005930,삼성전자,10,72000,KRW\n"
+        ).encode()
+
+        df, errors = parse_csv(content)
+        result = build_validation_result(df, errors)
+
+        assert result.import_status == "imported"
+        assert result.error_rows == 0
+        assert len(result.normalized_holdings) == 1
+
+        holding = result.normalized_holdings[0]
+        assert holding.client_id == "client-777"
+        assert holding.account == "123-45"
+        assert holding.code == "005930"
+        assert holding.name == "삼성전자"
+        assert holding.quantity == "10"
+        assert holding.avg_cost == "72000"
+        assert holding.currency == "KRW"
+        assert holding.market == "naver_kr"
+        assert holding.source_row == 2
+
+        symbol_mapping = next(m for m in result.field_mappings if m.standard_field == "symbol")
+        assert symbol_mapping.source_column == "종목코드"
+        assert symbol_mapping.confidence >= 0.95
+        assert symbol_mapping.needs_review is False
+
+    def test_missing_core_fields_returns_insufficient_data(self):
+        """보유자산 핵심 필드를 매핑하지 못하면 holdings 를 만들지 않는다."""
+        content = "종목명,메모\n삼성전자,관심종목\n".encode()
+
+        df, errors = parse_csv(content)
+        result = build_validation_result(df, errors)
+
+        assert result.import_status == "insufficient_data"
+        assert result.normalized_holdings == []
+        assert any(error.code == "missing_columns" for error in result.errors)
+
+    def test_duplicate_symbol_candidates_need_review(self):
+        """중복 symbol 후보는 자동 매핑하지 않고 PB 확인 대상으로 둔다."""
+        content = (
+            b"symbol,ticker,quantity,avg_cost,currency\n"
+            b"AAPL,MSFT,3,180,USD\n"
+        )
+
+        df, errors = parse_csv(content)
+        schema = detect_portfolio_schema(df)
+
+        symbol_mapping = next(m for m in schema.field_mappings if m.standard_field == "symbol")
+        assert symbol_mapping.needs_review is True
+        assert symbol_mapping.confidence < 0.95
+
+        normalized = normalize_holdings_from_csv(df, schema)
+        assert normalized.status == "needs_confirmation"
+        assert normalized.holdings == []
 
 
 # ──────────────────────────────────────────────────────────────────────────────

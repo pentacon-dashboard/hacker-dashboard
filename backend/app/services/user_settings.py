@@ -41,6 +41,18 @@ def _default_connected_accounts() -> list[dict[str, Any]]:
     ]
 
 
+def _normalize_timezone(value: str | None) -> str:
+    timezone = str(value or "").strip()
+    return timezone or "Asia/Seoul"
+
+
+def _repair_row_defaults(row: UserSettingsRow) -> bool:
+    if str(row.timezone or "").strip():
+        return False
+    row.timezone = "Asia/Seoul"
+    return True
+
+
 def _default_row(user_id: str) -> UserSettingsRow:
     """DB INSERT 용 기본 ORM 행 생성."""
     return UserSettingsRow(
@@ -100,7 +112,7 @@ def _row_to_schema(row: UserSettingsRow) -> UserSettings:
         name=row.name,
         email=row.email,
         language=row.language,
-        timezone=row.timezone,
+        timezone=_normalize_timezone(row.timezone),
         theme=ThemeSettings.model_validate(row.theme),
         notifications=NotificationSettings.model_validate(row.notifications),
         data=DataSettings.model_validate(row.data),
@@ -117,6 +129,9 @@ async def get_settings(db: AsyncSession, user_id: str) -> UserSettings:
     if row is None:
         row = _default_row(user_id)
         db.add(row)
+        await db.commit()
+        await db.refresh(row)
+    elif _repair_row_defaults(row):
         await db.commit()
         await db.refresh(row)
 
@@ -136,6 +151,8 @@ async def patch_settings(db: AsyncSession, user_id: str, patch: UserSettingsPatc
         db.add(row)
         # flush 해 row 가 세션에 등록되도록 (commit 은 아래서 한 번만)
         await db.flush()
+    else:
+        _repair_row_defaults(row)
 
     patch_dict = patch.model_dump(exclude_none=True)
 

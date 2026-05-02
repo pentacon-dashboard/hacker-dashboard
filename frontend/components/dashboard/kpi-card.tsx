@@ -62,8 +62,8 @@ export function KpiCard({
         "flex min-w-0 flex-col gap-2",
       )}
     >
-      <div className="flex items-center justify-between gap-2">
-        <span className="truncate text-xs font-medium text-muted-foreground">
+      <div className="flex items-start justify-between gap-2">
+        <span className="min-w-0 break-keep text-xs font-medium leading-tight text-muted-foreground">
           {label}
         </span>
         {icon && (
@@ -78,15 +78,15 @@ export function KpiCard({
           </span>
         )}
       </div>
-      <div className="flex items-baseline justify-between gap-2">
+      <div className="flex min-w-0 flex-col items-start gap-1">
         <span
-          className="min-w-0 truncate text-base font-semibold tracking-tight sm:text-lg md:text-xl"
+          className="min-w-0 max-w-full break-keep text-base font-semibold leading-tight tracking-tight sm:text-lg md:text-xl"
           title={value}
         >
           {value}
         </span>
         {delta && (
-          <span className={cn("shrink-0 text-xs font-semibold whitespace-nowrap", deltaColor)}>
+          <span className={cn("shrink-0 break-keep text-xs font-semibold leading-tight", deltaColor)}>
             {delta}
           </span>
         )}

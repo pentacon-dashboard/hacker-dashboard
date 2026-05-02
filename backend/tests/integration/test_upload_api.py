@@ -3,10 +3,15 @@
 from __future__ import annotations
 
 import json
+from collections.abc import AsyncGenerator
+from typing import Any
 
 import pytest
 from httpx import ASGITransport, AsyncClient
+from sqlalchemy import Column, DateTime, Integer, MetaData, Numeric, String, Table
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
+from app.db.session import get_db
 from app.main import app
 
 
@@ -21,6 +26,46 @@ def _csv_bytes(
 ) -> bytes:
     lines = [header] + rows
     return "\n".join(lines).encode("utf-8")
+
+
+def _create_upload_import_tables(conn: Any) -> None:
+    metadata = MetaData()
+    Table(
+        "holdings",
+        metadata,
+        Column("id", Integer, primary_key=True, autoincrement=True),
+        Column("user_id", String(50), nullable=False, default="pb-demo"),
+        Column("client_id", String(50), nullable=False, default="client-001"),
+        Column("market", String(20), nullable=False),
+        Column("code", String(50), nullable=False),
+        Column("quantity", Numeric(24, 8), nullable=False),
+        Column("avg_cost", Numeric(24, 8), nullable=False),
+        Column("currency", String(4), nullable=False, default="USD"),
+        Column("created_at", DateTime(timezone=True)),
+        Column("updated_at", DateTime(timezone=True)),
+    )
+    metadata.create_all(conn)
+
+
+@pytest.fixture
+async def upload_import_client() -> AsyncGenerator[AsyncClient, None]:
+    engine = create_async_engine("sqlite+aiosqlite:///:memory:", echo=False)
+    async with engine.begin() as conn:
+        await conn.run_sync(_create_upload_import_tables)
+
+    SessionLocal = async_sessionmaker(bind=engine, expire_on_commit=False, autoflush=False)
+
+    async def override_get_db() -> AsyncGenerator[AsyncSession, None]:
+        async with SessionLocal() as session:
+            yield session
+
+    app.dependency_overrides[get_db] = override_get_db
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
+        yield ac
+
+    app.dependency_overrides.pop(get_db, None)
+    await engine.dispose()
 
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -99,6 +144,126 @@ async def test_upload_csv_preview_max_5(client: AsyncClient) -> None:
     )
     assert resp.status_code == 200
     assert len(resp.json()["preview"]) <= 5
+
+
+@pytest.mark.asyncio
+async def test_upload_import_persists_normalized_holdings(
+    upload_import_client: AsyncClient,
+) -> None:
+    """자동 매핑 가능한 CSV 는 holdings DB에 저장한다."""
+    content = (
+        "고객ID,계좌번호,종목코드,종목명,보유수량,평균단가,통화\n"
+        "client-777,123-45,005930,삼성전자,10,72000,KRW\n"
+    ).encode()
+    upload_resp = await upload_import_client.post(
+        "/upload/csv",
+        files={"file": ("korean-broker.csv", content, "text/csv")},
+    )
+    assert upload_resp.status_code == 200
+
+    import_resp = await upload_import_client.post(
+        "/upload/import",
+        json={"upload_id": upload_resp.json()["upload_id"], "client_id": "client-777"},
+    )
+
+    assert import_resp.status_code == 200
+    body = import_resp.json()
+    assert body["status"] == "imported"
+    assert body["imported_count"] == 1
+    assert body["holdings"][0]["client_id"] == "client-777"
+    assert body["holdings"][0]["market"] == "naver_kr"
+    assert body["holdings"][0]["code"] == "005930"
+
+    holdings_resp = await upload_import_client.get("/portfolio/holdings?client_id=client-777")
+    assert holdings_resp.status_code == 200
+    holdings = holdings_resp.json()
+    assert len(holdings) == 1
+    assert holdings[0]["code"] == "005930"
+    assert holdings[0]["quantity"] == "10.00000000"
+
+
+@pytest.mark.asyncio
+async def test_upload_import_uses_selected_client_over_source_client_id(
+    upload_import_client: AsyncClient,
+) -> None:
+    content = (
+        "date,client_id,market,code,quantity,avg_cost,currency\n"
+        "2026-05-01,client-777,naver_kr,005930,10,72000,KRW\n"
+    ).encode("utf-8")
+    upload_resp = await upload_import_client.post(
+        "/upload/csv",
+        files={"file": ("selected-client.csv", content, "text/csv")},
+    )
+    assert upload_resp.status_code == 200
+
+    import_resp = await upload_import_client.post(
+        "/upload/import",
+        json={"upload_id": upload_resp.json()["upload_id"], "client_id": "client-002"},
+    )
+
+    assert import_resp.status_code == 200
+    body = import_resp.json()
+    assert body["status"] == "imported"
+    assert body["client_id"] == "client-002"
+    assert body["holdings"][0]["client_id"] == "client-002"
+    assert body["normalized_holdings"][0]["client_id"] == "client-777"
+    assert any(
+        "source client_id 'client-777' imported into selected client 'client-002'"
+        in warning
+        for warning in body["normalization_warnings"]
+    )
+
+    selected_holdings_resp = await upload_import_client.get(
+        "/portfolio/holdings?client_id=client-002"
+    )
+    assert selected_holdings_resp.status_code == 200
+    assert len(selected_holdings_resp.json()) == 1
+
+    source_holdings_resp = await upload_import_client.get(
+        "/portfolio/holdings?client_id=client-777"
+    )
+    assert source_holdings_resp.status_code == 200
+    assert source_holdings_resp.json() == []
+
+
+@pytest.mark.asyncio
+async def test_upload_import_needs_confirmation_does_not_persist(
+    upload_import_client: AsyncClient,
+) -> None:
+    """중복 후보처럼 PB 확인이 필요한 CSV 는 저장하지 않는다."""
+    content = b"symbol,ticker,quantity,avg_cost,currency\nAAPL,MSFT,3,180,USD\n"
+    upload_resp = await upload_import_client.post(
+        "/upload/csv",
+        files={"file": ("ambiguous.csv", content, "text/csv")},
+    )
+    assert upload_resp.status_code == 200
+
+    import_resp = await upload_import_client.post(
+        "/upload/import",
+        json={"upload_id": upload_resp.json()["upload_id"], "client_id": "client-777"},
+    )
+
+    assert import_resp.status_code == 200
+    body = import_resp.json()
+    assert body["status"] == "needs_confirmation"
+    assert body["imported_count"] == 0
+    assert body["holdings"] == []
+
+    holdings_resp = await upload_import_client.get("/portfolio/holdings?client_id=client-777")
+    assert holdings_resp.status_code == 200
+    assert holdings_resp.json() == []
+
+
+@pytest.mark.asyncio
+async def test_upload_import_invalid_upload_id_404(client: AsyncClient) -> None:
+    """없는 upload_id 는 일반 JSON API 오류로 반환한다."""
+    resp = await client.post(
+        "/upload/import",
+        json={"upload_id": "00000000-0000-0000-0000-000000000000"},
+    )
+
+    assert resp.status_code == 404
+    assert resp.json()["detail"]["code"] == "UPLOAD_NOT_FOUND"
 
 
 # ──────────────────────────────────────────────────────────────────────────────

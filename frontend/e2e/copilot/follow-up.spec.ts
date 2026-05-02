@@ -6,26 +6,24 @@
  * 1턴 카드가 히스토리에 유지되는지 검증
  */
 import { test, expect } from "@playwright/test";
+import { mockBaseApis, mockCopilotSse, submitCopilotQuery } from "../fixtures/api";
 
 test.describe("Copilot follow-up (2-turn)", () => {
   test.beforeEach(async ({ page }) => {
+    await mockBaseApis(page);
+    await mockCopilotSse(page);
     await page.goto("/?copilot=1");
   });
 
   test("1턴 비교 후 2턴 시뮬레이터 — 히스토리 카드 유지", async ({ page }) => {
-    const input = page.getByRole("textbox", { name: "copilot-input" });
-    await expect(input).toBeVisible({ timeout: 10_000 });
-
     // 1턴
-    await input.fill("TSLA vs NVDA 비교");
-    await page.keyboard.press("Enter");
+    await submitCopilotQuery(page, "TSLA vs NVDA 비교");
     await expect(
       page.getByTestId("copilot-card-comparison_table")
     ).toBeVisible({ timeout: 20_000 });
 
     // 2턴 — same drawer
-    await input.fill("그럼 엔비디아 -30% 시 내 포트폴리오?");
-    await page.keyboard.press("Enter");
+    await submitCopilotQuery(page, "그럼 엔비디아 -30% 시 내 포트폴리오?");
 
     // simulator_result 카드 등장
     await expect(

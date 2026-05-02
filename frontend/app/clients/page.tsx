@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
 
-export default function WatchlistRedirectPage() {
+export default function ClientsRedirectPage() {
   redirect("/");
 }

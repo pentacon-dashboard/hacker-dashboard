@@ -43,6 +43,15 @@ describe("TopHoldingsTable", () => {
     expect(texts).toEqual(["#", "종목", "시장", "평가액", "수익률", "비중"]);
   });
 
+  it("compact preview mode renders the customer book table as two readable columns", () => {
+    render(<TopHoldingsTable holdings={SAMPLE} compact />);
+
+    expect(screen.getAllByRole("columnheader")).toHaveLength(2);
+    expect(screen.queryByText("YAHOO")).not.toBeInTheDocument();
+    expect(screen.queryByText("22.3%")).not.toBeInTheDocument();
+    expect(screen.getByText("+22.15%")).toBeInTheDocument();
+  });
+
   it("value_krw 내림차순으로 상위 5개만 표시한다 (default limit=5)", () => {
     render(<TopHoldingsTable holdings={SAMPLE} />);
     const rows = screen.getAllByRole("row").slice(1); // header 제외

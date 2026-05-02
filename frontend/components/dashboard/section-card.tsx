@@ -26,8 +26,10 @@ export function SectionCard({
       )}
       data-testid={testId}
     >
-      <header className="mb-3 flex items-center justify-between gap-2">
-        <h2 className="text-sm font-semibold tracking-tight">{title}</h2>
+      <header className="mb-3 flex flex-wrap items-center justify-between gap-2">
+        <h2 className="shrink-0 break-keep text-sm font-semibold tracking-tight">
+          {title}
+        </h2>
         {action && <div className="shrink-0">{action}</div>}
       </header>
       <div className="min-h-0 flex-1">{children}</div>

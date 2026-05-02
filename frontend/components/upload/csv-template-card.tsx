@@ -38,9 +38,9 @@ export function CsvTemplateCard() {
             {t("upload.template.desc")}
           </p>
           <div className="rounded-lg border border-border bg-muted/30 px-3 py-2 font-mono text-xs text-muted-foreground">
-            <p>date,symbol,quantity,price,currency</p>
-            <p>2024-01-15,AAPL,12,182.5,USD</p>
-            <p>2024-01-15,005930.KS,40,71000,KRW</p>
+            <p>date,market,code,quantity,avg_cost,currency</p>
+            <p>2024-01-15,yahoo,AAPL,12,182.5,USD</p>
+            <p>2024-01-15,naver_kr,005930,40,71000,KRW</p>
             <p className="text-muted-foreground/50">...</p>
           </div>
           <Button

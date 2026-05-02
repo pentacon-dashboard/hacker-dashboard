@@ -41,4 +41,34 @@ describe("AllocationBreakdown", () => {
     const dots = container.querySelectorAll('[aria-hidden="true"]');
     expect(dots.length).toBeGreaterThanOrEqual(SAMPLE.length);
   });
+
+  it("고객장부 compact 모드에서는 원그래프 프레임을 좁은 패널에 맞게 제한한다", () => {
+    render(<AllocationBreakdown data={SAMPLE} compact />);
+
+    const frame = screen.getByTestId("allocation-pie-frame");
+    expect(frame).toHaveClass("h-40");
+    expect(frame).toHaveClass("max-w-[144px]");
+  });
+
+  it("고객장부 compact 모드에서는 범례 금액을 빼고 항목명 줄바꿈을 허용한다", () => {
+    render(<AllocationBreakdown data={SAMPLE} compact />);
+
+    expect(screen.getByTestId("allocation-compact-legend")).toBeInTheDocument();
+    const label = screen.getByText("해외 주식");
+    expect(label).toHaveClass("break-keep");
+    expect(label).not.toHaveClass("truncate");
+    expect(screen.getAllByText("43.2%").length).toBeGreaterThan(0);
+    expect(screen.queryByText("₩8.10M")).not.toBeInTheDocument();
+  });
+
+  it("고객장부 compact 모드에서는 빈 영역에 누적 비중 요약을 렌더한다", () => {
+    render(<AllocationBreakdown data={SAMPLE} compact />);
+
+    expect(screen.getByTestId("allocation-compact-summary")).toBeInTheDocument();
+    expect(screen.getByLabelText("자산 배분 누적 비중")).toBeInTheDocument();
+    expect(screen.getByText("최대 비중")).toBeInTheDocument();
+    expect(screen.getByText("분류 수")).toBeInTheDocument();
+    expect(screen.getByText("상위 3")).toBeInTheDocument();
+    expect(screen.getByText("83.8%")).toBeInTheDocument();
+  });
 });

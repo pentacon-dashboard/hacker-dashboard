@@ -27,7 +27,7 @@ test("BE /health 가 200 을 반환한다", async ({ request }) => {
 
 // ── 시나리오 2: 홈(/) 렌더 ─────────────────────────────────────────────────
 test("홈 페이지가 렌더되고 주요 영역이 보인다", async ({ page }) => {
-  await page.goto("/", { waitUntil: "networkidle", timeout: 30_000 });
+  await page.goto("/", { waitUntil: "domcontentloaded", timeout: 30_000 });
 
   // 페이지 타이틀 존재
   const title = await page.title();
@@ -38,17 +38,15 @@ test("홈 페이지가 렌더되고 주요 영역이 보인다", async ({ page }
   await expect(main).toBeVisible({ timeout: 15_000 });
 });
 
-// ── 시나리오 3: /watchlist 렌더 ────────────────────────────────────────────
-test("/watchlist 페이지가 렌더된다", async ({ page }) => {
+// ── 시나리오 3: /watchlist 레거시 리다이렉트 ───────────────────────────────
+test("/watchlist 는 고객장부 메인으로 이동한다", async ({ page }) => {
   await page.goto("/watchlist", { waitUntil: "domcontentloaded", timeout: 30_000 });
 
   // 에러 페이지가 아닌지 확인
   const bodyText = await page.locator("body").innerText();
   expect(bodyText).not.toMatch(/500|Internal Server Error/i);
+  await expect(page).toHaveURL(/\/$/);
 
-  // heading 또는 list 존재 여부 (느슨한 검증)
-  const hasContent = await page
-    .locator("h1, h2, [role='list'], table, [data-testid]")
-    .count();
-  expect(hasContent).toBeGreaterThan(0);
+  const main = page.locator("main, [role='main'], [id='main-content']").first();
+  await expect(main).toBeVisible({ timeout: 15_000 });
 });

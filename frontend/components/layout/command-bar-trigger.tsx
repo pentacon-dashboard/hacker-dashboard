@@ -51,7 +51,7 @@ export function CommandBarTrigger() {
   function handleHiddenInputKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
     if (e.key === "Enter") {
       e.preventDefault();
-      const q = inputValue.trim();
+      const q = e.currentTarget.value.trim() || inputValue.trim();
       if (q) {
         reset();
         setDrawerOpen(true);

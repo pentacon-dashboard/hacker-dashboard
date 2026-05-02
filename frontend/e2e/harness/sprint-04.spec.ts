@@ -1,8 +1,10 @@
 import { test, expect } from "@playwright/test";
+import { mockBaseApis, submitCopilotQuery } from "../fixtures/api";
 
 test.describe("sprint-04 acceptance — command bar + progressive rendering", () => {
   test("⌘K 로 커맨드 바 열고 질의 입력 → drawer 에 카드가 progressive 하게, degraded 포함 나타난다", async ({ page }) => {
     // data-only SSE mock (revision 2: event: 라인 없음)
+    await mockBaseApis(page);
     await page.route("**/copilot/query", async (route) => {
       const chunks = [
         `data: ${JSON.stringify({type: "plan.ready", plan: {plan_id: "p", session_id: "s", steps: [
@@ -33,17 +35,14 @@ test.describe("sprint-04 acceptance — command bar + progressive rendering", ()
     });
 
     await page.goto("/");
-    await page.keyboard.press("Meta+K");
-    const bar = page.getByRole("textbox", { name: /copilot|질의/i });
-    await expect(bar).toBeVisible();
-    await bar.fill("포트폴리오 요약");
-    await bar.press("Enter");
+    await page.keyboard.press("Control+K");
+    await submitCopilotQuery(page, "포트폴리오 요약");
 
     const drawer = page.getByRole("dialog", { name: /copilot/i });
     await expect(drawer).toBeVisible();
     await expect(drawer.getByText("포트폴리오 요약")).toBeVisible({ timeout: 5_000 });
     // DegradedCard 렌더 확인
     await expect(drawer.getByRole("alert")).toContainText(/비교 대상 누락/);
-    await expect(drawer.getByText("통합 응답")).toBeVisible({ timeout: 5_000 });
+    await expect(drawer.getByTestId("copilot-card-final").getByText("통합 응답").last()).toBeVisible({ timeout: 5_000 });
   });
 });

@@ -62,8 +62,8 @@ const TIMEFRAME_TO_INTERVAL: Record<Timeframe, string> = {
 interface BeIndicatorsRaw {
   interval: string;
   period: number;
-  rsi_14: Array<{ t: string; v: number }>;
-  macd: Array<{ t: string; macd: number; signal: number; histogram: number }>;
+  rsi_14: RsiPoint[];
+  macd: MacdPoint[];
   bollinger: {
     upper: Array<{ t: string; v: number }>;
     mid: Array<{ t: string; v: number }>;

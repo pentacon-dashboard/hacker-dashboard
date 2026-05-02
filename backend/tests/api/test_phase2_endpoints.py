@@ -7,8 +7,53 @@
 
 from __future__ import annotations
 
+from collections.abc import AsyncGenerator
+from typing import Any
+
 import pytest
-from httpx import AsyncClient
+from httpx import ASGITransport, AsyncClient
+from sqlalchemy import Boolean, Column, DateTime, Integer, MetaData, Numeric, String, Table
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+
+from app.db.session import get_db
+from app.main import app
+
+
+def _create_tables(conn: Any) -> None:
+    metadata = MetaData()
+    Table(
+        "watchlist_alerts",
+        metadata,
+        Column("id", Integer, primary_key=True, autoincrement=True),
+        Column("user_id", String(50), nullable=False, default="demo"),
+        Column("client_id", String(50), nullable=False, default="client-001"),
+        Column("symbol", String(50), nullable=False),
+        Column("market", String(20), nullable=False),
+        Column("direction", String(10), nullable=False),
+        Column("threshold", Numeric(18, 4), nullable=False),
+        Column("enabled", Boolean, nullable=False, default=True),
+        Column("created_at", DateTime(timezone=True)),
+    )
+    metadata.create_all(conn)
+
+
+@pytest.fixture
+async def client() -> AsyncGenerator[AsyncClient, None]:
+    engine = create_async_engine("sqlite+aiosqlite:///:memory:", echo=False)
+    async with engine.begin() as conn:
+        await conn.run_sync(_create_tables)
+
+    SessionLocal = async_sessionmaker(bind=engine, expire_on_commit=False, autoflush=False)
+
+    async def override_get_db() -> AsyncGenerator[AsyncSession, None]:
+        async with SessionLocal() as session:
+            yield session
+
+    app.dependency_overrides[get_db] = override_get_db
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
+        yield ac
+    app.dependency_overrides.pop(get_db, None)
+    await engine.dispose()
 
 # ── 2-A: market-leaders ──────────────────────────────────────────────────────
 
