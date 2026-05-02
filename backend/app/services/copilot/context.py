@@ -19,7 +19,7 @@ from app.services.session.protocol import SessionStoreProtocol
 
 # ── 상수 ─────────────────────────────────────────────────────────────────────
 
-_MAX_PRIOR_TURNS = 3
+_MAX_PRIOR_TURNS = 8
 _MAX_CHARS = 2000
 _MAX_QUERY_LEN = 200  # 단일 query 최대 길이 (sanitize)
 _MAX_SUMMARY_LEN = 400  # 단일 summary 최대 길이
@@ -143,3 +143,27 @@ def format_context_for_planner(active_context: ActiveContext) -> str:
 
     parts.append(active_context.user_query)
     return "\n".join(parts)
+
+
+def format_context_for_agent(active_context: ActiveContext) -> str:
+    """Format bounded session memory for answer-generation prompts.
+
+    The agent context is intentionally explanatory memory, not permission to
+    calculate new facts. Analyzer prompts still receive deterministic metrics
+    through their normal inputs.
+    """
+    if not active_context.prior_turns:
+        return (
+            "Conversation context: none.\n"
+            "Do not introduce new calculations or facts from memory."
+        )
+
+    lines = [
+        "Conversation context:",
+        "Use only these verified prior-turn summaries when explaining follow-up questions.",
+        "Do not introduce new calculations, fresh market facts, or investment actions from memory.",
+    ]
+    for idx, turn in enumerate(active_context.prior_turns, start=1):
+        lines.append(f"{idx}. user: {turn.query}")
+        lines.append(f"   verified_summary: {turn.summary}")
+    return "\n".join(lines)

@@ -13,7 +13,7 @@ import os
 import uuid
 from typing import Any
 
-from app.schemas.copilot import SessionTurn
+from app.schemas.copilot import SessionMeta, SessionTurn
 
 
 class PostgresSessionStore:
@@ -163,6 +163,100 @@ class PostgresSessionStore:
                 await conn.execute("DELETE FROM copilot_sessions WHERE id = $1", session_id)
         except Exception:  # noqa: BLE001
             pass
+
+    async def exists(self, session_id: str) -> bool:
+        """Return whether a non-expired session exists."""
+        try:
+            pool = await self._get_pool()
+            ttl_days = self._ttl_days()
+            if ttl_days == 0:
+                return False
+            ttl_check = ""
+            if ttl_days > 0:
+                ttl_check = f"AND updated_at > NOW() - INTERVAL '{ttl_days} days'"
+            async with pool.acquire() as conn:
+                row = await conn.fetchrow(
+                    f"SELECT 1 FROM copilot_sessions WHERE id = $1 {ttl_check} LIMIT 1",
+                    session_id,
+                )
+                return row is not None
+        except Exception:  # noqa: BLE001
+            return False
+
+    async def list_sessions(
+        self,
+        limit: int = 20,
+        offset: int = 0,
+        user_id: str | None = None,
+    ) -> list[SessionMeta]:
+        """Return recent session metadata for the Copilot sidebar."""
+        del user_id  # Session ownership is not modeled yet.
+        try:
+            pool = await self._get_pool()
+            ttl_days = self._ttl_days()
+            if ttl_days == 0:
+                return []
+            ttl_check = ""
+            if ttl_days > 0:
+                ttl_check = f"WHERE s.updated_at > NOW() - INTERVAL '{ttl_days} days'"
+
+            async with pool.acquire() as conn:
+                rows = await conn.fetch(
+                    f"""
+                    SELECT
+                      s.id,
+                      s.updated_at,
+                      first_turn.query AS first_query,
+                      last_turn.query AS last_query,
+                      last_turn.created_at AS last_turn_at,
+                      COALESCE(turn_counts.turn_count, 0) AS turn_count
+                    FROM copilot_sessions s
+                    LEFT JOIN LATERAL (
+                      SELECT query
+                      FROM copilot_turns
+                      WHERE session_id = s.id
+                      ORDER BY turn_idx ASC
+                      LIMIT 1
+                    ) first_turn ON TRUE
+                    LEFT JOIN LATERAL (
+                      SELECT query, created_at
+                      FROM copilot_turns
+                      WHERE session_id = s.id
+                      ORDER BY turn_idx DESC
+                      LIMIT 1
+                    ) last_turn ON TRUE
+                    LEFT JOIN LATERAL (
+                      SELECT COUNT(*)::int AS turn_count
+                      FROM copilot_turns
+                      WHERE session_id = s.id
+                    ) turn_counts ON TRUE
+                    {ttl_check}
+                    ORDER BY s.updated_at DESC
+                    LIMIT $1 OFFSET $2
+                    """,
+                    limit,
+                    offset,
+                )
+
+            sessions: list[SessionMeta] = []
+            for row in rows:
+                first_query = row["first_query"] or "(빈 세션)"
+                last_query = row["last_query"] or ""
+                title = first_query[:80] + ("..." if len(first_query) > 80 else "")
+                preview = last_query[:120] + ("..." if len(last_query) > 120 else "")
+                last_turn_at = row["last_turn_at"] or row["updated_at"]
+                sessions.append(
+                    SessionMeta(
+                        session_id=str(row["id"]),
+                        title=title,
+                        last_turn_at=last_turn_at.isoformat().replace("+00:00", "Z"),
+                        turn_count=int(row["turn_count"] or 0),
+                        preview=preview,
+                    )
+                )
+            return sessions
+        except Exception:  # noqa: BLE001
+            return []
 
     async def new_session(self) -> str:
         """uuid4 hex 세션 ID 생성 + DB 행 삽입."""

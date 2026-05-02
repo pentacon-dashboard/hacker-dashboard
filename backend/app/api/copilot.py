@@ -8,6 +8,7 @@ SSE 스트리밍(/copilot/query) 은 sprint-04 에서 추가.
 from __future__ import annotations
 
 import uuid as _uuid
+import inspect
 from collections.abc import AsyncGenerator
 from typing import Any
 
@@ -21,6 +22,12 @@ from app.services.copilot.context import build_active_context
 from app.services.session import get_session_store
 
 router = APIRouter(prefix="/copilot", tags=["copilot"])
+
+
+async def _maybe_await(value: Any) -> Any:
+    if inspect.isawaitable(value):
+        return await value
+    return value
 
 
 # ── POST /copilot/plan (sprint-01) ──────────────────────────────────────────
@@ -196,7 +203,7 @@ async def list_sessions(
     """GET /copilot/sessions — 세션 히스토리 목록 (최근순)."""
     store = get_session_store()
     if hasattr(store, "list_sessions"):
-        return store.list_sessions(limit=limit, offset=offset)
+        return await _maybe_await(store.list_sessions(limit=limit, offset=offset))
     # list_sessions 가 없는 store (PostgresSessionStore 등) 는 빈 목록 반환
     return []
 
@@ -216,7 +223,7 @@ async def get_session_alias(session_id: str) -> SessionResponse:
     store = get_session_store()
 
     if hasattr(store, "exists"):
-        if not store.exists(session_id):
+        if not await _maybe_await(store.exists(session_id)):
             raise HTTPException(
                 status_code=404, detail=f"session {session_id!r} not found or expired"
             )
@@ -260,7 +267,7 @@ async def get_session(session_id: str) -> SessionResponse:
 
     # 존재 여부 확인 (InMemorySessionStore: exists() 사용, 그 외: get_turns 결과로 판단)
     if hasattr(store, "exists"):
-        if not store.exists(session_id):
+        if not await _maybe_await(store.exists(session_id)):
             raise HTTPException(
                 status_code=404, detail=f"session {session_id!r} not found or expired"
             )

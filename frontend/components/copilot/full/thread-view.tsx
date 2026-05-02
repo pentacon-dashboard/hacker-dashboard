@@ -1,10 +1,17 @@
 "use client";
 
-import { FormEvent, useRef } from "react";
-import { Send, Loader2, Bot, User } from "lucide-react";
+import { FormEvent, KeyboardEvent, useRef } from "react";
+import { Bot, Loader2, Send, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import type { CopilotStreamState, StepState } from "@/hooks/use-copilot-stream";
-import { useLocale } from "@/lib/i18n/locale-provider";
+import type { CopilotStreamState } from "@/hooks/use-copilot-stream";
+import { cn } from "@/lib/utils";
+import {
+  artifactChipLabel,
+  artifactTabs,
+  hasArtifacts,
+  type ArtifactSummary,
+  type ArtifactTab,
+} from "./artifact-panel";
 
 interface ThreadMessage {
   role: "user" | "assistant";
@@ -12,6 +19,8 @@ interface ThreadMessage {
   turn_id?: string;
   analyzer?: string;
   analyzer_reason?: string;
+  degraded?: boolean;
+  artifacts?: ArtifactSummary;
 }
 
 interface ThreadViewProps {
@@ -19,32 +28,59 @@ interface ThreadViewProps {
   messages?: ThreadMessage[];
   streamState: CopilotStreamState;
   onSendMessage: (query: string) => void;
+  onArtifactSelect?: (tab: ArtifactTab) => void;
   disabled?: boolean;
 }
 
-function agentLabel(agent?: string): string {
-  switch (agent) {
-    case "stock":
-      return "종목";
-    case "crypto":
-      return "가상자산";
-    case "fx":
-      return "환율";
-    case "macro":
-      return "시장";
-    case "portfolio":
-      return "포트폴리오";
-    case "rebalance":
-      return "리밸런싱";
-    case "comparison":
-      return "비교";
-    case "simulator":
-      return "시뮬레이션";
-    case "news-rag":
-      return "뉴스 근거";
-    default:
-      return "자료";
-  }
+function ArtifactChips({
+  summary,
+  onSelect,
+}: {
+  summary?: ArtifactSummary;
+  onSelect?: (tab: ArtifactTab) => void;
+}) {
+  if (!hasArtifacts(summary)) return null;
+
+  return (
+    <div className="mt-3 flex flex-wrap gap-1.5">
+      {artifactTabs
+        .filter((tab) => Number(summary[tab] ?? 0) > 0)
+        .map((tab) => (
+          <button
+            key={tab}
+            type="button"
+            onClick={() => onSelect?.(tab)}
+            className="rounded-full border border-border px-2.5 py-1 text-xs text-muted-foreground hover:border-primary/50 hover:text-primary"
+            data-testid={`artifact-chip-${tab}`}
+          >
+            {artifactChipLabel(tab, Number(summary[tab] ?? 0))}
+          </button>
+        ))}
+    </div>
+  );
+}
+
+function AssistantTyping() {
+  return (
+    <div className="flex justify-start" data-testid="assistant-typing">
+      <div className="flex w-full max-w-3xl gap-3">
+        <div className="mt-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-muted">
+          <Bot className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
+        </div>
+        <div className="w-full space-y-3 py-1">
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <Loader2 className="h-4 w-4 animate-spin text-primary" aria-hidden="true" />
+            답변을 준비하고 있습니다
+          </div>
+          <div className="space-y-2">
+            <div className="h-3 w-2/3 animate-pulse rounded bg-muted" />
+            <div className="h-3 w-full animate-pulse rounded bg-muted" />
+            <div className="h-3 w-4/5 animate-pulse rounded bg-muted" />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 export function ThreadView({
@@ -52,169 +88,124 @@ export function ThreadView({
   messages = [],
   streamState,
   onSendMessage,
+  onArtifactSelect,
   disabled,
 }: ThreadViewProps) {
-  const { t } = useLocale();
-  const inputRef = useRef<HTMLInputElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
+  const isStreaming = streamState.status === "streaming";
 
-  function handleSubmit(e: FormEvent) {
-    e.preventDefault();
-    const val = inputRef.current?.value.trim();
-    if (!val) return;
-    onSendMessage(val);
+  function submitCurrentValue() {
+    const value = inputRef.current?.value.trim();
+    if (!value) return;
+    onSendMessage(value);
     if (inputRef.current) inputRef.current.value = "";
     setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: "smooth" }), 100);
   }
 
-  const stepEntries = Object.entries(streamState.steps) as [string, StepState][];
-  const isStreaming = streamState.status === "streaming";
+  function handleSubmit(e: FormEvent) {
+    e.preventDefault();
+    submitCurrentValue();
+  }
+
+  function handleKeyDown(e: KeyboardEvent<HTMLTextAreaElement>) {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      submitCurrentValue();
+    }
+  }
 
   return (
-    <div className="flex h-full flex-col" data-testid="thread-view">
-      {/* 스레드 스크롤 영역 */}
-      <div className="flex-1 space-y-4 overflow-y-auto px-1 py-2">
-        {/* 세션 없음 / 빈 상태 */}
-        {!sessionId && messages.length === 0 && streamState.status === "idle" && (
-          <div className="flex flex-col items-center justify-center py-16 text-center">
-            <Bot className="mb-3 h-10 w-10 text-muted-foreground/40" aria-hidden="true" />
-            <p className="text-sm font-medium text-muted-foreground">{t("copilot.emptyTitle")}</p>
-            <p className="mt-1 text-xs text-muted-foreground/60">
-              {t("copilot.emptyDesc")}
-            </p>
-          </div>
-        )}
-
-        {/* 기존 메시지 히스토리 */}
-        {messages.map((msg, i) => (
-          <div
-            key={i}
-            className={`flex gap-2 ${msg.role === "user" ? "flex-row-reverse" : "flex-row"}`}
-          >
-            <div
-              className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full ${
-                msg.role === "user" ? "bg-primary" : "bg-muted"
-              }`}
-            >
-              {msg.role === "user" ? (
-                <User className="h-3.5 w-3.5 text-primary-foreground" aria-hidden="true" />
-              ) : (
-                <Bot className="h-3.5 w-3.5 text-muted-foreground" aria-hidden="true" />
-              )}
-            </div>
-            <div
-              className={`max-w-[85%] rounded-lg px-3 py-2 text-sm ${
-                msg.role === "user"
-                  ? "bg-primary text-primary-foreground"
-                  : "border border-border bg-card"
-              }`}
-            >
-              {/* Analyzer 배지 */}
-              {msg.analyzer && (
-                <div className="mb-1.5 flex items-center gap-1.5">
-                  <span className="rounded bg-primary/20 px-1.5 py-0.5 text-[10px] font-semibold text-primary">
-                    Router: {msg.analyzer}
-                  </span>
-                  {msg.analyzer_reason && (
-                    <span className="text-[10px] text-muted-foreground">{msg.analyzer_reason}</span>
-                  )}
-                </div>
-              )}
-              <p className="whitespace-pre-wrap">{msg.content}</p>
-            </div>
-          </div>
-        ))}
-
-        {/* 실시간 스트리밍 */}
-        {isStreaming && (
-          <div className="space-y-3">
-            {streamState.plan && (
-              <div className="flex items-center gap-2 rounded-md border border-primary/20 bg-primary/5 px-3 py-2 text-xs text-muted-foreground">
-                <Loader2 className="h-3 w-3 animate-spin text-primary" aria-hidden="true" />
-                <span>질문을 이해하고 답변을 구성하고 있습니다.</span>
+    <div className="flex h-full min-h-0 flex-col bg-background" data-testid="thread-view">
+      <div className="flex-1 overflow-y-auto px-4 py-6">
+        <div className="mx-auto flex w-full max-w-3xl flex-col gap-6">
+          {!sessionId && messages.length === 0 && streamState.status === "idle" && (
+            <div className="flex min-h-[45vh] flex-col items-center justify-center text-center">
+              <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
+                <Bot className="h-6 w-6 text-primary" aria-hidden="true" />
               </div>
-            )}
+              <h2 className="text-lg font-semibold">Copilot과 대화하기</h2>
+              <p className="mt-2 max-w-md text-sm text-muted-foreground">
+                포트폴리오 요약, 리밸런싱 근거, 고객 설명 문안을 이어서 물어볼 수 있습니다.
+              </p>
+            </div>
+          )}
 
-            {stepEntries.map(([stepId, stepState]) => {
-              const stepMeta = streamState.plan?.steps.find((step) => step.step_id === stepId);
-
-              return (
-                <div key={stepId} className="space-y-1.5">
-                  <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
-                    <Loader2 className="h-3 w-3 animate-spin text-primary" aria-hidden="true" />
-                    <span>{agentLabel(stepMeta?.agent)} 분석 중</span>
-                    {stepState.degraded && (
-                      <span className="rounded bg-destructive/10 px-1 py-0.5 text-[10px] text-destructive">
-                        일부 제한
-                      </span>
-                    )}
+          {messages.map((msg, index) => {
+            const isUser = msg.role === "user";
+            return (
+              <div
+                key={`${msg.role}-${index}-${msg.turn_id ?? ""}`}
+                className={cn("flex", isUser ? "justify-end" : "justify-start")}
+                data-testid={`message-${msg.role}-${index}`}
+              >
+                {isUser ? (
+                  <div className="max-w-[78%] rounded-2xl bg-primary px-4 py-2 text-sm leading-6 text-primary-foreground">
+                    <p className="whitespace-pre-wrap">{msg.content}</p>
                   </div>
-
-                  {!stepState.card && stepState.buffer && (
-                    <div
-                      className="rounded border border-border bg-card px-3 py-2 text-sm text-muted-foreground"
-                      aria-live="polite"
-                    >
-                      {stepState.buffer}
-                      <span className="animate-pulse">|</span>
+                ) : (
+                  <div className="flex w-full max-w-3xl gap-3">
+                    <div className="mt-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-muted">
+                      <Bot className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
                     </div>
-                  )}
-
-                  {!stepState.card && !stepState.buffer && (
-                    <div className="h-14 animate-pulse rounded border border-border bg-muted" aria-label={t("copilot.loading")} />
-                  )}
-
-                  {stepState.card && !streamState.finalCard && (
-                    <div className="rounded border border-border bg-card px-3 py-2 text-sm text-muted-foreground">
-                      분석 결과를 대화형 답변으로 정리하고 있습니다.
+                    <div className="min-w-0 flex-1 text-sm leading-6">
+                      {msg.degraded && (
+                        <span className="mb-2 inline-flex rounded-full bg-amber-500/10 px-2 py-0.5 text-xs font-medium text-amber-600">
+                          일부 근거 제한
+                        </span>
+                      )}
+                      <p className="whitespace-pre-wrap text-foreground">{msg.content}</p>
+                      <ArtifactChips summary={msg.artifacts} onSelect={onArtifactSelect} />
                     </div>
-                  )}
+                  </div>
+                )}
+              </div>
+            );
+          })}
 
-                  {stepState.card && streamState.finalCard && (
-                    <div className="rounded border border-border bg-card px-3 py-2 text-sm text-muted-foreground">
-                      답변을 대화 기록에 저장하고 있습니다.
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        )}
-
-        {/* 에러 */}
-        {streamState.error && (
-          <div className="rounded border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">
-            {t("copilot.error")}: {streamState.error}
-          </div>
-        )}
-
-        <div ref={bottomRef} />
+          {isStreaming && <AssistantTyping />}
+          {streamState.error && (
+            <div className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+              오류: {streamState.error}
+            </div>
+          )}
+          <div ref={bottomRef} />
+        </div>
       </div>
 
-      {/* 입력 폼 */}
-      <form onSubmit={handleSubmit} className="flex gap-2 border-t border-border pt-3">
-        <input
-          ref={inputRef}
-          type="text"
-          placeholder={t("copilot.inputPlaceholder")}
-          disabled={disabled || isStreaming}
-          className="flex-1 rounded-lg border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring disabled:opacity-50"
-          aria-label={t("copilot.inputAria")}
-          data-testid="thread-input"
-        />
-        <Button
-          type="submit"
-          size="icon"
-          disabled={disabled || isStreaming}
-          aria-label={t("copilot.send")}
-          data-testid="thread-send-btn"
-        >
-          {isStreaming ? (
-            <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
-          ) : (
-            <Send className="h-4 w-4" aria-hidden="true" />
-          )}
-        </Button>
+      <form
+        onSubmit={handleSubmit}
+        className="border-t border-border bg-background px-4 py-3"
+        data-testid="thread-composer"
+        data-multiline="true"
+      >
+        <div className="mx-auto flex max-w-3xl items-end gap-2 rounded-2xl border border-input bg-background px-3 py-2 shadow-sm">
+          <User className="mb-2 h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+          <textarea
+            ref={inputRef}
+            rows={1}
+            placeholder="메시지를 입력하세요"
+            disabled={disabled || isStreaming}
+            onKeyDown={handleKeyDown}
+            className="max-h-32 min-h-9 flex-1 resize-none bg-transparent py-2 text-sm leading-5 outline-none disabled:opacity-50"
+            aria-label="질문 입력"
+            data-testid="thread-input"
+          />
+          <Button
+            type="submit"
+            size="icon"
+            disabled={disabled || isStreaming}
+            aria-label="전송"
+            data-testid="thread-send-btn"
+            className="h-9 w-9 shrink-0 rounded-full"
+          >
+            {isStreaming ? (
+              <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+            ) : (
+              <Send className="h-4 w-4" aria-hidden="true" />
+            )}
+          </Button>
+        </div>
       </form>
     </div>
   );

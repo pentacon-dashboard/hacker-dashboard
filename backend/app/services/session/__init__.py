@@ -2,8 +2,9 @@
 
 환경변수 `COPILOT_SESSION_STORE` 로 구현체를 선택한다.
 
-- memory (기본): InMemorySessionStore 싱글톤 (memory_store 모듈의 _store 공유)
+- memory: InMemorySessionStore 싱글톤 (memory_store 모듈의 _store 공유)
 - postgres: PostgresSessionStore (COPILOT_SESSION_STORE_URL 필요)
+명시 값이 없으면 COPILOT_SESSION_STORE_URL 이 있을 때 postgres, 없을 때 memory 를 사용한다.
 """
 
 from __future__ import annotations
@@ -30,7 +31,7 @@ _memory_store: InMemorySessionStore | None = None
 
 
 def get_session_store() -> InMemorySessionStore | PostgresSessionStore:
-    """env: COPILOT_SESSION_STORE=memory|postgres (default: memory).
+    """env: COPILOT_SESSION_STORE=memory|postgres.
 
     반환 타입은 SessionStoreProtocol 을 만족하는 구현체.
 
@@ -39,7 +40,11 @@ def get_session_store() -> InMemorySessionStore | PostgresSessionStore:
     """
     global _postgres_store, _memory_store
 
-    mode = os.environ.get("COPILOT_SESSION_STORE", "memory").strip().lower()
+    configured_mode = os.environ.get("COPILOT_SESSION_STORE")
+    if configured_mode:
+        mode = configured_mode.strip().lower()
+    else:
+        mode = "postgres" if os.environ.get("COPILOT_SESSION_STORE_URL") else "memory"
 
     if mode == "postgres":
         if _postgres_store is None:

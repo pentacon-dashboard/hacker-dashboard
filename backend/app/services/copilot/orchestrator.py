@@ -8,6 +8,8 @@ must never leak into final answers.
 from __future__ import annotations
 
 import asyncio
+import datetime
+import html
 import json
 import os
 import uuid
@@ -31,7 +33,12 @@ from app.schemas.copilot import (
     SimulatorResultCard,
     TextCard,
 )
-from app.services.copilot.context import build_active_context, format_context_for_planner
+from app.services.copilot.context import (
+    build_active_context,
+    format_context_for_agent,
+    format_context_for_planner,
+)
+from app.services.copilot.intent import classify_copilot_intent
 from app.services.session import get_session_store
 from app.services.session.memory_store import make_turn_id
 
@@ -316,7 +323,11 @@ async def _fetch_portfolio_context() -> dict[str, Any]:
     }
 
 
-async def _run_agent_llm(step: CopilotStep, user_query: str) -> dict[str, Any]:
+async def _run_agent_llm(
+    step: CopilotStep,
+    user_query: str,
+    active_context: ActiveContext | None = None,
+) -> dict[str, Any]:
     from app.agents.llm import LLMUnavailableError, call_llm
 
     agent = step.agent
@@ -325,6 +336,11 @@ async def _run_agent_llm(step: CopilotStep, user_query: str) -> dict[str, Any]:
         return _run_step_sync(step, user_query)
 
     try:
+        memory_context = (
+            format_context_for_agent(active_context)
+            if active_context is not None
+            else "Conversation context: none."
+        )
         if agent in {"portfolio", "rebalance"}:
             try:
                 ctx = await _fetch_portfolio_context()
@@ -336,13 +352,15 @@ async def _run_agent_llm(step: CopilotStep, user_query: str) -> dict[str, Any]:
                     "holdings": [],
                 }
             user_content = (
-                f"사용자 질문: {user_query}\n\n"
-                f"포트폴리오 데이터:\n{json.dumps(ctx, ensure_ascii=False, indent=2)}"
+                f"{memory_context}\n\n"
+                f"User question: {user_query}\n\n"
+                f"Deterministic portfolio data:\n{json.dumps(ctx, ensure_ascii=False, indent=2)}"
             )
         else:
             user_content = (
-                f"사용자 질문: {user_query}\n"
-                f"Step 파라미터:\n{json.dumps(dict(step.inputs), ensure_ascii=False, indent=2)}"
+                f"{memory_context}\n\n"
+                f"User question: {user_query}\n"
+                f"Step inputs:\n{json.dumps(dict(step.inputs), ensure_ascii=False, indent=2)}"
             )
 
         raw = await call_llm(
@@ -385,6 +403,7 @@ async def _execute_step(
     delay_ms: int,
     queue: asyncio.Queue[bytes],
     user_query: str = "",
+    active_context: ActiveContext | None = None,
 ) -> dict[str, Any]:
     if delay_ms > 0:
         await asyncio.sleep(delay_ms / 1000)
@@ -395,7 +414,7 @@ async def _execute_step(
     ]
 
     if step.agent in _AGENT_PROMPT_MAP:
-        outcome = await _run_agent_llm(step, user_query)
+        outcome = await _run_agent_llm(step, user_query, active_context)
     else:
         loop = asyncio.get_event_loop()
         outcome = await loop.run_in_executor(None, _run_step_sync, step, user_query)
@@ -661,6 +680,106 @@ async def _run_final_gate(
     return final_card
 
 
+def _conversation_fallback_text(active_context: ActiveContext, query: str) -> str:
+    last = active_context.prior_turns[-1] if active_context.prior_turns else None
+    if last is None:
+        return "이전 대화가 없어 새 분석이 필요합니다."
+    summary = html.unescape(last.summary).strip()
+    user_query = html.unescape(query).strip()
+    return (
+        f"이전 답변을 기준으로 정리하면 다음과 같습니다.\n\n"
+        f"{summary}\n\n"
+        f"요청하신 표현('{user_query}')에 맞춰 새 계산 없이 설명만 바꿨습니다."
+    )
+
+
+async def _build_conversation_card(query: str, active_context: ActiveContext) -> dict[str, Any]:
+    from app.agents.llm import LLMUnavailableError, call_llm
+
+    prompt = (
+        f"{format_context_for_agent(active_context)}\n\n"
+        f"Current user request: {query}\n\n"
+        "Answer conversationally in Korean unless the user used English. "
+        "Only re-explain, summarize, or rephrase verified prior summaries. "
+        "Do not calculate new numbers, compare new symbols, cite fresh news, "
+        "or imply buy/sell/rebalance recommendations."
+    )
+    try:
+        raw = await call_llm(
+            system_prompt_name="copilot_conversation_system",
+            user_content=prompt,
+            temperature=0.2,
+            max_tokens=900,
+        )
+        content = _sanitize_debug_text(_strip_code_fence(raw))
+        if not content or content in {"{}", "[]"}:
+            content = _conversation_fallback_text(active_context, query)
+        return {"type": "text", "content": content, "degraded": False}
+    except LLMUnavailableError:
+        return {
+            "type": "text",
+            "content": _conversation_fallback_text(active_context, query),
+            "degraded": True,
+        }
+    except Exception as exc:  # noqa: BLE001
+        return {
+            "type": "text",
+            "content": _conversation_fallback_text(active_context, query),
+            "degraded": True,
+            "degraded_reason": str(exc)[:160],
+        }
+
+
+async def _stream_conversation_shortcut(
+    *,
+    query: str,
+    resolved_session_id: str,
+    turn_id: str,
+    active_context: ActiveContext,
+    store: Any,
+    reason: str,
+) -> AsyncGenerator[bytes, None]:
+    plan = CopilotPlan(
+        plan_id=f"conversation-{turn_id}",
+        session_id=resolved_session_id,
+        created_at=datetime.datetime.now(datetime.UTC).isoformat().replace("+00:00", "Z"),
+        steps=[
+            CopilotStep(
+                step_id="chat-1",
+                agent="portfolio",
+                inputs={"mode": "conversation", "intent_reason": reason},
+                depends_on=[],
+                gate_policy=GatePolicy.model_validate(
+                    {"schema": True, "domain": True, "critique": False}
+                ),
+            )
+        ],
+    )
+
+    yield _sse({"type": "plan.ready", "plan": plan.model_dump()})
+    yield _sse({"type": "step.start", "step_id": "chat-1"})
+    yield _sse({"type": "step.token", "step_id": "chat-1", "text": "답변을 정리하고 있습니다..."})
+
+    final_card = await _build_conversation_card(query, active_context)
+    yield _sse({"type": "step.result", "step_id": "chat-1", "card": final_card})
+    yield _sse({"type": "final.card", "card": final_card})
+
+    new_turn = SessionTurn(
+        turn_id=turn_id,
+        query=query,
+        plan_id=plan.plan_id,
+        final_card=final_card,
+        citations=[],
+        active_context=active_context.model_dump(),
+    )
+    try:
+        await store.append_turn(resolved_session_id, new_turn)
+    except Exception:  # noqa: BLE001
+        pass
+
+    yield _sse({"type": "done", "session_id": resolved_session_id, "turn_id": turn_id})
+
+
 async def stream_copilot_query(
     query: str,
     session_id: str | None = None,
@@ -678,6 +797,19 @@ async def stream_copilot_query(
     )
     context_str = format_context_for_planner(active_context)
 
+    intent = classify_copilot_intent(query, active_context=active_context)
+    if intent.route == "conversation":
+        async for chunk in _stream_conversation_shortcut(
+            query=query,
+            resolved_session_id=resolved_session_id,
+            turn_id=turn_id,
+            active_context=active_context,
+            store=store,
+            reason=intent.reason,
+        ):
+            yield chunk
+        return
+
     try:
         plan: CopilotPlan = await build_copilot_plan(
             query=context_str, session_id=resolved_session_id
@@ -694,7 +826,10 @@ async def stream_copilot_query(
 
     for level in _topological_levels(plan.steps):
         results = await asyncio.gather(
-            *[_execute_step(step, harness_step_delay_ms, dummy_queue, query) for step in level],
+            *[
+                _execute_step(step, harness_step_delay_ms, dummy_queue, query, active_context)
+                for step in level
+            ],
             return_exceptions=True,
         )
         sorted_pairs = sorted(zip(level, results), key=lambda pair: pair[0].step_id)

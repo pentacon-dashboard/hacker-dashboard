@@ -83,5 +83,5 @@
 
 - Q: "API 키 없이 어떻게 재현합니까?" → A: `COPILOT_NEWS_MODE=stub` 기본값 + fixture corpus. 실 키는 opt-in.
 - Q: "RAG 인용 검증은?" → A: critique gate 의 citation faithfulness 체크. `source_url`이 ingest 테이블에 없으면 게이트 fail.
-- Q: "세션 메모리 저장소는?" → A: 기본 InMemoryStore. `COPILOT_SESSION_STORE=postgres` 로 Postgres 전환 가능.
+- Q: "세션 메모리 저장소는?" → A: 개발/데모 기본은 `COPILOT_SESSION_STORE=postgres` + `COPILOT_SESSION_STORE_URL` 기반 Postgres 지속 저장입니다. 테스트나 DB 없는 로컬 실행은 `COPILOT_SESSION_STORE=memory` 로 전환할 수 있습니다.
 - Q: "목업에서 봤던 68.3% 와 지금 화면의 12.4% 는 왜 다릅니까?" → A: 목업의 68.3% 는 초기 와이어프레임에서 '입출금 위험 분석' 지표로 기획된 수치였습니다. 팀 결정으로 입출금 패턴 분석 대신 **HHI(허핀달-허쉬만 지수)** 기반 자산 집중도 리스크로 지표를 교체했습니다. HHI 는 단일 자산 편중을 정량화하는 산업 표준 지수로, 12.4%는 10개 이상 자산에 분산된 양호한 포트폴리오를 의미합니다. 두 지표는 측정 대상 자체가 다릅니다.
