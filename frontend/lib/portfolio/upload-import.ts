@@ -6,6 +6,12 @@ const CLIENT_ID_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._:-]{0,63}$/;
 
 type UploadImportResponse = components["schemas"]["UploadImportResponse"];
 export type UploadImportStatus = UploadImportResponse["status"];
+export type ConfirmedCsvMappingMap = NonNullable<
+  components["schemas"]["UploadImportRequest"]["confirmed_mapping"]
+>;
+export type CsvMappingCandidateGroup =
+  components["schemas"]["CsvMappingCandidateGroup"];
+export type UploadBlockingError = components["schemas"]["UploadErrorDetail"];
 export type UploadImportClientMode = "new" | "existing";
 
 export interface UploadImportClientSelection {
@@ -20,6 +26,10 @@ export interface UploadedClientImportResult {
   importedRows: number;
   skippedRows: number;
   warnings: string[];
+  mappingCandidates: CsvMappingCandidateGroup[];
+  normalizedPreview: Record<string, unknown>[];
+  blockingErrors: UploadBlockingError[];
+  importBatchKey?: string | null;
 }
 
 function sanitizeClientId(value: string | undefined): string | null {
@@ -89,6 +99,7 @@ function resolveImportedClientId(
 export async function importPortfolioCsvAsClient(
   uploadId: string,
   selection?: UploadImportClientSelection,
+  confirmedMapping?: ConfirmedCsvMappingMap,
 ): Promise<UploadedClientImportResult> {
   const requestedClientId = await resolveRequestedClientId(selection);
   const response = await apiFetch<UploadImportResponse>("/upload/import", {
@@ -96,6 +107,7 @@ export async function importPortfolioCsvAsClient(
     body: JSON.stringify({
       upload_id: uploadId,
       client_id: requestedClientId,
+      ...(confirmedMapping ? { confirmed_mapping: confirmedMapping } : {}),
     }),
   });
 
@@ -106,5 +118,9 @@ export async function importPortfolioCsvAsClient(
     importedRows: response.imported_count,
     skippedRows: Math.max(normalizedCount - response.imported_count, 0),
     warnings: response.normalization_warnings ?? [],
+    mappingCandidates: response.mapping_candidates ?? [],
+    normalizedPreview: response.normalized_preview ?? [],
+    blockingErrors: response.blocking_errors ?? [],
+    importBatchKey: response.import_batch_key,
   };
 }

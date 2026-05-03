@@ -18,6 +18,24 @@ describe("AiInsightCard", () => {
     expect(screen.getByText("포트폴리오는 기술주 중심으로 구성되어 있습니다.")).toBeInTheDocument();
   });
 
+  it("AI 인사이트 문장의 금액 숫자를 천 단위 콤마로 표시한다", () => {
+    render(
+      <AiInsightCard
+        insight={{
+          ...MOCK_INSIGHT,
+          summary: "총 평가금액은 13715541원이고 예상 매수금액은 2500000원입니다.",
+          bullets: ["현금성 자산 1200000원 확보", "리밸런싱 비용 15000원 예상"],
+        }}
+      />,
+    );
+
+    expect(
+      screen.getByText("총 평가금액은 13,715,541원이고 예상 매수금액은 2,500,000원입니다."),
+    ).toBeInTheDocument();
+    expect(screen.getByText("현금성 자산 1,200,000원 확보")).toBeInTheDocument();
+    expect(screen.getByText("리밸런싱 비용 15,000원 예상")).toBeInTheDocument();
+  });
+
   it("3개 bullets를 렌더한다", () => {
     render(<AiInsightCard insight={MOCK_INSIGHT} />);
     const bullets = screen.getByTestId("ai-insight-bullets");

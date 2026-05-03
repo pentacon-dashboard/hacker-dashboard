@@ -2982,6 +2982,46 @@
         ],
         "title": "CommodityItem"
       },
+      "ConfirmedCsvMapping": {
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "column",
+              "derived"
+            ],
+            "title": "Type"
+          },
+          "column": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Column"
+          },
+          "method": {
+            "anyOf": [
+              {
+                "type": "string",
+                "const": "symbol_pattern"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Method"
+          }
+        },
+        "type": "object",
+        "required": [
+          "type"
+        ],
+        "title": "ConfirmedCsvMapping"
+      },
       "ConnectedAccount": {
         "properties": {
           "provider": {
@@ -3178,6 +3218,83 @@
           "mapping_reason"
         ],
         "title": "CsvFieldMapping"
+      },
+      "CsvMappingCandidate": {
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "column",
+              "derived"
+            ],
+            "title": "Type"
+          },
+          "column": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Column"
+          },
+          "method": {
+            "anyOf": [
+              {
+                "type": "string",
+                "const": "symbol_pattern"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Method"
+          },
+          "confidence": {
+            "type": "number",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Confidence"
+          },
+          "needs_review": {
+            "type": "boolean",
+            "title": "Needs Review",
+            "default": false
+          },
+          "reason": {
+            "type": "string",
+            "title": "Reason"
+          }
+        },
+        "type": "object",
+        "required": [
+          "type",
+          "confidence",
+          "reason"
+        ],
+        "title": "CsvMappingCandidate"
+      },
+      "CsvMappingCandidateGroup": {
+        "properties": {
+          "standard_field": {
+            "type": "string",
+            "title": "Standard Field"
+          },
+          "candidates": {
+            "items": {
+              "$ref": "#/components/schemas/CsvMappingCandidate"
+            },
+            "type": "array",
+            "title": "Candidates"
+          }
+        },
+        "type": "object",
+        "required": [
+          "standard_field"
+        ],
+        "title": "CsvMappingCandidateGroup"
       },
       "DataSettings": {
         "properties": {
@@ -5432,6 +5549,20 @@
             "title": "Client Id",
             "description": "CSV row에 고객 ID가 없을 때 사용할 PB 선택 고객 ID",
             "default": "client-001"
+          },
+          "confirmed_mapping": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "$ref": "#/components/schemas/ConfirmedCsvMapping"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Confirmed Mapping"
           }
         },
         "type": "object",
@@ -5459,6 +5590,17 @@
             "type": "integer",
             "title": "Imported Count"
           },
+          "import_batch_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Import Batch Key"
+          },
           "holdings": {
             "items": {
               "$ref": "#/components/schemas/HoldingResponse"
@@ -5473,12 +5615,27 @@
             "type": "array",
             "title": "Field Mappings"
           },
+          "mapping_candidates": {
+            "items": {
+              "$ref": "#/components/schemas/CsvMappingCandidateGroup"
+            },
+            "type": "array",
+            "title": "Mapping Candidates"
+          },
           "unmapped_columns": {
             "items": {
               "type": "string"
             },
             "type": "array",
             "title": "Unmapped Columns"
+          },
+          "normalized_preview": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Normalized Preview"
           },
           "normalized_holdings": {
             "items": {
@@ -5493,6 +5650,13 @@
             },
             "type": "array",
             "title": "Normalization Warnings"
+          },
+          "blocking_errors": {
+            "items": {
+              "$ref": "#/components/schemas/UploadErrorDetail"
+            },
+            "type": "array",
+            "title": "Blocking Errors"
           }
         },
         "type": "object",
@@ -5508,6 +5672,11 @@
           "upload_id": {
             "type": "string",
             "title": "Upload Id"
+          },
+          "file_content_hash": {
+            "type": "string",
+            "title": "File Content Hash",
+            "default": ""
           },
           "total_rows": {
             "type": "integer",
@@ -5565,12 +5734,27 @@
             "type": "array",
             "title": "Field Mappings"
           },
+          "mapping_candidates": {
+            "items": {
+              "$ref": "#/components/schemas/CsvMappingCandidateGroup"
+            },
+            "type": "array",
+            "title": "Mapping Candidates"
+          },
           "unmapped_columns": {
             "items": {
               "type": "string"
             },
             "type": "array",
             "title": "Unmapped Columns"
+          },
+          "normalized_preview": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Normalized Preview"
           },
           "normalized_holdings": {
             "items": {

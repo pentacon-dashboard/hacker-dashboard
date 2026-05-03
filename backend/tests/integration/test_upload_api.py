@@ -8,7 +8,7 @@ from typing import Any
 
 import pytest
 from httpx import ASGITransport, AsyncClient
-from sqlalchemy import Column, DateTime, Integer, MetaData, Numeric, String, Table
+from sqlalchemy import Column, DateTime, Integer, MetaData, Numeric, String, Table, Text
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from app.db.session import get_db
@@ -41,6 +41,26 @@ def _create_upload_import_tables(conn: Any) -> None:
         Column("quantity", Numeric(24, 8), nullable=False),
         Column("avg_cost", Numeric(24, 8), nullable=False),
         Column("currency", String(4), nullable=False, default="USD"),
+        Column("import_batch_key", String(128), nullable=True),
+        Column("source_row", Integer, nullable=True),
+        Column("source_columns", Text, nullable=True),
+        Column("source_client_id", String(64), nullable=True),
+        Column("created_at", DateTime(timezone=True)),
+        Column("updated_at", DateTime(timezone=True)),
+    )
+    Table(
+        "portfolio_import_batches",
+        metadata,
+        Column("id", Integer, primary_key=True, autoincrement=True),
+        Column("user_id", String(50), nullable=False, default="pb-demo"),
+        Column("client_id", String(50), nullable=False),
+        Column("import_batch_key", String(128), nullable=False, unique=True),
+        Column("file_name", String(255), nullable=False),
+        Column("file_content_hash", String(64), nullable=False),
+        Column("confirmed_mapping_hash", String(64), nullable=False),
+        Column("confirmed_mapping", Text, nullable=False),
+        Column("status", String(32), nullable=False),
+        Column("warnings", Text, nullable=False),
         Column("created_at", DateTime(timezone=True)),
         Column("updated_at", DateTime(timezone=True)),
     )
@@ -134,6 +154,36 @@ async def test_upload_csv_returns_upload_id(client: AsyncClient) -> None:
 
 
 @pytest.mark.asyncio
+async def test_upload_csv_returns_hash_candidates_and_normalized_preview(
+    client: AsyncClient,
+) -> None:
+    """Upload review exposes the contract needed for PB mapping confirmation."""
+    content = b"ticker,shares,average cost,currency\n005930,10,72000,KRW\n"
+    resp = await client.post(
+        "/upload/csv",
+        files={"file": ("mapping-review.csv", content, "text/csv")},
+    )
+
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["file_content_hash"]
+    assert len(body["file_content_hash"]) == 64
+    assert body["normalized_preview"][0]["source_row"] == 2
+    quantity_candidates = next(
+        item for item in body["mapping_candidates"] if item["standard_field"] == "quantity"
+    )
+    assert quantity_candidates["candidates"][0]["type"] == "column"
+    assert quantity_candidates["candidates"][0]["column"] == "shares"
+    market_candidates = next(
+        item for item in body["mapping_candidates"] if item["standard_field"] == "market"
+    )
+    assert any(
+        candidate["type"] == "derived" and candidate["method"] == "symbol_pattern"
+        for candidate in market_candidates["candidates"]
+    )
+
+
+@pytest.mark.asyncio
 async def test_upload_csv_preview_max_5(client: AsyncClient) -> None:
     """preview 최대 5행."""
     rows = [f"2024-01-{i:02d},yahoo,AAPL,{i},150.00,USD,note" for i in range(1, 11)]
@@ -187,9 +237,9 @@ async def test_upload_import_uses_selected_client_over_source_client_id(
     upload_import_client: AsyncClient,
 ) -> None:
     content = (
-        "date,client_id,market,code,quantity,avg_cost,currency\n"
-        "2026-05-01,client-777,naver_kr,005930,10,72000,KRW\n"
-    ).encode("utf-8")
+        b"date,client_id,market,code,quantity,avg_cost,currency\n"
+        b"2026-05-01,client-777,naver_kr,005930,10,72000,KRW\n"
+    )
     upload_resp = await upload_import_client.post(
         "/upload/csv",
         files={"file": ("selected-client.csv", content, "text/csv")},
@@ -224,6 +274,164 @@ async def test_upload_import_uses_selected_client_over_source_client_id(
     )
     assert source_holdings_resp.status_code == 200
     assert source_holdings_resp.json() == []
+
+
+@pytest.mark.asyncio
+async def test_upload_import_accepts_confirmed_mapping_for_arbitrary_column_names(
+    upload_import_client: AsyncClient,
+) -> None:
+    content = (
+        b"Security ID,Units Held,Book Price,Settlement CCY,Venue\n"
+        b"005930,10,72000,KRW,naver_kr\n"
+    )
+    upload_resp = await upload_import_client.post(
+        "/upload/csv",
+        files={"file": ("arbitrary-columns.csv", content, "text/csv")},
+    )
+    assert upload_resp.status_code == 200
+
+    import_resp = await upload_import_client.post(
+        "/upload/import",
+        json={
+            "upload_id": upload_resp.json()["upload_id"],
+            "client_id": "client-880",
+            "confirmed_mapping": {
+                "symbol": {"type": "column", "column": "Security ID"},
+                "quantity": {"type": "column", "column": "Units Held"},
+                "avg_cost": {"type": "column", "column": "Book Price"},
+                "currency": {"type": "column", "column": "Settlement CCY"},
+                "market": {"type": "column", "column": "Venue"},
+            },
+        },
+    )
+
+    assert import_resp.status_code == 200
+    body = import_resp.json()
+    assert body["status"] == "imported"
+    assert body["imported_count"] == 1
+    assert body["holdings"][0]["client_id"] == "client-880"
+    assert body["holdings"][0]["market"] == "naver_kr"
+    assert body["holdings"][0]["code"] == "005930"
+    assert body["import_batch_key"]
+
+
+@pytest.mark.asyncio
+async def test_upload_import_blocks_invalid_rows_after_confirmed_mapping(
+    upload_import_client: AsyncClient,
+) -> None:
+    content = (
+        b"Security ID,Units Held,Book Price,Settlement CCY,Venue\n"
+        b"005930,-10,72000,KRW,naver_kr\n"
+    )
+    upload_resp = await upload_import_client.post(
+        "/upload/csv",
+        files={"file": ("invalid-arbitrary-columns.csv", content, "text/csv")},
+    )
+    assert upload_resp.status_code == 200
+
+    import_resp = await upload_import_client.post(
+        "/upload/import",
+        json={
+            "upload_id": upload_resp.json()["upload_id"],
+            "client_id": "client-881",
+            "confirmed_mapping": {
+                "symbol": {"type": "column", "column": "Security ID"},
+                "quantity": {"type": "column", "column": "Units Held"},
+                "avg_cost": {"type": "column", "column": "Book Price"},
+                "currency": {"type": "column", "column": "Settlement CCY"},
+                "market": {"type": "column", "column": "Venue"},
+            },
+        },
+    )
+
+    assert import_resp.status_code == 200
+    body = import_resp.json()
+    assert body["status"] == "needs_confirmation"
+    assert body["imported_count"] == 0
+    assert body["holdings"] == []
+    assert body["blocking_errors"][0]["row"] == 2
+    assert body["blocking_errors"][0]["code"] == "invalid_quantity"
+
+
+@pytest.mark.asyncio
+async def test_upload_import_replaces_matching_import_batch(
+    upload_import_client: AsyncClient,
+) -> None:
+    content = b"code,quantity,avg_cost\n005930,10,72000\n"
+    upload_resp = await upload_import_client.post(
+        "/upload/csv",
+        files={"file": ("same-source.csv", content, "text/csv")},
+    )
+    assert upload_resp.status_code == 200
+    request_body = {
+        "upload_id": upload_resp.json()["upload_id"],
+        "client_id": "client-882",
+        "confirmed_mapping": {
+            "symbol": {"type": "column", "column": "code"},
+            "quantity": {"type": "column", "column": "quantity"},
+            "avg_cost": {"type": "column", "column": "avg_cost"},
+            "currency": {"type": "derived", "method": "symbol_pattern"},
+            "market": {"type": "derived", "method": "symbol_pattern"},
+        },
+    }
+
+    first_import = await upload_import_client.post("/upload/import", json=request_body)
+    second_import = await upload_import_client.post("/upload/import", json=request_body)
+
+    assert first_import.status_code == 200
+    assert second_import.status_code == 200
+    assert first_import.json()["status"] == "imported"
+    assert second_import.json()["status"] == "imported"
+    assert first_import.json()["import_batch_key"] == second_import.json()["import_batch_key"]
+
+    holdings_resp = await upload_import_client.get("/portfolio/holdings?client_id=client-882")
+    assert holdings_resp.status_code == 200
+    holdings = holdings_resp.json()
+    assert len(holdings) == 1
+    assert holdings[0]["code"] == "005930"
+
+
+@pytest.mark.asyncio
+async def test_upload_import_batch_replacement_preserves_manual_holdings(
+    upload_import_client: AsyncClient,
+) -> None:
+    manual_resp = await upload_import_client.post(
+        "/portfolio/holdings",
+        json={
+            "client_id": "client-883",
+            "market": "upbit",
+            "code": "KRW-BTC",
+            "quantity": "0.1",
+            "avg_cost": "80000000",
+            "currency": "KRW",
+        },
+    )
+    assert manual_resp.status_code == 201
+
+    content = b"code,quantity,avg_cost\n005930,10,72000\n"
+    upload_resp = await upload_import_client.post(
+        "/upload/csv",
+        files={"file": ("same-source-with-manual.csv", content, "text/csv")},
+    )
+    request_body = {
+        "upload_id": upload_resp.json()["upload_id"],
+        "client_id": "client-883",
+        "confirmed_mapping": {
+            "symbol": {"type": "column", "column": "code"},
+            "quantity": {"type": "column", "column": "quantity"},
+            "avg_cost": {"type": "column", "column": "avg_cost"},
+            "currency": {"type": "derived", "method": "symbol_pattern"},
+            "market": {"type": "derived", "method": "symbol_pattern"},
+        },
+    }
+
+    await upload_import_client.post("/upload/import", json=request_body)
+    await upload_import_client.post("/upload/import", json=request_body)
+
+    holdings_resp = await upload_import_client.get("/portfolio/holdings?client_id=client-883")
+    assert holdings_resp.status_code == 200
+    holdings = holdings_resp.json()
+    assert sorted(holding["code"] for holding in holdings) == ["005930", "KRW-BTC"]
 
 
 @pytest.mark.asyncio

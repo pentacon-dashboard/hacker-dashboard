@@ -20,6 +20,7 @@ from sqlalchemy import (
     Numeric,
     String,
     Table,
+    Text,
     UniqueConstraint,
 )
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
@@ -42,7 +43,11 @@ def _create_portfolio_tables(conn: Any) -> None:
         Column("code", String(50), nullable=False),
         Column("quantity", Numeric(24, 8), nullable=False),
         Column("avg_cost", Numeric(24, 8), nullable=False),
-        Column("currency", String(3), nullable=False, default="USD"),
+        Column("currency", String(4), nullable=False, default="USD"),
+        Column("import_batch_key", String(128), nullable=True),
+        Column("source_row", Integer, nullable=True),
+        Column("source_columns", Text, nullable=True),
+        Column("source_client_id", String(64), nullable=True),
         Column("created_at", DateTime(timezone=True)),
         Column("updated_at", DateTime(timezone=True)),
     )

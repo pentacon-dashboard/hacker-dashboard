@@ -295,6 +295,32 @@ class TestBrokerCsvIntake:
         assert normalized.status == "needs_confirmation"
         assert normalized.holdings == []
 
+    def test_plain_us_ticker_without_market_currency_needs_confirmation(self):
+        """Plain US tickers do not system-confirm market/currency without explicit columns."""
+        content = b"code,quantity,avg_cost\nAAPL,3,180\n"
+
+        df, errors = parse_csv(content)
+        result = build_validation_result(df, errors)
+
+        assert result.import_status == "needs_confirmation"
+        assert result.normalized_holdings == []
+        assert any(
+            "market could not be inferred" in warning
+            for warning in result.normalization_warnings
+        )
+
+    def test_krx_code_without_market_currency_system_derives(self):
+        """Six-digit KRX codes may derive market/currency from the symbol pattern."""
+        content = b"code,quantity,avg_cost\n005930,10,72000\n"
+
+        df, errors = parse_csv(content)
+        result = build_validation_result(df, errors)
+
+        assert result.import_status == "imported"
+        holding = result.normalized_holdings[0]
+        assert holding.market == "naver_kr"
+        assert holding.currency == "KRW"
+
 
 # ──────────────────────────────────────────────────────────────────────────────
 # 골든 샘플 기반 테스트

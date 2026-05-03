@@ -23,7 +23,10 @@ from typing import Any, Literal
 
 from app.schemas.upload import (
     AnalyzeProgressEvent,
+    ConfirmedCsvMapping,
     CsvFieldMapping,
+    CsvMappingCandidate,
+    CsvMappingCandidateGroup,
     NormalizedCsvHolding,
     UploadErrorDetail,
     UploadValidationResult,
@@ -98,6 +101,7 @@ class PortfolioSchemaDetection:
     field_mappings: list[CsvFieldMapping]
     mapped_columns: dict[str, str]
     review_fields: set[str] = field(default_factory=set)
+    derived_fields: dict[str, str] = field(default_factory=dict)
     missing_required_fields: list[str] = field(default_factory=list)
     unmapped_columns: list[str] = field(default_factory=list)
     warnings: list[str] = field(default_factory=list)
@@ -108,6 +112,7 @@ class CsvNormalizationResult:
     status: Literal["imported", "needs_confirmation", "insufficient_data"]
     holdings: list[NormalizedCsvHolding]
     warnings: list[str] = field(default_factory=list)
+    blocking_errors: list[UploadErrorDetail] = field(default_factory=list)
 
 
 async def _cleanup_expired() -> None:
@@ -142,6 +147,17 @@ def get_cached_df(upload_id: str) -> Any | None:
     return entry["df"]
 
 
+def get_cached_upload(upload_id: str) -> dict[str, Any] | None:
+    """Return cached upload metadata. Expired or missing uploads return None."""
+    entry = _upload_cache.get(upload_id)
+    if entry is None:
+        return None
+    if entry["expires_at"] < time.time():
+        _upload_cache.pop(upload_id, None)
+        return None
+    return entry
+
+
 def _normalize_column_name(value: object) -> str:
     return str(value).strip().lower()
 
@@ -156,6 +172,24 @@ def _original_column(df: Any, column: str) -> str:
     if isinstance(original_columns, dict):
         return str(original_columns.get(column, column))
     return column
+
+
+def _resolve_source_column(df: Any, source_column: str | None) -> str | None:
+    if not source_column:
+        return None
+    columns = [str(c) for c in getattr(df, "columns", [])]
+    if source_column in columns:
+        return source_column
+    original_columns = getattr(df, "attrs", {}).get("original_columns", {})
+    if isinstance(original_columns, dict):
+        for normalized, original in original_columns.items():
+            if source_column == original or _alias_key(source_column) == _alias_key(original):
+                return str(normalized)
+    source_key = _alias_key(source_column)
+    for column in columns:
+        if source_key == _alias_key(column):
+            return column
+    return None
 
 
 def _column_candidates(columns: list[str], standard_field: str) -> list[tuple[str, float, str]]:
@@ -257,6 +291,180 @@ def detect_portfolio_schema(df: Any) -> PortfolioSchemaDetection:
     )
 
 
+def _rows_support_symbol_pattern_derivation(
+    df: Any,
+    *,
+    symbol_col: str,
+    field_name: str,
+) -> bool:
+    if field_name not in {"market", "currency"}:
+        return False
+    if getattr(df, "empty", True):
+        return False
+    for _idx, row in df.iterrows():
+        code = _string_value(row.get(symbol_col))
+        if not code:
+            return False
+        if field_name == "market" and _infer_market(code) is None:
+            return False
+        if field_name == "currency":
+            market = _infer_market(code)
+            if _infer_currency(code, market) is None:
+                return False
+    return True
+
+
+def build_mapping_candidates(
+    df: Any,
+    schema: PortfolioSchemaDetection | None = None,
+) -> list[CsvMappingCandidateGroup]:
+    """Return UI-selectable mapping candidates for each canonical holding field."""
+    schema = schema or detect_portfolio_schema(df)
+    columns = [str(c) for c in getattr(df, "columns", [])]
+    groups: list[CsvMappingCandidateGroup] = []
+    standard_fields = [
+        "symbol",
+        "quantity",
+        "avg_cost",
+        "currency",
+        "market",
+        "client_id",
+        "account",
+        "broker",
+        "name",
+        "date",
+    ]
+
+    symbol_col = schema.mapped_columns.get("symbol")
+    for field_name in standard_fields:
+        candidates: list[CsvMappingCandidate] = [
+            CsvMappingCandidate(
+                type="column",
+                column=_original_column(df, column),
+                confidence=confidence,
+                needs_review=confidence < _AUTO_MAP_THRESHOLD,
+                reason=reason,
+            )
+            for column, confidence, reason in _column_candidates(columns, field_name)
+        ]
+        if (
+            field_name in {"market", "currency"}
+            and symbol_col
+            and _rows_support_symbol_pattern_derivation(
+                df,
+                symbol_col=symbol_col,
+                field_name=field_name,
+            )
+        ):
+            candidates.append(
+                CsvMappingCandidate(
+                    type="derived",
+                    method="symbol_pattern",
+                    confidence=1.0,
+                    needs_review=False,
+                    reason=f"deterministic {field_name} derived from symbol pattern",
+                )
+            )
+        groups.append(CsvMappingCandidateGroup(standard_field=field_name, candidates=candidates))
+    return groups
+
+
+def build_normalized_preview(
+    df: Any,
+    schema: PortfolioSchemaDetection | None = None,
+    *,
+    limit: int = 5,
+) -> list[dict[str, Any]]:
+    """Best-effort canonical preview for review UI; it is not import evidence by itself."""
+    schema = schema or detect_portfolio_schema(df)
+    preview: list[dict[str, Any]] = []
+    if getattr(df, "empty", True):
+        return preview
+    for idx, row in df.head(limit).iterrows():
+        item: dict[str, Any] = {"source_row": int(idx) + 2}
+        for field_name, column in schema.mapped_columns.items():
+            item[field_name] = _string_value(row.get(column))
+        code = _string_value(row.get(schema.mapped_columns.get("symbol"))) if schema.mapped_columns.get("symbol") else None
+        if code:
+            if "market" not in item:
+                item["market"] = _infer_market(code)
+            if "currency" not in item:
+                item["currency"] = _infer_currency(code, item.get("market"))
+        preview.append(item)
+    return preview
+
+
+def _schema_from_confirmed_mapping(
+    df: Any,
+    confirmed_mapping: dict[str, ConfirmedCsvMapping],
+) -> PortfolioSchemaDetection:
+    mapped_columns: dict[str, str] = {}
+    derived_fields: dict[str, str] = {}
+    mappings: list[CsvFieldMapping] = []
+    missing_required: list[str] = []
+    warnings: list[str] = []
+    required_fields = {"symbol", "quantity", "avg_cost", "currency", "market"}
+
+    for field_name, mapping in confirmed_mapping.items():
+        if mapping.type == "column":
+            column = _resolve_source_column(df, mapping.column)
+            if column is None:
+                warnings.append(f"{field_name}: confirmed column '{mapping.column}' not found")
+                if field_name in required_fields:
+                    missing_required.append(field_name)
+                mappings.append(
+                    CsvFieldMapping(
+                        standard_field=field_name,
+                        source_column=mapping.column,
+                        confidence=0.0,
+                        needs_review=True,
+                        mapping_reason="confirmed column was not found in source CSV",
+                    )
+                )
+                continue
+            mapped_columns[field_name] = column
+            mappings.append(
+                CsvFieldMapping(
+                    standard_field=field_name,
+                    source_column=_original_column(df, column),
+                    confidence=1.0,
+                    needs_review=False,
+                    mapping_reason="PB confirmed column mapping",
+                )
+            )
+        elif mapping.type == "derived" and mapping.method == "symbol_pattern":
+            derived_fields[field_name] = "symbol_pattern"
+            mappings.append(
+                CsvFieldMapping(
+                    standard_field=field_name,
+                    source_column=None,
+                    confidence=1.0,
+                    needs_review=False,
+                    mapping_reason="PB confirmed deterministic symbol-pattern mapping",
+                )
+            )
+        else:
+            warnings.append(f"{field_name}: unsupported confirmed mapping")
+            if field_name in required_fields:
+                missing_required.append(field_name)
+
+    for field_name in required_fields:
+        if field_name not in mapped_columns and field_name not in derived_fields:
+            missing_required.append(field_name)
+
+    mapped_values = set(mapped_columns.values())
+    columns = [str(c) for c in getattr(df, "columns", [])]
+    unmapped = [_original_column(df, column) for column in columns if column not in mapped_values]
+    return PortfolioSchemaDetection(
+        field_mappings=mappings,
+        mapped_columns=mapped_columns,
+        derived_fields=derived_fields,
+        missing_required_fields=sorted(set(missing_required)),
+        unmapped_columns=unmapped,
+        warnings=warnings,
+    )
+
+
 def _string_value(value: Any) -> str | None:
     if value is None:
         return None
@@ -328,23 +536,19 @@ def _infer_market(symbol: str) -> str | None:
         return "binance"
     if re.fullmatch(r"\d{6}(\.KS|\.KQ)?", code):
         return "naver_kr"
-    if re.fullmatch(r"[A-Z]{1,5}", code):
-        return "yahoo"
     return None
 
 
 def _infer_currency(symbol: str, market: str | None) -> str | None:
     code = symbol.strip().upper()
-    if code.startswith("KRW-") or market == "naver_kr":
+    if code.startswith("KRW-") or market == "naver_kr" or re.fullmatch(r"\d{6}(\.KS|\.KQ)?", code):
         return "KRW"
     if "USDT" in code:
         return "USDT"
-    if market == "yahoo":
-        return "USD"
     return None
 
 
-def normalize_holdings_from_csv(
+def _normalize_holdings_from_csv_legacy(
     df: Any,
     schema: PortfolioSchemaDetection | None = None,
 ) -> CsvNormalizationResult:
@@ -440,6 +644,151 @@ def normalize_holdings_from_csv(
 # ────────────────────────────────────────────────────────────────────────────
 # parse_csv
 # ────────────────────────────────────────────────────────────────────────────
+
+
+# Canonical implementation used by the upload/import contract. The legacy
+# implementation above is retained only to keep this patch narrow and safe.
+def normalize_holdings_from_csv(
+    df: Any,
+    schema: PortfolioSchemaDetection | None = None,
+) -> CsvNormalizationResult:
+    """Convert mapped CSV rows into canonical holdings, failing closed on uncertainty."""
+    schema = schema or detect_portfolio_schema(df)
+    warnings = list(schema.warnings)
+    blocking_errors: list[UploadErrorDetail] = []
+
+    if schema.review_fields & set(_REQUIRED_IMPORT_FIELDS):
+        return CsvNormalizationResult(status="needs_confirmation", holdings=[], warnings=warnings)
+    if "symbol" in schema.missing_required_fields or "quantity" in schema.missing_required_fields:
+        return CsvNormalizationResult(status="insufficient_data", holdings=[], warnings=warnings)
+
+    symbol_col = schema.mapped_columns.get("symbol")
+    quantity_col = schema.mapped_columns.get("quantity")
+    if not symbol_col or not quantity_col:
+        return CsvNormalizationResult(status="insufficient_data", holdings=[], warnings=warnings)
+
+    avg_cost_col = schema.mapped_columns.get("avg_cost")
+    currency_col = schema.mapped_columns.get("currency")
+    market_col = schema.mapped_columns.get("market")
+    name_col = schema.mapped_columns.get("name")
+    account_col = schema.mapped_columns.get("account")
+    client_col = schema.mapped_columns.get("client_id")
+
+    holdings: list[NormalizedCsvHolding] = []
+    needs_confirmation = bool(schema.review_fields)
+
+    for idx, row in df.iterrows():
+        source_row = int(idx) + 2
+        code = _string_value(row.get(symbol_col))
+        if code is None:
+            blocking_errors.append(
+                UploadErrorDetail(
+                    row=source_row,
+                    column=_original_column(df, symbol_col),
+                    code="missing_symbol",
+                    message="symbol is required",
+                )
+            )
+            continue
+
+        quantity = _parse_decimal(row.get(quantity_col))
+        if quantity is None or quantity <= 0:
+            blocking_errors.append(
+                UploadErrorDetail(
+                    row=source_row,
+                    column=_original_column(df, quantity_col),
+                    code="invalid_quantity",
+                    message="quantity must be greater than zero",
+                )
+            )
+            continue
+
+        avg_cost: Decimal | None = None
+        if avg_cost_col:
+            avg_cost = _parse_decimal(row.get(avg_cost_col))
+            if avg_cost is None or avg_cost <= 0:
+                blocking_errors.append(
+                    UploadErrorDetail(
+                        row=source_row,
+                        column=_original_column(df, avg_cost_col),
+                        code="invalid_avg_cost",
+                        message="avg_cost must be greater than zero",
+                    )
+                )
+                continue
+        else:
+            needs_confirmation = True
+            warnings.append("avg_cost column not mapped; PB confirmation required")
+            continue
+
+        market = _normalize_market(_string_value(row.get(market_col))) if market_col else None
+        if market is None and schema.derived_fields.get("market") == "symbol_pattern":
+            market = _infer_market(code)
+        if market is None:
+            market = _infer_market(code)
+        if market is None:
+            needs_confirmation = True
+            warnings.append(f"row {source_row}: market could not be inferred")
+            continue
+
+        currency_raw = _string_value(row.get(currency_col)) if currency_col else None
+        currency = currency_raw.upper() if currency_raw else None
+        if currency is None and schema.derived_fields.get("currency") == "symbol_pattern":
+            currency = _infer_currency(code, market)
+        if currency is None:
+            currency = _infer_currency(code, market)
+        if currency is None:
+            needs_confirmation = True
+            warnings.append(f"row {source_row}: currency could not be inferred")
+            continue
+        if currency not in _VALID_CURRENCIES:
+            blocking_errors.append(
+                UploadErrorDetail(
+                    row=source_row,
+                    column=_original_column(df, currency_col) if currency_col else "currency",
+                    code="unknown_currency",
+                    message=f"unsupported currency: {currency}",
+                )
+            )
+            continue
+
+        source_columns = {
+            field_name: _original_column(df, column_name)
+            for field_name, column_name in schema.mapped_columns.items()
+        }
+        holdings.append(
+            NormalizedCsvHolding(
+                client_id=_string_value(row.get(client_col)) if client_col else None,
+                account=_string_value(row.get(account_col)) if account_col else None,
+                market=market,
+                code=code.upper(),
+                name=_string_value(row.get(name_col)) if name_col else None,
+                quantity=_format_decimal(quantity),
+                avg_cost=_format_decimal(avg_cost),
+                currency=currency,
+                source_row=source_row,
+                source_columns=source_columns,
+            )
+        )
+
+    if blocking_errors:
+        return CsvNormalizationResult(
+            status="needs_confirmation",
+            holdings=[],
+            warnings=warnings,
+            blocking_errors=blocking_errors,
+        )
+    if not holdings:
+        return CsvNormalizationResult(status="needs_confirmation", holdings=[], warnings=warnings)
+    status: Literal["imported", "needs_confirmation", "insufficient_data"] = (
+        "needs_confirmation" if needs_confirmation else "imported"
+    )
+    return CsvNormalizationResult(
+        status=status,
+        holdings=holdings if status == "imported" else [],
+        warnings=warnings,
+        blocking_errors=blocking_errors,
+    )
 
 
 def parse_csv(
@@ -602,6 +951,7 @@ def build_validation_result(
     df: Any,
     errors: list[UploadErrorDetail],
     filename: str = "upload.csv",
+    file_content_hash: str | None = None,
 ) -> UploadValidationResult:
     """DataFrame + 오류 목록으로 UploadValidationResult 생성 및 캐시 저장."""
     upload_id = str(uuid.uuid4())
@@ -625,9 +975,22 @@ def build_validation_result(
         preview = df.head(5).fillna("").to_dict(orient="records")
 
     fingerprint = _make_schema_fingerprint(df) if not df.empty else "00000000"
+    if file_content_hash is None:
+        if not df.empty:
+            try:
+                file_content_hash = hashlib.sha256(
+                    df.to_csv(index=False).encode("utf-8")
+                ).hexdigest()
+            except Exception:  # noqa: BLE001
+                file_content_hash = hashlib.sha256(fingerprint.encode()).hexdigest()
+        else:
+            file_content_hash = hashlib.sha256(b"").hexdigest()
+    mapping_candidates = build_mapping_candidates(df, schema) if not df.empty else []
+    normalized_preview = build_normalized_preview(df, schema) if not df.empty else []
 
     result = UploadValidationResult(
         upload_id=upload_id,
+        file_content_hash=file_content_hash,
         total_rows=total_rows,
         valid_rows=valid_rows,
         error_rows=error_rows,
@@ -638,7 +1001,9 @@ def build_validation_result(
         created_at=datetime.now(UTC).isoformat(),
         import_status=normalized.status,
         field_mappings=schema.field_mappings,
+        mapping_candidates=mapping_candidates,
         unmapped_columns=schema.unmapped_columns,
+        normalized_preview=normalized_preview,
         normalized_holdings=normalized.holdings,
         normalization_warnings=normalized.warnings,
     )
@@ -646,6 +1011,9 @@ def build_validation_result(
     # 캐시 저장 (TTL 30분)
     _upload_cache[upload_id] = {
         "df": df,
+        "errors": errors,
+        "filename": filename,
+        "file_content_hash": file_content_hash,
         "expires_at": time.time() + _TTL_SECONDS,
     }
 

@@ -4,10 +4,17 @@ import { CheckCircle, XCircle, AlertTriangle } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useLocale } from "@/lib/i18n/locale-provider";
+import type { components } from "@shared/types/api";
+
+type UploadImportStatus = components["schemas"]["UploadImportResponse"]["status"];
+type CsvMappingCandidateGroup =
+  components["schemas"]["CsvMappingCandidateGroup"];
+type NormalizedCsvHolding = components["schemas"]["NormalizedCsvHolding"];
 
 export interface ValidationResult {
   upload_id: string;
   filename?: string;
+  file_content_hash?: string;
   total_rows: number;
   valid_rows: number;
   error_rows: number;
@@ -19,6 +26,11 @@ export interface ValidationResult {
   warnings?: { row: number; column?: string | null; code?: string; message: string }[];
   schema_fingerprint?: string;
   created_at?: string;
+  import_status?: UploadImportStatus;
+  mapping_candidates?: CsvMappingCandidateGroup[];
+  normalized_preview?: Record<string, unknown>[];
+  normalized_holdings?: NormalizedCsvHolding[];
+  normalization_warnings?: string[];
 }
 
 interface ValidationCardProps {

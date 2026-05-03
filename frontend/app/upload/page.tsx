@@ -10,10 +10,12 @@ import { PreviewTable } from "@/components/upload/preview-table";
 import { AnalyzerConfigCard, type AnalyzerConfig } from "@/components/upload/analyzer-config-card";
 import { AnalyzeProgressCard } from "@/components/upload/analyze-progress-card";
 import { CsvTemplateCard } from "@/components/upload/csv-template-card";
+import { MappingReviewCard } from "@/components/upload/mapping-review-card";
 import { API_BASE } from "@/lib/api/client";
 import { getPortfolioClients, type PortfolioClientsResponse } from "@/lib/api/portfolio";
 import { useLocale } from "@/lib/i18n/locale-provider";
 import {
+  type ConfirmedCsvMappingMap,
   getNextPortfolioClientId,
   importPortfolioCsvAsClient,
   type UploadImportClientMode,
@@ -28,8 +30,16 @@ const DEFAULT_CONFIG: AnalyzerConfig = {
   include_fx: true,
 };
 
+function stringifyRows(rows: Record<string, unknown>[] | undefined): Record<string, string>[] {
+  return (rows ?? []).map((row) =>
+    Object.fromEntries(
+      Object.entries(row).map(([key, value]) => [key, String(value ?? "")]),
+    ),
+  );
+}
+
 function getPreviewRows(result: ValidationResult | null): Record<string, string>[] {
-  return result?.preview_rows ?? result?.preview ?? [];
+  return stringifyRows(result?.preview_rows ?? result?.preview);
 }
 
 function getPreviewColumns(result: ValidationResult | null): string[] {
@@ -177,6 +187,8 @@ function ImportStatusPanel({
   if (!result) return null;
 
   const imported = result.status === "imported";
+  const warnings = result.warnings ?? [];
+  const blockingErrors = result.blockingErrors ?? [];
   return (
     <div
       className={
@@ -198,11 +210,24 @@ function ImportStatusPanel({
             : "보유자산 매핑 확인 필요"}
         </span>
       </div>
-      {!imported && result.warnings.length > 0 && (
-        <p className="mt-1 pl-6 text-muted-foreground">{result.warnings[0]}</p>
+      {!imported && warnings.length > 0 && (
+        <p className="mt-1 pl-6 text-muted-foreground">{warnings[0]}</p>
       )}
-      {imported && result.warnings.length > 0 && (
-        <p className="mt-1 pl-6 text-muted-foreground">{result.warnings[0]}</p>
+      {!imported && blockingErrors.length > 0 && (
+        <div className="mt-2 space-y-1 pl-6">
+          {blockingErrors.slice(0, 3).map((error, index) => (
+            <p
+              key={`${error.row}-${error.column ?? "row"}-${index}`}
+              className="text-muted-foreground"
+            >
+              R{error.row} {error.column ? `${error.column}: ` : ""}
+              {error.message}
+            </p>
+          ))}
+        </div>
+      )}
+      {imported && warnings.length > 0 && (
+        <p className="mt-1 pl-6 text-muted-foreground">{warnings[0]}</p>
       )}
     </div>
   );
@@ -247,6 +272,22 @@ export default function UploadPage() {
     clientMode === "new" && importedClient?.clientId
       ? importedClient.clientId
       : generatedClientId;
+  const importedMappingCandidates = importedClient?.mappingCandidates ?? [];
+  const importedNormalizedPreview = importedClient?.normalizedPreview ?? [];
+  const mappingCandidates =
+    importedMappingCandidates.length > 0
+      ? importedMappingCandidates
+      : validationResult?.mapping_candidates ?? [];
+  const normalizedPreview =
+    importedNormalizedPreview.length > 0
+      ? importedNormalizedPreview
+      : validationResult?.normalized_preview ?? [];
+  const showMappingReview =
+    Boolean(validationResult) &&
+    importedClient?.status !== "imported" &&
+    mappingCandidates.length > 0 &&
+    (validationResult?.import_status !== "imported" ||
+      importedClient?.status === "needs_confirmation");
 
   useEffect(() => {
     if (selectedExistingClientId || clients.length === 0) return;
@@ -338,7 +379,11 @@ export default function UploadPage() {
         setValidationResult(result);
         setValidationLoading(false);
 
-        if (result.error_rows > 0 || result.valid_rows === 0) {
+        if (
+          result.error_rows > 0 ||
+          result.valid_rows === 0 ||
+          (result.import_status && result.import_status !== "imported")
+        ) {
           setUploading(false);
           return;
         }
@@ -368,6 +413,39 @@ export default function UploadPage() {
       setUploadProgress(0);
     }
   }, [buildClientSelection, refreshPortfolioCaches]);
+
+  const handleConfirmedMappingImport = useCallback(
+    async (confirmedMapping: ConfirmedCsvMappingMap) => {
+      if (!validationResult) return;
+      const clientSelection = buildClientSelection();
+      if (!clientSelection) {
+        setValidationError("湲곗〈 怨좉컼???좏깮??二쇱꽭??");
+        return;
+      }
+
+      setValidationError(null);
+      setImporting(true);
+      try {
+        const importResult = await importPortfolioCsvAsClient(
+          validationResult.upload_id,
+          clientSelection,
+          confirmedMapping,
+        );
+        setImportedClient(importResult);
+        if (importResult.status === "imported") {
+          await refreshPortfolioCaches(importResult.clientId);
+        }
+      } catch (e) {
+        setValidationError(
+          e instanceof Error ? `蹂댁쑀?먯궛 ????ㅽ뙣: ${e.message}` : "蹂댁쑀?먯궛 ????ㅽ뙣",
+        );
+      } finally {
+        setImporting(false);
+        setUploading(false);
+      }
+    },
+    [buildClientSelection, refreshPortfolioCaches, validationResult],
+  );
 
   const handleClear = useCallback(() => {
     setSelectedFile(null);
@@ -435,6 +513,16 @@ export default function UploadPage() {
         />
 
         {/* 4. 분석 설정 */}
+        {showMappingReview && (
+          <MappingReviewCard
+            candidates={mappingCandidates}
+            normalizedPreview={normalizedPreview}
+            blockingErrors={importedClient?.blockingErrors ?? []}
+            importing={importing}
+            onConfirm={handleConfirmedMappingImport}
+          />
+        )}
+
         <AnalyzerConfigCard
           config={config}
           onChange={setConfig}

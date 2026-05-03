@@ -22,6 +22,29 @@ interface AiInsightCardProps {
   isLoading?: boolean;
 }
 
+const amountFormatter = new Intl.NumberFormat("ko-KR", {
+  maximumFractionDigits: 0,
+});
+const currencyAmountPattern = /(^|[^\d,])(\d{5,}(?:\.\d+)?)(?=\s*(?:원|KRW|USD|달러|₩|\$))/g;
+const amountKeywordPattern =
+  /((?:평가금액|매수금액|매도금액|매도액|매수액|보유금액|투자금액|손익|비용|자산|현금|총액|금액)[^\d,]{0,16})(\d{5,}(?:\.\d+)?)/g;
+
+function formatAmountToken(value: string): string {
+  const number = Number(value);
+  if (!Number.isFinite(number)) return value;
+  return amountFormatter.format(number);
+}
+
+export function formatInsightAmounts(text: string): string {
+  return text
+    .replace(currencyAmountPattern, (_match, prefix: string, value: string) => {
+      return `${prefix}${formatAmountToken(value)}`;
+    })
+    .replace(amountKeywordPattern, (_match, prefix: string, value: string) => {
+      return `${prefix}${formatAmountToken(value)}`;
+    });
+}
+
 function GateBadge({ name, status }: { name: string; status: string | undefined }) {
   const pass = status === "pass" || status === "ok";
   const pending = status == null;
@@ -106,7 +129,7 @@ export function AiInsightCard({ insight, isLoading = false }: AiInsightCardProps
         className="text-xs leading-relaxed text-foreground"
         data-testid="ai-insight-summary"
       >
-        {insight.summary}
+        {formatInsightAmounts(insight.summary)}
       </p>
 
       {/* Bullets */}
@@ -118,7 +141,7 @@ export function AiInsightCard({ insight, isLoading = false }: AiInsightCardProps
                 className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-primary/60"
                 aria-hidden="true"
               />
-              {b}
+              {formatInsightAmounts(b)}
             </li>
           ))}
         </ul>

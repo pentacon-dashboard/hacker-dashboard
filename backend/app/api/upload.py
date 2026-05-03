@@ -8,6 +8,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 import logging
 from collections.abc import AsyncGenerator
@@ -26,7 +27,7 @@ from app.schemas.upload import (
 )
 from app.services.upload import (
     build_validation_result,
-    get_cached_df,
+    get_cached_upload,
     parse_csv,
     run_analyze_stream,
 )
@@ -76,7 +77,12 @@ async def upload_csv(
 
     filename = file.filename or "upload.csv"
     df, errors = parse_csv(content, filename=filename)
-    result = build_validation_result(df, errors, filename=filename)
+    result = build_validation_result(
+        df,
+        errors,
+        filename=filename,
+        file_content_hash=hashlib.sha256(content).hexdigest(),
+    )
 
     logger.info(
         "upload_csv: upload_id=%s total=%d valid=%d errors=%d",
@@ -104,8 +110,8 @@ async def import_upload(
     db: AsyncSession = Depends(get_db),
 ) -> UploadImportResponse:
     """업로드된 CSV holdings 를 PB 선택 고객 포트폴리오에 반영한다."""
-    df = get_cached_df(body.upload_id)
-    if df is None:
+    upload = get_cached_upload(body.upload_id)
+    if upload is None:
         raise HTTPException(
             status_code=404,
             detail={
@@ -114,7 +120,14 @@ async def import_upload(
             },
         )
 
-    return await import_holdings_from_df(df, db=db, client_id=body.client_id)
+    return await import_holdings_from_df(
+        upload["df"],
+        db=db,
+        client_id=body.client_id,
+        file_content_hash=str(upload.get("file_content_hash") or ""),
+        file_name=str(upload.get("filename") or "upload.csv"),
+        confirmed_mapping=body.confirmed_mapping,
+    )
 
 
 # ──────────────────────────────────────────────────────────────────────────────

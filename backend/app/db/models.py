@@ -69,6 +69,31 @@ class Holding(Base):
     quantity: Mapped[Decimal] = mapped_column(Numeric(24, 8), nullable=False)
     avg_cost: Mapped[Decimal] = mapped_column(Numeric(24, 8), nullable=False)
     currency: Mapped[str] = mapped_column(String(4), nullable=False, default="USD")
+    import_batch_key: Mapped[str | None] = mapped_column(String(128), nullable=True, index=True)
+    source_row: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    source_columns: Mapped[str | None] = mapped_column(Text, nullable=True)
+    source_client_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+
+
+class PortfolioImportBatch(Base):
+    """Durable audit record for one confirmed CSV import batch."""
+
+    __tablename__ = "portfolio_import_batches"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[str] = mapped_column(String(50), nullable=False, default="pb-demo")
+    client_id: Mapped[str] = mapped_column(String(50), nullable=False, index=True)
+    import_batch_key: Mapped[str] = mapped_column(String(128), nullable=False, unique=True)
+    file_name: Mapped[str] = mapped_column(String(255), nullable=False)
+    file_content_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    confirmed_mapping_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    confirmed_mapping: Mapped[str] = mapped_column(Text, nullable=False)
+    status: Mapped[str] = mapped_column(String(32), nullable=False)
+    warnings: Mapped[str] = mapped_column(Text, nullable=False, default="[]")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()

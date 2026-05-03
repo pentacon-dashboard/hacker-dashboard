@@ -257,6 +257,7 @@ def _create_tables_sqlite(conn: Any) -> None:
         Numeric,
         String,
         Table,
+        Text,
         UniqueConstraint,
     )
 
@@ -272,7 +273,28 @@ def _create_tables_sqlite(conn: Any) -> None:
         Column("code", String(50), nullable=False),
         Column("quantity", Numeric(24, 8), nullable=False),
         Column("avg_cost", Numeric(24, 8), nullable=False),
-        Column("currency", String(3), nullable=False, default="USD"),
+        Column("currency", String(4), nullable=False, default="USD"),
+        Column("import_batch_key", String(128), nullable=True),
+        Column("source_row", Integer, nullable=True),
+        Column("source_columns", Text, nullable=True),
+        Column("source_client_id", String(64), nullable=True),
+        Column("created_at", DateTime(timezone=True)),
+        Column("updated_at", DateTime(timezone=True)),
+    )
+
+    Table(
+        "portfolio_import_batches",
+        metadata,
+        Column("id", Integer, primary_key=True),
+        Column("user_id", String(50), nullable=False, default="demo"),
+        Column("client_id", String(50), nullable=False),
+        Column("import_batch_key", String(128), nullable=False, unique=True),
+        Column("file_name", String(255), nullable=False),
+        Column("file_content_hash", String(64), nullable=False),
+        Column("confirmed_mapping_hash", String(64), nullable=False),
+        Column("confirmed_mapping", Text, nullable=False),
+        Column("status", String(32), nullable=False),
+        Column("warnings", Text, nullable=False, default="[]"),
         Column("created_at", DateTime(timezone=True)),
         Column("updated_at", DateTime(timezone=True)),
     )

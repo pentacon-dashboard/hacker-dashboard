@@ -32,6 +32,55 @@ const PRESETS: { label: string; values: SliderTarget }[] = [
 ];
 
 const DEFAULT_TARGET: SliderTarget = { stock_kr: 20, stock_us: 40, crypto: 30, cash: 10 };
+const TARGET_KEYS: (keyof SliderTarget)[] = ["stock_kr", "stock_us", "crypto", "cash"];
+
+function clampSliderValue(value: number): number {
+  if (!Number.isFinite(value)) return 0;
+  return Math.max(0, Math.min(100, Math.round(value)));
+}
+
+function balanceTargetAfterChange(
+  previous: SliderTarget,
+  changedKey: keyof SliderTarget,
+  rawValue: number,
+): SliderTarget {
+  const changedValue = clampSliderValue(rawValue);
+  const remaining = 100 - changedValue;
+  const otherKeys = TARGET_KEYS.filter((key) => key !== changedKey);
+  const previousOtherTotal = otherKeys.reduce((sum, key) => sum + previous[key], 0);
+  const next: SliderTarget = { ...previous, [changedKey]: changedValue };
+
+  if (previousOtherTotal <= 0) {
+    const base = Math.floor(remaining / otherKeys.length);
+    let leftover = remaining - base * otherKeys.length;
+
+    for (const key of otherKeys) {
+      next[key] = base + (leftover > 0 ? 1 : 0);
+      if (leftover > 0) leftover -= 1;
+    }
+
+    return next;
+  }
+
+  const scaled = otherKeys.map((key) => {
+    const exact = (previous[key] / previousOtherTotal) * remaining;
+    return {
+      key,
+      value: Math.floor(exact),
+      remainder: exact - Math.floor(exact),
+    };
+  });
+
+  let leftover = remaining - scaled.reduce((sum, item) => sum + item.value, 0);
+  scaled.sort((a, b) => b.remainder - a.remainder);
+
+  for (const item of scaled) {
+    next[item.key] = item.value + (leftover > 0 ? 1 : 0);
+    if (leftover > 0) leftover -= 1;
+  }
+
+  return next;
+}
 
 function loadFromStorage(): SliderTarget {
   if (typeof window === "undefined") return DEFAULT_TARGET;
@@ -131,7 +180,7 @@ export function RebalancePanel({ clientId = "client-001" }: RebalancePanelProps)
   const handleSliderChange = useCallback(
     (key: keyof SliderTarget, value: number) => {
       setTarget((prev) => {
-        const next = { ...prev, [key]: value };
+        const next = balanceTargetAfterChange(prev, key, value);
         saveToStorage(next);
         return next;
       });
@@ -207,7 +256,7 @@ export function RebalancePanel({ clientId = "client-001" }: RebalancePanelProps)
           </div>
         </CardHeader>
         <CardContent className="space-y-6">
-          {(Object.keys(SLIDER_LABELS) as (keyof SliderTarget)[]).map((key) => (
+          {TARGET_KEYS.map((key) => (
             <div key={key} className="space-y-2">
               <div className="flex justify-between items-center">
                 <label

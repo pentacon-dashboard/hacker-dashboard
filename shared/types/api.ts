@@ -1278,6 +1278,18 @@ export interface components {
              */
             unit: string;
         };
+        /** ConfirmedCsvMapping */
+        ConfirmedCsvMapping: {
+            /**
+             * Type
+             * @enum {string}
+             */
+            type: "column" | "derived";
+            /** Column */
+            column?: string | null;
+            /** Method */
+            method?: "symbol_pattern" | null;
+        };
         /** ConnectedAccount */
         ConnectedAccount: {
             /**
@@ -1365,6 +1377,34 @@ export interface components {
             needs_review: boolean;
             /** Mapping Reason */
             mapping_reason: string;
+        };
+        /** CsvMappingCandidate */
+        CsvMappingCandidate: {
+            /**
+             * Type
+             * @enum {string}
+             */
+            type: "column" | "derived";
+            /** Column */
+            column?: string | null;
+            /** Method */
+            method?: "symbol_pattern" | null;
+            /** Confidence */
+            confidence: number;
+            /**
+             * Needs Review
+             * @default false
+             */
+            needs_review: boolean;
+            /** Reason */
+            reason: string;
+        };
+        /** CsvMappingCandidateGroup */
+        CsvMappingCandidateGroup: {
+            /** Standard Field */
+            standard_field: string;
+            /** Candidates */
+            candidates?: components["schemas"]["CsvMappingCandidate"][];
         };
         /** DataSettings */
         DataSettings: {
@@ -2479,6 +2519,10 @@ export interface components {
              * @default client-001
              */
             client_id: string;
+            /** Confirmed Mapping */
+            confirmed_mapping?: {
+                [key: string]: components["schemas"]["ConfirmedCsvMapping"];
+            } | null;
         };
         /** UploadImportResponse */
         UploadImportResponse: {
@@ -2491,21 +2535,36 @@ export interface components {
             client_id: string;
             /** Imported Count */
             imported_count: number;
+            /** Import Batch Key */
+            import_batch_key?: string | null;
             /** Holdings */
             holdings?: components["schemas"]["HoldingResponse"][];
             /** Field Mappings */
             field_mappings?: components["schemas"]["CsvFieldMapping"][];
+            /** Mapping Candidates */
+            mapping_candidates?: components["schemas"]["CsvMappingCandidateGroup"][];
             /** Unmapped Columns */
             unmapped_columns?: string[];
+            /** Normalized Preview */
+            normalized_preview?: {
+                [key: string]: unknown;
+            }[];
             /** Normalized Holdings */
             normalized_holdings?: components["schemas"]["NormalizedCsvHolding"][];
             /** Normalization Warnings */
             normalization_warnings?: string[];
+            /** Blocking Errors */
+            blocking_errors?: components["schemas"]["UploadErrorDetail"][];
         };
         /** UploadValidationResult */
         UploadValidationResult: {
             /** Upload Id */
             upload_id: string;
+            /**
+             * File Content Hash
+             * @default
+             */
+            file_content_hash: string;
             /** Total Rows */
             total_rows: number;
             /** Valid Rows */
@@ -2532,8 +2591,14 @@ export interface components {
             import_status: "imported" | "needs_confirmation" | "insufficient_data";
             /** Field Mappings */
             field_mappings?: components["schemas"]["CsvFieldMapping"][];
+            /** Mapping Candidates */
+            mapping_candidates?: components["schemas"]["CsvMappingCandidateGroup"][];
             /** Unmapped Columns */
             unmapped_columns?: string[];
+            /** Normalized Preview */
+            normalized_preview?: {
+                [key: string]: unknown;
+            }[];
             /** Normalized Holdings */
             normalized_holdings?: components["schemas"]["NormalizedCsvHolding"][];
             /** Normalization Warnings */

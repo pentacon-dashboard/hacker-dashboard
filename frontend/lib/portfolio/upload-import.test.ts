@@ -74,6 +74,10 @@ describe("upload-import", () => {
       importedRows: 1,
       skippedRows: 0,
       warnings: [],
+      mappingCandidates: [],
+      normalizedPreview: [],
+      blockingErrors: [],
+      importBatchKey: undefined,
     });
   });
 
@@ -98,6 +102,48 @@ describe("upload-import", () => {
       body: JSON.stringify({ upload_id: "upload-123", client_id: "client-002" }),
     });
     expect(result.clientId).toBe("client-002");
+  });
+
+  it("sends PB confirmed mapping when re-importing the same upload", async () => {
+    apiClient.apiFetch.mockResolvedValue({
+      status: "imported",
+      client_id: "client-002",
+      imported_count: 1,
+      holdings: [{ client_id: "client-002" }],
+      normalized_holdings: [{ code: "AAPL" }],
+      normalization_warnings: [],
+    });
+
+    await importPortfolioCsvAsClient(
+      "upload-ambiguous",
+      {
+        mode: "existing",
+        clientId: "client-002",
+        existingClientIds: ["client-001", "client-002"],
+      },
+      {
+        symbol: { type: "column", column: "Ticker" },
+        quantity: { type: "column", column: "Qty" },
+        avg_cost: { type: "column", column: "Average Price" },
+        currency: { type: "column", column: "CCY" },
+        market: { type: "column", column: "Exchange" },
+      },
+    );
+
+    expect(apiClient.apiFetch).toHaveBeenCalledWith("/upload/import", {
+      method: "POST",
+      body: JSON.stringify({
+        upload_id: "upload-ambiguous",
+        client_id: "client-002",
+        confirmed_mapping: {
+          symbol: { type: "column", column: "Ticker" },
+          quantity: { type: "column", column: "Qty" },
+          avg_cost: { type: "column", column: "Average Price" },
+          currency: { type: "column", column: "CCY" },
+          market: { type: "column", column: "Exchange" },
+        },
+      }),
+    });
   });
 
   it("falls back to fetching clients when no new-client ids are provided", async () => {
@@ -151,6 +197,10 @@ describe("upload-import", () => {
       importedRows: 0,
       skippedRows: 1,
       warnings: ["multiple candidates for symbol"],
+      mappingCandidates: [],
+      normalizedPreview: [],
+      blockingErrors: [],
+      importBatchKey: undefined,
     });
   });
 });

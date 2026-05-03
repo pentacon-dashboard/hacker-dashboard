@@ -77,17 +77,19 @@ describe("RebalancePanel", () => {
     expect(button).not.toBeDisabled();
   });
 
-  it("슬라이더 변경으로 합계가 100%가 아닐 때 '제안 받기' 버튼이 비활성화됨", () => {
+  it("슬라이더 하나를 변경하면 나머지 비중을 자동 보정해 합계 100%를 유지함", () => {
     render(<RebalancePanel />);
     const button = screen.getByRole("button", { name: "제안 받기" });
     // 초기 균형형: 20+40+30+10=100 → 활성화
     expect(button).not.toBeDisabled();
 
-    // 합계 합산이 130이 되도록 stock_kr 슬라이더를 50으로 변경
     const sliders = screen.getAllByRole("slider");
     fireEvent.change(sliders[0]!, { target: { value: "50" } });
-    // 50+40+30+10=130 → 비활성화
-    expect(button).toBeDisabled();
+
+    const values = sliders.map((slider) => Number((slider as HTMLInputElement).value));
+    expect(values).toEqual([50, 25, 19, 6]);
+    expect(values.reduce((sum, value) => sum + value, 0)).toBe(100);
+    expect(button).not.toBeDisabled();
   });
 
   it("합계가 100%일 때 '제안 받기' 버튼이 활성화됨", () => {

@@ -24,6 +24,26 @@ class CsvFieldMapping(BaseModel):
     mapping_reason: str
 
 
+class CsvMappingCandidate(BaseModel):
+    type: Literal["column", "derived"]
+    column: str | None = None
+    method: Literal["symbol_pattern"] | None = None
+    confidence: float = Field(ge=0.0, le=1.0)
+    needs_review: bool = False
+    reason: str
+
+
+class CsvMappingCandidateGroup(BaseModel):
+    standard_field: str
+    candidates: list[CsvMappingCandidate] = Field(default_factory=list)
+
+
+class ConfirmedCsvMapping(BaseModel):
+    type: Literal["column", "derived"]
+    column: str | None = None
+    method: Literal["symbol_pattern"] | None = None
+
+
 class NormalizedCsvHolding(BaseModel):
     client_id: str | None = None
     account: str | None = None
@@ -39,6 +59,7 @@ class NormalizedCsvHolding(BaseModel):
 
 class UploadValidationResult(BaseModel):
     upload_id: str  # uuid4
+    file_content_hash: str = ""
     total_rows: int
     valid_rows: int
     error_rows: int
@@ -51,7 +72,9 @@ class UploadValidationResult(BaseModel):
         "insufficient_data"
     )
     field_mappings: list[CsvFieldMapping] = Field(default_factory=list)
+    mapping_candidates: list[CsvMappingCandidateGroup] = Field(default_factory=list)
     unmapped_columns: list[str] = Field(default_factory=list)
+    normalized_preview: list[dict[str, Any]] = Field(default_factory=list)
     normalized_holdings: list[NormalizedCsvHolding] = Field(default_factory=list)
     normalization_warnings: list[str] = Field(default_factory=list)
 
@@ -67,15 +90,22 @@ class UploadImportRequest(BaseModel):
     )
 
 
+    confirmed_mapping: dict[str, ConfirmedCsvMapping] | None = None
+
+
 class UploadImportResponse(BaseModel):
     status: Literal["imported", "needs_confirmation", "insufficient_data"]
     client_id: str
     imported_count: int
+    import_batch_key: str | None = None
     holdings: list[HoldingResponse] = Field(default_factory=list)
     field_mappings: list[CsvFieldMapping] = Field(default_factory=list)
+    mapping_candidates: list[CsvMappingCandidateGroup] = Field(default_factory=list)
     unmapped_columns: list[str] = Field(default_factory=list)
+    normalized_preview: list[dict[str, Any]] = Field(default_factory=list)
     normalized_holdings: list[NormalizedCsvHolding] = Field(default_factory=list)
     normalization_warnings: list[str] = Field(default_factory=list)
+    blocking_errors: list[UploadErrorDetail] = Field(default_factory=list)
 
 
 class UploadAnalyzerConfig(BaseModel):
