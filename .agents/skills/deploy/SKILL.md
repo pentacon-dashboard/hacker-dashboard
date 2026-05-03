@@ -14,7 +14,8 @@ Use this skill for production release work in `C:\Users\ehgus\hacker-dashboard`.
 - Backend: Fly.io app `hacker-dashboard-api`, configured by `backend/fly.toml`
 - Backend URL: `https://hacker-dashboard-api.fly.dev`
 - Production DB: Neon Postgres project `hacker-dashboard`, injected through Fly secret `DATABASE_URL`
-- Frontend production URL: `https://hacker-dashboard.vercel.app`
+- Frontend production URL: `https://hacker-dashboard-fe.vercel.app`
+- Legacy/stale URL warning: do not use `https://hacker-dashboard.vercel.app` as the release target unless `vercel inspect` shows it as an alias of the current `hacker-dashboard-fe` deployment.
 
 ## Release Flow
 
@@ -82,7 +83,9 @@ Check:
 
 ```bash
 curl -fsS https://hacker-dashboard-api.fly.dev/health
-curl -fsSI https://hacker-dashboard.vercel.app
+curl -fsSI https://hacker-dashboard-fe.vercel.app
+curl -fsS https://hacker-dashboard-api.fly.dev/portfolio/clients
+curl -fsS "https://hacker-dashboard-api.fly.dev/portfolio/holdings?client_id=client-003"
 ```
 
 Then verify in browser-use or Playwright:
@@ -90,6 +93,9 @@ Then verify in browser-use or Playwright:
 - `/` renders the customer book.
 - `/clients/client-003` loads past skeleton and shows non-empty KPI/holdings UI.
 - Console error count is zero.
+- `/portfolio/clients` must include the linked demo clients used by the UI route smoke.
+- `client-003` must have at least one holding before a production demo can be marked ready.
+- If production health is ok but `client-003` is empty, classify it as `ledger_missing`; do not seed or mutate the cloud database without explicit action-time confirmation.
 
 ## Safety
 
