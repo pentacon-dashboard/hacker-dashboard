@@ -16,6 +16,7 @@ Plan must be read-only. Do not create branches, worktrees, commits, generated im
 - sprint list in execution order
 - risk register
 - verification matrix
+- demo runtime preflight matrix, when customer books, upload/import, portfolio APIs, Docker/Postgres, demo seeds, or browser smoke are in scope
 - stop rules
 
 Each `sprints/<sprint_id>/contract.md` must contain:
@@ -26,6 +27,7 @@ Each `sprints/<sprint_id>/contract.md` must contain:
 - required evidence
 - acceptance criteria
 - verification commands
+- required demo preflight commands and browser routes, when applicable
 - expected artifacts
 - image generation allowance, if relevant
 - compound opportunities to watch for
@@ -49,6 +51,7 @@ Rules:
 - branch and worktree path
 - changed files
 - commands run and outcomes
+- demo preflight result and browser routes checked, when applicable
 - tests not run and why
 - image requests and generated assets
 - blockers or scope exceptions
@@ -63,6 +66,7 @@ Review stance:
 - Lead with blocking bugs, regressions, missing tests, unsupported claims, and scope violations.
 - Do not reward work that lacks evidence.
 - Do not accept product behavior that violates AGENTS.md or investment-dashboard rules.
+- Do not accept customer-book demo readiness without the demo preflight result and loaded client-detail browser evidence.
 - If the implementation is partial but useful, score it below threshold and provide precise next actions.
 
 Review dimensions:
@@ -71,6 +75,7 @@ Review dimensions:
 - correctness
 - regression risk
 - test evidence
+- demo runtime evidence for customer-book, upload/import, portfolio API, Docker/Postgres, or browser-smoke work
 - UX/evidence quality for frontend work
 - deterministic financial/evidence compliance for investment work
 - maintainability and scope control

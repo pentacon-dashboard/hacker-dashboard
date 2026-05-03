@@ -27,3 +27,4 @@
 - Run focused Vitest for changed components.
 - Run `npm run typecheck` for typed API/UI changes.
 - Use Playwright for routed visual workflows.
+- For customer-book demo routes, verify loaded data in `/` and linked `/clients/<client_id>` routes. Do not accept a skeleton, hidden error, or empty workspace as a passing smoke when the API has holdings.

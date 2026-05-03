@@ -99,6 +99,14 @@ true|false - <why>
 | Command | Result | Notes |
 |---|---|---|
 
+## Demo Preflight
+- Required: yes|no
+- Command: `<command or n/a>`
+- Result: pass|fail|not run
+- Checked clients: `<client ids or n/a>`
+- Browser routes: `<routes or n/a>`
+- Notes: `<DB/ledger/frontend classification if relevant>`
+
 ## Images
 - <asset slug or none>
 
@@ -136,6 +144,9 @@ threshold=<n>, max_iter=<n>
 
 ## Checks
 <commands and outcomes>
+
+## Demo Runtime Evidence
+<preflight command/result, required clients, and browser routes verified; use "not applicable" when out of scope>
 
 ## Residual Risks
 <risks>

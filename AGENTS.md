@@ -74,5 +74,12 @@ The Codex-readable skill lives at `.agents/skills/investment-dashboard/SKILL.md`
 - Frontend lint: `cd frontend && npm run lint`.
 - E2E smoke: `cd frontend && npx playwright test e2e/smoke.spec.ts --config=e2e/playwright.config.ts`.
 - Full local gate: `make ci-local`.
+- Customer-book demo preflight: `powershell -ExecutionPolicy Bypass -File .agents/skills/harness-run/scripts/check-demo-preflight.ps1`, then verify `/` and linked `/clients/<client_id>` routes after data has loaded.
 
 When finalizing work, report changed files, checks run, and checks not run.
+
+## Demo Runtime Gate
+
+- Treat `/health` with `services.db != ok` as a backend runtime blocker, even if the frontend shell renders.
+- Treat a linked demo client with `holdings_count == 0` as missing ledger data, not a passing empty state, unless the task explicitly tests empty-state behavior.
+- Browser smoke for customer-book routes must wait past skeleton loading and confirm populated KPI/holdings UI.

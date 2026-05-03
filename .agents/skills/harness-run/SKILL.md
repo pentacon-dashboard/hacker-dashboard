@@ -61,6 +61,7 @@ Read only the references needed for the current phase:
 - `references/worktrees-and-agents.md`: branch/worktree/session orchestration.
 - `references/image-policy.md`: always-allowed image generation capability, budget, and asset manifest.
 - `references/mock-boundary.md`: required guardrails when work touches demo data, MSW, Copilot, Docker env, or live API wiring.
+- `references/demo-preflight.md`: required DB, customer-ledger, and browser checks when work touches customer books, upload/import, portfolio APIs, Docker/Postgres, demo seeds, or browser smoke.
 
 For investment-domain changes, also use `$investment-dashboard`.
 
@@ -81,6 +82,7 @@ Each sprint contract must include:
 - allowed write scope
 - acceptance criteria
 - verification commands
+- demo runtime preflight requirements, when the sprint touches customer books, upload/import, portfolio APIs, Docker/Postgres, demo seeds, or browser smoke
 - risk notes
 - expected artifacts
 - max iteration and score threshold
@@ -93,6 +95,7 @@ For each iteration:
 
 - implement only the current sprint contract
 - record changed files, commands, results, blockers, and image requests
+- run `.agents/skills/harness-run/scripts/check-demo-preflight.ps1` before browser smoke when customer-book or portfolio demo data is in scope
 - write `<run_artifacts>/work-<sprint_id>-<iter>.md`
 
 Image generation is always allowed as a worker capability. It must follow `references/image-policy.md`.
@@ -107,6 +110,7 @@ Write:
 - `<run_artifacts>/review-<sprint_id>-<iter>.md`
 
 Lead with blocking findings. Score only against the contract and evidence.
+Block demo readiness if required customer-ledger preflight was skipped, if a linked client detail route is empty, or if a skeleton screenshot is treated as a pass.
 
 ### 4. Compound
 
@@ -148,3 +152,4 @@ Write:
 - final image manifest, if images were generated
 
 Report changed files, checks run, checks not run, branch/worktree status, and residual risks.
+For demo/customer-book work, include the preflight result and the exact client routes verified in the browser.

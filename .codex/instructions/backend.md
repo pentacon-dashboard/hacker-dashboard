@@ -24,3 +24,4 @@
 - For Router/Analyzer changes, run focused golden and unit tests.
 - For API changes, run related API tests and OpenAPI contract checks when feasible.
 - For prompt changes, add or update golden samples.
+- For Docker/Postgres, portfolio API, upload/import, or customer-book demo changes, run the harness demo preflight from the repo root and verify `/health` reports `services.db=ok` against the same database used by the running backend.

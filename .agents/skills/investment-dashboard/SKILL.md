@@ -21,6 +21,7 @@ Use this skill when working on investment data analysis, PB/WM reporting, or das
 10. Read `references/insight-rules.md` for narrative, confidence, and forbidden claims.
 11. Read `references/validation-rules.md` before finalizing behavior.
 12. Keep `Skills.md`, `.codex/competition/Skills.md`, and these reference files aligned when the analysis rule system changes.
+13. When customer-book, upload/import, portfolio API, Docker/Postgres, demo seed, or browser-smoke behavior is in scope, also follow `$harness-run` `references/demo-preflight.md`.
 
 ## Core Behavior
 
@@ -40,6 +41,7 @@ Use this skill when working on investment data analysis, PB/WM reporting, or das
 - API contract changes require `make openapi`.
 - Prompt, Analyzer, gate, or report contract changes require golden sample updates.
 - Do not put customer-specific assumptions, risk profiles, or investment objectives into output unless they exist in input or approved fixtures.
+- Do not link to a demo client workspace unless that client has ledger data or the route intentionally demonstrates an empty state.
 
 ## Verification
 
@@ -51,3 +53,4 @@ Run the narrowest meaningful check first:
 - Frontend component: `cd frontend && npm run test`
 - Type/API changes: `cd frontend && npm run typecheck`
 - Routed UX: Playwright smoke or affected E2E spec.
+- Client-book demo runtime: `powershell -ExecutionPolicy Bypass -File .agents/skills/harness-run/scripts/check-demo-preflight.ps1`, then verify `/` and each linked `/clients/<client_id>` route after data has loaded.

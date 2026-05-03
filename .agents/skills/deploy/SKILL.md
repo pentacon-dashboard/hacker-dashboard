@@ -1,51 +1,99 @@
 ---
 name: deploy
-description: 금융 대시보드를 Vercel(FE) + Fly.io/Render(BE) + Neon(Postgres) 조합으로 배포하거나 재배포한다. 배포, 롤백, 환경변수 동기화, 헬스체크 작업 시 호출.
+description: Deploy or verify hacker-dashboard production rollout using Vercel for frontend, Fly.io for backend, and Neon Postgres. Use for commit/push/deploy, rollback, env sync, migrations, production health checks, and release readiness.
 ---
 
-# Skill — Deploy
+# Deploy
 
-공모전 제출용 배포 절차 표준화. 이 스킬은 개발 편의용이며 최종 프로덕트에 포함되지 않습니다.
+Use this skill for production release work in `C:\Users\ehgus\hacker-dashboard`.
 
-## 전제
+## Current Targets
 
-- Vercel 프로젝트: `hacker-dashboard-fe` (main 브랜치 연동)
-- Fly.io 앱: `hacker-dashboard-be` (Dockerfile from `backend/`)
-- Neon DB: `hacker-dashboard` (pooled connection string)
-- GitHub Actions 가 PR 머지 시 자동 트리거 — 수동은 rollback/hotfix 전용
+- GitHub repo: `https://github.com/pentacon-dashboard/hacker-dashboard.git`
+- Frontend: Vercel project `hacker-dashboard-fe`, linked from `frontend/.vercel/project.json`
+- Backend: Fly.io app `hacker-dashboard-api`, configured by `backend/fly.toml`
+- Backend URL: `https://hacker-dashboard-api.fly.dev`
+- Production DB: Neon Postgres project `hacker-dashboard`, injected through Fly secret `DATABASE_URL`
+- Frontend production URL: `https://hacker-dashboard.vercel.app`
 
-## 최초 배포 체크리스트
+## Release Flow
 
-1. [ ] Vercel env: `NEXT_PUBLIC_API_BASE`, `NEXT_PUBLIC_WS_BASE`
-2. [ ] Fly secrets: `DATABASE_URL`, `REDIS_URL`, `ANTHROPIC_API_KEY`
-3. [ ] Alembic 마이그레이션 `alembic upgrade head` 원격 실행
-4. [ ] 시드 데이터 로드 (`backend/scripts/seed_demo.py`)
-5. [ ] `/healthz` (BE), `/api/health` (FE) 200 확인
-6. [ ] Lighthouse 수동 리포트 캡처
+1. Verify local status and stage only intended files.
+2. Run the relevant local checks before commit.
+3. Commit with a Korean commit message.
+4. Push `main` to `origin`.
+5. Confirm GitHub Actions deploys backend when `backend/**` or `.github/workflows/fly-deploy.yml` changed.
+6. Confirm Vercel deployment for `hacker-dashboard-fe`.
+7. Check production health and demo routes.
 
-## 재배포 / 핫픽스
+## Required Checks
+
+Run these before a production push when feasible:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .agents/skills/harness-run/scripts/check-demo-preflight.ps1
+cd backend; uv run pytest -q
+cd frontend; npm run typecheck
+cd frontend; npm run lint
+cd frontend; npm run test
+cd frontend; npm run build
+```
+
+For skill-only or documentation-only releases, record any skipped full checks and why.
+
+## Backend Deploy
+
+Automatic deploy:
+
+- `.github/workflows/fly-deploy.yml` deploys `hacker-dashboard-api` on `main` pushes that touch `backend/**` or the workflow file.
+- The workflow verifies `https://hacker-dashboard-api.fly.dev/health`.
+
+Manual deploy:
 
 ```bash
-# FE
+cd backend
+fly deploy --remote-only --strategy rolling
+```
+
+`backend/fly.toml` runs `alembic upgrade head` as the Fly release command.
+
+## Frontend Deploy
+
+Automatic deploy:
+
+- Vercel is linked to project `hacker-dashboard-fe`.
+- Pushing `main` should create a production deployment through the GitHub integration.
+
+Manual deploy:
+
+```bash
+cd frontend
 vercel --prod
-
-# BE
-fly deploy --remote-only --config backend/fly.toml
-
-# DB 마이그레이션이 있는 경우
-fly ssh console -C "alembic upgrade head"
 ```
 
-## 롤백
+Required production env:
+
+- `NEXT_PUBLIC_API_BASE=https://hacker-dashboard-api.fly.dev`
+- `NEXT_PUBLIC_WS_BASE=wss://hacker-dashboard-api.fly.dev`
+
+## Production Verification
+
+Check:
 
 ```bash
-# FE: Vercel 대시보드 → Previous Deployment → Promote to Production
-# BE:
-fly releases --app hacker-dashboard-be
-fly deploy --image registry.fly.io/hacker-dashboard-be:<prev-tag>
+curl -fsS https://hacker-dashboard-api.fly.dev/health
+curl -fsSI https://hacker-dashboard.vercel.app
 ```
 
-## 주의
+Then verify in browser-use or Playwright:
 
-- 프로덕션 DB 마이그레이션 **다운타임 위험 있는 변경**(컬럼 제거, 타입 변경) 은 스킬로 처리하지 말고 사람이 감독
-- `ANTHROPIC_API_KEY` 등 시크릿을 절대 로그로 출력하지 말 것
+- `/` renders the customer book.
+- `/clients/client-003` loads past skeleton and shows non-empty KPI/holdings UI.
+- Console error count is zero.
+
+## Safety
+
+- Do not print secret values.
+- Do not commit `.env*`, deployment tokens, screenshots, caches, or local reports.
+- If Fly health is degraded because DB is unreachable, stop and fix `DATABASE_URL` or migration state before marking deployment healthy.
+- If a linked client route is empty, classify it as missing ledger data unless the task explicitly tests empty-state behavior.

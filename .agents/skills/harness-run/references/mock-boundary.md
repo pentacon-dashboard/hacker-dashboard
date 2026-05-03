@@ -28,6 +28,14 @@ run the relevant guard tests:
 
 Also run normal type/lint checks for the edited surface.
 
+When touched files include Docker env, customer-book demo data, upload/import,
+portfolio APIs, or browser smoke, also run:
+
+- `powershell -ExecutionPolicy Bypass -File .agents/skills/harness-run/scripts/check-demo-preflight.ps1`
+
+Then verify the linked client detail route in browser-use or Playwright after the
+data has loaded. A green API badge or root page render alone is not enough.
+
 ## Review Questions
 
 - Could a customer-only mock flag make stock prices, news, watchlist, or Copilot fake?
@@ -35,3 +43,6 @@ Also run normal type/lint checks for the edited surface.
 - Does Copilot have any route-local mock stream path?
 - Does live news retrieval still pass through the service that checks configured providers first?
 - Are Docker env files wired so API keys reach backend containers without being committed or printed?
+- Does the running backend use the same Docker/Postgres database that was migrated and seeded?
+- Do all linked demo clients have non-empty holdings through `/portfolio/summary?client_id=...`?
+- Did browser evidence wait past skeleton loading and verify a populated client detail route?

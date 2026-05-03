@@ -14,9 +14,11 @@
 - UI metrics match backend deterministic output.
 - LLM narrative cannot add unsupported facts.
 - Portfolio context is opt-in and gracefully degrades.
+- Linked client workspaces are populated when they are part of the demo path.
 - Rebalance actions survive LLM failure.
 - Broker CSV mapping confidence below the auto-map threshold produces `needs_review`.
 - Client report sections fail closed when evidence is missing.
+- Local demo readiness requires backend DB health, non-empty required client ledgers, and browser evidence after data load.
 
 ## Test Selection
 
@@ -25,3 +27,4 @@
 - Frontend: Vitest and typecheck.
 - Routed UX: Playwright.
 - Reports: golden samples for section order, evidence links, and fail-safe states.
+- Client-book runtime: harness demo preflight plus browser verification for `/` and linked `/clients/<client_id>` routes.
