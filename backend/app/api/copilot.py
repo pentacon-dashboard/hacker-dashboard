@@ -7,10 +7,10 @@ SSE 스트리밍(/copilot/query) 은 sprint-04 에서 추가.
 
 from __future__ import annotations
 
-import uuid as _uuid
 import inspect
+import uuid as _uuid
 from collections.abc import AsyncGenerator
-from typing import Any
+from typing import Any, cast
 
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import StreamingResponse
@@ -203,7 +203,8 @@ async def list_sessions(
     """GET /copilot/sessions — 세션 히스토리 목록 (최근순)."""
     store = get_session_store()
     if hasattr(store, "list_sessions"):
-        return await _maybe_await(store.list_sessions(limit=limit, offset=offset))
+        sessions = await _maybe_await(store.list_sessions(limit=limit, offset=offset))
+        return cast(list[SessionMeta], sessions)
     # list_sessions 가 없는 store (PostgresSessionStore 등) 는 빈 목록 반환
     return []
 

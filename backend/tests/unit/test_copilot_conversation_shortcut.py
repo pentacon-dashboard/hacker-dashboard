@@ -135,7 +135,9 @@ async def test_stream_uses_conversation_shortcut_and_saves_turn(
     )
 
     events: list[dict] = []
-    async for chunk in stream_copilot_query("방금 내용을 고객용으로 쉽게 설명해줘", session_id="s1"):
+    async for chunk in stream_copilot_query(
+        "방금 내용을 고객용으로 쉽게 설명해줘", session_id="s1"
+    ):
         for block in chunk.decode().split("\n\n"):
             for line in block.splitlines():
                 if line.startswith("data:"):

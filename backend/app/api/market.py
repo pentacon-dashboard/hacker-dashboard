@@ -70,6 +70,7 @@ def _is_complete_ohlc_bar(bar: Any) -> bool:
 def _complete_ohlc_bars(bars: list[Any]) -> list[Any]:
     return [bar for bar in bars if _is_complete_ohlc_bar(bar)]
 
+
 _SAMPLE_SYMBOLS: list[Symbol] = [
     Symbol(
         symbol="AAPL", name="Apple Inc.", asset_class="stock", exchange="NASDAQ", market="yahoo"

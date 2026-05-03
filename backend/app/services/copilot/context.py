@@ -154,8 +154,7 @@ def format_context_for_agent(active_context: ActiveContext) -> str:
     """
     if not active_context.prior_turns:
         return (
-            "Conversation context: none.\n"
-            "Do not introduce new calculations or facts from memory."
+            "Conversation context: none.\nDo not introduce new calculations or facts from memory."
         )
 
     lines = [

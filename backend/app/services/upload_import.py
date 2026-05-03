@@ -65,7 +65,9 @@ def _holding_to_response(h: Holding) -> HoldingResponse:
     )
 
 
-def _decimal_from_text(value: str, *, field_name: str, source_row: int) -> tuple[Decimal, str | None]:
+def _decimal_from_text(
+    value: str, *, field_name: str, source_row: int
+) -> tuple[Decimal, str | None]:
     try:
         parsed = Decimal(value)
     except InvalidOperation:

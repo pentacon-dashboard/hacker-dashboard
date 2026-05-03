@@ -89,7 +89,6 @@ class UploadImportRequest(BaseModel):
         description="CSV row에 고객 ID가 없을 때 사용할 PB 선택 고객 ID",
     )
 
-
     confirmed_mapping: dict[str, ConfirmedCsvMapping] | None = None
 
 

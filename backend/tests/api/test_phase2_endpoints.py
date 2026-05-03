@@ -55,6 +55,7 @@ async def client() -> AsyncGenerator[AsyncClient, None]:
     app.dependency_overrides.pop(get_db, None)
     await engine.dispose()
 
+
 # ── 2-A: market-leaders ──────────────────────────────────────────────────────
 
 

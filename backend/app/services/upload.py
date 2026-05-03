@@ -384,7 +384,11 @@ def build_normalized_preview(
         item: dict[str, Any] = {"source_row": int(idx) + 2}
         for field_name, column in schema.mapped_columns.items():
             item[field_name] = _string_value(row.get(column))
-        code = _string_value(row.get(schema.mapped_columns.get("symbol"))) if schema.mapped_columns.get("symbol") else None
+        code = (
+            _string_value(row.get(schema.mapped_columns.get("symbol")))
+            if schema.mapped_columns.get("symbol")
+            else None
+        )
         if code:
             if "market" not in item:
                 item["market"] = _infer_market(code)
@@ -958,10 +962,14 @@ def build_validation_result(
     total_rows = len(df) if not df.empty else 0
     error_rows = len({e.row for e in errors if e.row > 0})
     valid_rows = max(0, total_rows - error_rows)
-    schema = detect_portfolio_schema(df) if not df.empty else PortfolioSchemaDetection(
-        field_mappings=[],
-        mapped_columns={},
-        missing_required_fields=list(_REQUIRED_IMPORT_FIELDS),
+    schema = (
+        detect_portfolio_schema(df)
+        if not df.empty
+        else PortfolioSchemaDetection(
+            field_mappings=[],
+            mapped_columns={},
+            missing_required_fields=list(_REQUIRED_IMPORT_FIELDS),
+        )
     )
     normalized = (
         normalize_holdings_from_csv(df, schema)

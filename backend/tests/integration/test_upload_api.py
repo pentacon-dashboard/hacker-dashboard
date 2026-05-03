@@ -258,8 +258,7 @@ async def test_upload_import_uses_selected_client_over_source_client_id(
     assert body["holdings"][0]["client_id"] == "client-002"
     assert body["normalized_holdings"][0]["client_id"] == "client-777"
     assert any(
-        "source client_id 'client-777' imported into selected client 'client-002'"
-        in warning
+        "source client_id 'client-777' imported into selected client 'client-002'" in warning
         for warning in body["normalization_warnings"]
     )
 
@@ -281,8 +280,7 @@ async def test_upload_import_accepts_confirmed_mapping_for_arbitrary_column_name
     upload_import_client: AsyncClient,
 ) -> None:
     content = (
-        b"Security ID,Units Held,Book Price,Settlement CCY,Venue\n"
-        b"005930,10,72000,KRW,naver_kr\n"
+        b"Security ID,Units Held,Book Price,Settlement CCY,Venue\n005930,10,72000,KRW,naver_kr\n"
     )
     upload_resp = await upload_import_client.post(
         "/upload/csv",
@@ -320,8 +318,7 @@ async def test_upload_import_blocks_invalid_rows_after_confirmed_mapping(
     upload_import_client: AsyncClient,
 ) -> None:
     content = (
-        b"Security ID,Units Held,Book Price,Settlement CCY,Venue\n"
-        b"005930,-10,72000,KRW,naver_kr\n"
+        b"Security ID,Units Held,Book Price,Settlement CCY,Venue\n005930,-10,72000,KRW,naver_kr\n"
     )
     upload_resp = await upload_import_client.post(
         "/upload/csv",

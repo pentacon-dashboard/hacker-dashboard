@@ -279,10 +279,7 @@ class TestBrokerCsvIntake:
 
     def test_duplicate_symbol_candidates_need_review(self):
         """중복 symbol 후보는 자동 매핑하지 않고 PB 확인 대상으로 둔다."""
-        content = (
-            b"symbol,ticker,quantity,avg_cost,currency\n"
-            b"AAPL,MSFT,3,180,USD\n"
-        )
+        content = b"symbol,ticker,quantity,avg_cost,currency\nAAPL,MSFT,3,180,USD\n"
 
         df, errors = parse_csv(content)
         schema = detect_portfolio_schema(df)
@@ -305,8 +302,7 @@ class TestBrokerCsvIntake:
         assert result.import_status == "needs_confirmation"
         assert result.normalized_holdings == []
         assert any(
-            "market could not be inferred" in warning
-            for warning in result.normalization_warnings
+            "market could not be inferred" in warning for warning in result.normalization_warnings
         )
 
     def test_krx_code_without_market_currency_system_derives(self):
