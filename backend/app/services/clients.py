@@ -438,9 +438,9 @@ async def _match_clients(
                 Client.client_id == alias.client_id,
             )
         )
-        client = result.scalar_one_or_none()
-        if client is None:
-            client = Client(
+        alias_client = result.scalar_one_or_none()
+        if alias_client is None:
+            alias_client = Client(
                 user_id=alias.user_id,
                 client_id=alias.client_id,
                 label=default_client_label(alias.client_id),
@@ -448,7 +448,7 @@ async def _match_clients(
             )
         by_key[(alias.user_id, alias.client_id)] = await _candidate_from_client(
             db,
-            client,
+            alias_client,
             match_type=alias.alias_type,
             matched_value=alias.alias_value,
         )
