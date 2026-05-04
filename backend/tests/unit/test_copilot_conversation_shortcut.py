@@ -256,6 +256,7 @@ async def test_portfolio_agent_degrades_when_requested_client_has_no_data(
         fake_fetch_portfolio_context,
         raising=False,
     )
+
     async def fake_resolve_client(*_: object, **__: object) -> tuple[str, bool, str | None, None]:
         return "client-002", True, "고객 B", None
 
@@ -417,7 +418,9 @@ async def test_portfolio_deterministic_summary_skips_subjective_critique(
                 "n_holdings": 3,
                 "asset_class_breakdown": {"stock_us": "1.0000"},
             },
-            "holdings": [{"market": "yahoo", "code": "TSLA", "value_krw": "3693249.00", "pnl_pct": "127.09"}],
+            "holdings": [
+                {"market": "yahoo", "code": "TSLA", "value_krw": "3693249.00", "pnl_pct": "127.09"}
+            ],
         }
 
     async def fake_call_llm(**_: str) -> str:

@@ -81,7 +81,9 @@ async def test_resolve_unique_display_name(client_db: AsyncSession) -> None:
 @pytest.mark.asyncio
 async def test_label_and_name_mismatch_blocks_resolution(client_db: AsyncSession) -> None:
     await ensure_client_registry(client_db, client_id="client-003", label="고객 C")
-    await ensure_client_registry(client_db, client_id="client-014", label="VIP-14", display_name="홍길동")
+    await ensure_client_registry(
+        client_db, client_id="client-014", label="VIP-14", display_name="홍길동"
+    )
     await client_db.commit()
 
     resolution = await resolve_client_reference(
@@ -100,8 +102,12 @@ async def test_label_and_name_mismatch_blocks_resolution(client_db: AsyncSession
 @pytest.mark.asyncio
 async def test_ambiguous_name_candidates_are_sorted(client_db: AsyncSession) -> None:
     now = datetime.now(UTC)
-    await ensure_client_registry(client_db, client_id="client-014", label="VIP-14", display_name="김민수")
-    await ensure_client_registry(client_db, client_id="client-022", label="VIP-22", display_name="김민수")
+    await ensure_client_registry(
+        client_db, client_id="client-014", label="VIP-14", display_name="김민수"
+    )
+    await ensure_client_registry(
+        client_db, client_id="client-022", label="VIP-22", display_name="김민수"
+    )
     client_db.add(
         Holding(
             user_id="pb-demo",
