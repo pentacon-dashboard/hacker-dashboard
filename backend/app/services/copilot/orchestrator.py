@@ -214,11 +214,18 @@ def _portfolio_context_to_text(ctx: dict[str, Any]) -> str | None:
     if ctx.get("portfolio_context_unavailable"):
         return None
 
-    client_context = (
-        ctx.get("client_context") if isinstance(ctx.get("client_context"), dict) else {}
+    client_context_value = ctx.get("client_context")
+    client_context: dict[str, Any] = (
+        cast("dict[str, Any]", client_context_value)
+        if isinstance(client_context_value, dict)
+        else {}
     )
-    indicators = ctx.get("indicators") if isinstance(ctx.get("indicators"), dict) else {}
-    holdings = ctx.get("holdings") if isinstance(ctx.get("holdings"), list) else []
+    indicators_value = ctx.get("indicators")
+    indicators: dict[str, Any] = (
+        cast("dict[str, Any]", indicators_value) if isinstance(indicators_value, dict) else {}
+    )
+    holdings_value = ctx.get("holdings")
+    holdings: list[Any] = holdings_value if isinstance(holdings_value, list) else []
     client_name = str(client_context.get("client_name") or "선택 고객")
 
     total_value = indicators.get("total_value")
@@ -478,7 +485,11 @@ async def _resolve_client_for_copilot(
 
 def _client_candidate_payload(candidate: Any) -> dict[str, Any]:
     last_activity_at = getattr(candidate, "last_activity_at", None)
-    last_activity = last_activity_at.isoformat() if hasattr(last_activity_at, "isoformat") else None
+    last_activity = (
+        last_activity_at.isoformat()
+        if last_activity_at is not None and hasattr(last_activity_at, "isoformat")
+        else None
+    )
     client_id = str(getattr(candidate, "client_id", "") or "")
     label = getattr(candidate, "label", None)
     display_name = getattr(candidate, "display_name", None)
@@ -544,8 +555,11 @@ def _client_resolution_result(resolution: Any) -> dict[str, Any]:
 
 
 def _missing_portfolio_context_result(ctx: dict[str, Any]) -> dict[str, Any]:
-    client_context = (
-        ctx.get("client_context") if isinstance(ctx.get("client_context"), dict) else {}
+    client_context_value = ctx.get("client_context")
+    client_context: dict[str, Any] = (
+        cast("dict[str, Any]", client_context_value)
+        if isinstance(client_context_value, dict)
+        else {}
     )
     client_id = str(client_context.get("client_id") or _DEFAULT_COPILOT_CLIENT_ID)
     client_name = str(client_context.get("client_name") or _client_display_name(client_id))
