@@ -46,6 +46,7 @@ async function fetchSessions(): Promise<CopilotSession[]> {
 interface HistoryMessage {
   role: "user" | "assistant";
   content: string;
+  card?: CopilotCard;
   turn_id?: string;
   analyzer?: string;
   analyzer_reason?: string;
@@ -211,6 +212,7 @@ export default function CopilotPage() {
             messages.push({
               role: "assistant",
               content: finalCardToMessage(card),
+              card,
               analyzer: turn.analyzer,
               analyzer_reason: turn.analyzer_reason,
               turn_id: turn.turn_id,
@@ -246,19 +248,28 @@ export default function CopilotPage() {
     [sendQuery, activeSessionId],
   );
 
+  const handleClientCandidateSelect = useCallback(
+    (clientId: string) => {
+      handleSendMessage(`${clientId} 포트폴리오 요약`);
+    },
+    [handleSendMessage],
+  );
+
   useEffect(() => {
     if (streamState.status !== "completed" || !streamState.finalCard || !streamState.turnId) return;
     if (appendedTurnRef.current === streamState.turnId) return;
 
+    const finalCard = streamState.finalCard;
     const artifacts = artifactSummaryFromStream(streamState);
     appendedTurnRef.current = streamState.turnId;
     setLiveMessages((prev) => [
       ...prev,
       {
         role: "assistant",
-        content: finalCardToMessage(streamState.finalCard),
+        content: finalCardToMessage(finalCard),
+        card: finalCard,
         turn_id: streamState.turnId ?? undefined,
-        degraded: streamState.finalCard?.degraded === true,
+        degraded: finalCard.degraded === true,
         artifacts: hasArtifacts(artifacts) ? artifacts : undefined,
       },
     ]);
@@ -342,6 +353,7 @@ export default function CopilotPage() {
           messages={messages}
           streamState={streamState}
           onSendMessage={handleSendMessage}
+          onClientCandidateSelect={handleClientCandidateSelect}
           onArtifactSelect={openArtifactPanel}
         />
       </main>

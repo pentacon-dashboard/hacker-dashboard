@@ -12,9 +12,11 @@ import datetime
 import html
 import json
 import os
+import re
 import uuid
 from collections import defaultdict
 from collections.abc import AsyncGenerator
+from decimal import Decimal, InvalidOperation
 from typing import Any, cast
 
 import app.agents.llm as _llm_module
@@ -41,6 +43,31 @@ from app.services.copilot.context import (
 from app.services.copilot.intent import classify_copilot_intent
 from app.services.session import get_session_store
 from app.services.session.memory_store import make_turn_id
+
+_DEFAULT_COPILOT_CLIENT_ID = "client-001"
+_PORTFOLIO_USER_IDS = ("pb-demo", "demo")
+_CLIENT_ID_RE = re.compile(r"\bclient-(\d{3})\b", re.IGNORECASE)
+_CLIENT_NUMERIC_RE = re.compile(r"\bclient\s*[-_ ]?\s*(\d{1,3})\b", re.IGNORECASE)
+_CLIENT_LABEL_RE = re.compile(r"(?:고객|client|customer)\s*[-_:]?\s*([A-Za-z])\b", re.IGNORECASE)
+_CLIENT_REVERSE_LABEL_RE = re.compile(
+    r"\b([A-Za-z])\s*[-_:]?\s*(?:고객|client|customer)\b", re.IGNORECASE
+)
+_CLIENT_REFERENCE_PREFIX_RE = re.compile(
+    r"^\s*(?P<reference>.+?)\s*(?:포트폴리오|portfolio|요약|분석|리밸런싱|rebalance|summary|report)\b",
+    re.IGNORECASE,
+)
+_CLIENT_REFERENCE_MARKER_RE = re.compile(r"(?:고객|client|customer|client-\d{3})", re.IGNORECASE)
+_CLIENT_PORTFOLIO_TERM_RE = re.compile(
+    r"(?:포트폴리오|portfolio|요약|리밸런싱|rebalance|summary|report)",
+    re.IGNORECASE,
+)
+_GENERIC_CLIENT_REFERENCES = {"", "현재", "지금", "내", "전체", "포트폴리오", "portfolio"}
+_SAFETY_CLIENT_RESOLUTION_STATUSES = {
+    "ambiguous",
+    "mismatch",
+    "not_found",
+    "no_portfolio_data",
+}
 
 
 def _sse(payload: dict[str, Any]) -> bytes:
@@ -83,6 +110,11 @@ async def _critique_gate(
     card: dict[str, Any], step: CopilotStep, *, is_final: bool = False
 ) -> tuple[str, str]:
     instruction = "위 copilot card 가 사용자 질의에 적합하고 사실에 기반한 내용인지 평가하라. "
+    instruction += (
+        "Do not fail only because deterministic numeric metrics look unusual, high, low, "
+        "or intuitively inconsistent. Fail only for unsupported claims, guaranteed returns, "
+        "missing-data contradictions, or clear internal contradictions. "
+    )
     if is_final:
         instruction += "최종 통합 응답이므로 인용이 있다면 excerpt 와 일치하는지 확인하라. "
     instruction += 'JSON 만 출력: {"verdict": "pass"|"fail", "reason": "..."}'
@@ -136,6 +168,93 @@ def _format_value(value: Any) -> str:
     if value is None:
         return "-"
     return json.dumps(value, ensure_ascii=False, default=str)
+
+
+def _to_decimal(value: Any) -> Decimal | None:
+    try:
+        return Decimal(str(value).replace(",", ""))
+    except (InvalidOperation, ValueError):
+        return None
+
+
+def _format_krw(value: Any) -> str:
+    number = _to_decimal(value)
+    if number is None:
+        return _format_value(value)
+    return f"{number.quantize(Decimal('1')):,}원"
+
+
+def _format_pct(value: Any) -> str:
+    number = _to_decimal(value)
+    if number is None:
+        return f"{_format_value(value)}%"
+    return f"{number.quantize(Decimal('0.01'))}%"
+
+
+def _format_weight_pct(value: Any) -> str:
+    number = _to_decimal(value)
+    if number is None:
+        return f"{_format_value(value)}%"
+    if abs(number) <= Decimal("1"):
+        number *= Decimal("100")
+    return f"{number.quantize(Decimal('0.01'))}%"
+
+
+def _asset_class_label(asset_class: str) -> str:
+    labels = {
+        "stock_us": "미국 주식",
+        "stock_kr": "한국 주식",
+        "crypto": "암호화폐",
+        "cash": "현금",
+    }
+    return labels.get(asset_class, asset_class)
+
+
+def _portfolio_context_to_text(ctx: dict[str, Any]) -> str | None:
+    if ctx.get("portfolio_context_unavailable"):
+        return None
+
+    client_context = ctx.get("client_context") if isinstance(ctx.get("client_context"), dict) else {}
+    indicators = ctx.get("indicators") if isinstance(ctx.get("indicators"), dict) else {}
+    holdings = ctx.get("holdings") if isinstance(ctx.get("holdings"), list) else []
+    client_name = str(client_context.get("client_name") or "선택 고객")
+
+    total_value = indicators.get("total_value")
+    pnl_pct = indicators.get("pnl_pct")
+    n_holdings = indicators.get("n_holdings")
+    if total_value is None or pnl_pct is None:
+        return None
+
+    lines = [
+        (
+            f"{client_name}의 포트폴리오는 총 평가금액 {_format_krw(total_value)}, "
+            f"총 손익률 {_format_pct(pnl_pct)}, 보유 종목 {n_holdings}개입니다."
+        )
+    ]
+
+    breakdown = indicators.get("asset_class_breakdown")
+    if isinstance(breakdown, dict) and breakdown:
+        allocation = ", ".join(
+            f"{_asset_class_label(str(asset_class))} {_format_weight_pct(weight)}"
+            for asset_class, weight in breakdown.items()
+        )
+        lines.append(f"자산군 비중은 {allocation}입니다.")
+
+    holding_summaries: list[str] = []
+    for holding in holdings[:3]:
+        if not isinstance(holding, dict):
+            continue
+        code = str(holding.get("code") or "").strip()
+        value_krw = holding.get("value_krw")
+        holding_pnl_pct = holding.get("pnl_pct")
+        if code and value_krw is not None and holding_pnl_pct is not None:
+            holding_summaries.append(
+                f"{code}({_format_krw(value_krw)}, {_format_pct(holding_pnl_pct)})"
+            )
+    if holding_summaries:
+        lines.append(f"주요 보유 종목은 {', '.join(holding_summaries)}입니다.")
+
+    return " ".join(lines)
 
 
 def _coerce_llm_answer_to_text(text: str) -> str:
@@ -225,6 +344,228 @@ def _fallback_text(agent: str, user_query: str) -> str:
     return f"{user_query or '요청한 내용'}에 대한 분석을 정리했습니다."
 
 
+def _client_id_from_label(label: str) -> str | None:
+    normalized = label.strip().upper()
+    if len(normalized) != 1 or not ("A" <= normalized <= "Z"):
+        return None
+    return f"client-{ord(normalized) - ord('A') + 1:03d}"
+
+
+def _normalize_client_reference(value: str) -> str | None:
+    candidate = value.strip()
+    if not candidate:
+        return None
+
+    id_match = _CLIENT_ID_RE.fullmatch(candidate)
+    if id_match is not None:
+        return f"client-{id_match.group(1)}"
+
+    numeric_match = _CLIENT_NUMERIC_RE.fullmatch(candidate)
+    if numeric_match is not None:
+        return f"client-{int(numeric_match.group(1)):03d}"
+
+    label_id = _client_id_from_label(candidate)
+    if label_id is not None:
+        return label_id
+
+    for pattern in (_CLIENT_LABEL_RE, _CLIENT_REVERSE_LABEL_RE):
+        label_match = pattern.fullmatch(candidate)
+        if label_match is not None:
+            label_id = _client_id_from_label(label_match.group(1))
+            if label_id is not None:
+                return label_id
+
+    return None
+
+
+def _client_display_name(client_id: str) -> str:
+    match = _CLIENT_ID_RE.fullmatch(client_id.strip())
+    if match is None:
+        return client_id
+    index = int(match.group(1)) - 1
+    if 0 <= index < 26:
+        return f"고객 {chr(ord('A') + index)}"
+    return client_id
+
+
+def _resolve_requested_client(step: CopilotStep, user_query: str) -> tuple[str, bool]:
+    input_client_id = step.inputs.get("client_id")
+    if isinstance(input_client_id, str) and input_client_id.strip():
+        normalized = _normalize_client_reference(input_client_id)
+        return normalized or input_client_id.strip(), True
+
+    id_match = _CLIENT_ID_RE.search(user_query)
+    if id_match is not None:
+        return f"client-{id_match.group(1)}", True
+
+    numeric_match = _CLIENT_NUMERIC_RE.search(user_query)
+    if numeric_match is not None:
+        return f"client-{int(numeric_match.group(1)):03d}", True
+
+    for pattern in (_CLIENT_LABEL_RE, _CLIENT_REVERSE_LABEL_RE):
+        label_match = pattern.search(user_query)
+        if label_match is not None:
+            resolved = _client_id_from_label(label_match.group(1))
+            if resolved is not None:
+                return resolved, True
+
+    return _DEFAULT_COPILOT_CLIENT_ID, False
+
+
+def _client_reference_fragment(user_query: str) -> str | None:
+    match = _CLIENT_REFERENCE_PREFIX_RE.search(user_query)
+    if match is None:
+        return None
+    reference = match.group("reference").strip()
+    if not _CLIENT_REFERENCE_MARKER_RE.search(reference) and not _CLIENT_PORTFOLIO_TERM_RE.search(
+        user_query
+    ):
+        return None
+    if reference.casefold() in _GENERIC_CLIENT_REFERENCES:
+        return None
+    return reference or None
+
+
+def _build_client_portfolio_plan(query: str, *, session_id: str) -> CopilotPlan | None:
+    reference = _client_reference_fragment(query)
+    if not reference:
+        return None
+    return CopilotPlan(
+        plan_id=f"client-portfolio-{uuid.uuid4().hex[:8]}",
+        session_id=session_id,
+        created_at=datetime.datetime.now(datetime.UTC).isoformat().replace("+00:00", "Z"),
+        steps=[
+            CopilotStep(
+                step_id="client-portfolio",
+                agent="portfolio",
+                inputs={"client_id": reference},
+                depends_on=[],
+                gate_policy=GatePolicy.model_validate(
+                    {"schema": True, "domain": True, "critique": True}
+                ),
+            )
+        ],
+    )
+
+
+async def _resolve_client_for_copilot(
+    step: CopilotStep,
+    user_query: str,
+) -> tuple[str, bool, str | None, Any | None]:
+    from app.db.session import AsyncSessionLocal
+    from app.services.clients import resolve_client_reference
+
+    input_client_id = step.inputs.get("client_id")
+    raw_input = input_client_id.strip() if isinstance(input_client_id, str) else ""
+    reference = raw_input or _client_reference_fragment(user_query)
+    if not reference:
+        client_id, client_was_explicit = _resolve_requested_client(step, user_query)
+        return client_id, client_was_explicit, None, None
+
+    async with AsyncSessionLocal() as db:
+        resolution = await resolve_client_reference(
+            db,
+            reference,
+            user_ids=_PORTFOLIO_USER_IDS,
+        )
+
+    if resolution.status == "resolved" and resolution.client_id:
+        return resolution.client_id, True, resolution.display_label, resolution
+    return _DEFAULT_COPILOT_CLIENT_ID, True, None, resolution
+
+
+def _client_candidate_payload(candidate: Any) -> dict[str, Any]:
+    last_activity_at = getattr(candidate, "last_activity_at", None)
+    last_activity = (
+        last_activity_at.isoformat() if hasattr(last_activity_at, "isoformat") else None
+    )
+    client_id = str(getattr(candidate, "client_id", "") or "")
+    label = getattr(candidate, "label", None)
+    display_name = getattr(candidate, "display_name", None)
+    display_label = (
+        str(getattr(candidate, "display_label", "") or "").strip()
+        or str(display_name or "").strip()
+        or str(label or "").strip()
+        or client_id
+    )
+    return {
+        "user_id": str(getattr(candidate, "user_id", "") or ""),
+        "client_id": client_id,
+        "label": label,
+        "display_name": display_name,
+        "display_label": display_label,
+        "match_type": str(getattr(candidate, "match_type", "") or ""),
+        "matched_value": str(getattr(candidate, "matched_value", "") or ""),
+        "holdings_count": int(getattr(candidate, "holdings_count", 0) or 0),
+        "last_activity_at": last_activity,
+    }
+
+
+def _client_resolution_result(resolution: Any) -> dict[str, Any]:
+    status = getattr(resolution, "status", "not_found")
+    candidates = list(getattr(resolution, "candidates", ()) or ())
+    candidate_payloads = [_client_candidate_payload(candidate) for candidate in candidates[:10]]
+    if status == "ambiguous":
+        lines = ["일치하는 고객이 여러 명입니다. 고객을 선택해 주세요."]
+        for idx, candidate in enumerate(candidates[:5], start=1):
+            last_activity = (
+                candidate.last_activity_at.date().isoformat()
+                if getattr(candidate, "last_activity_at", None)
+                else "최근 활동 없음"
+            )
+            lines.append(
+                f"{idx}. {candidate.display_label} ({candidate.client_id}) · "
+                f"보유 {candidate.holdings_count}개 · {last_activity}"
+            )
+        content = "\n".join(lines)
+    elif status == "mismatch":
+        lines = ["입력한 고객 라벨과 이름이 서로 다른 고객을 가리킵니다. 고객을 다시 선택해 주세요."]
+        for candidate in candidates[:5]:
+            lines.append(f"- {candidate.display_label} ({candidate.client_id})")
+        content = "\n".join(lines)
+    else:
+        content = "입력한 고객을 찾을 수 없습니다. 고객 ID, 고객 라벨, 또는 등록된 고객명을 확인해 주세요."
+
+    return {
+        "card": {
+            "type": "text",
+            "content": content,
+            "degraded": True,
+            "degraded_reason": str(status),
+            "client_resolution_status": str(status),
+            "client_resolution_reason": str(getattr(resolution, "reason", "") or ""),
+            "requires_client_selection": status in {"ambiguous", "mismatch"},
+            "client_candidates": candidate_payloads,
+        },
+        "gate_results": {"schema": "pass", "domain": "fail", "critique": "skip"},
+    }
+
+
+def _missing_portfolio_context_result(ctx: dict[str, Any]) -> dict[str, Any]:
+    client_context = ctx.get("client_context") if isinstance(ctx.get("client_context"), dict) else {}
+    client_id = str(client_context.get("client_id") or _DEFAULT_COPILOT_CLIENT_ID)
+    client_name = str(client_context.get("client_name") or _client_display_name(client_id))
+    content = (
+        f"{client_name}({client_id})의 포트폴리오 원장 데이터가 없습니다. "
+        "존재하지 않거나 아직 업로드되지 않은 고객에 대해 총 평가금액, 수익률, 자산 비중을 "
+        "산출하지 않겠습니다. 고객 목록 또는 업로드 원장을 확인해 주세요."
+    )
+    return {
+        "card": {
+            "type": "text",
+            "content": content,
+            "degraded": True,
+            "degraded_reason": "client_portfolio_not_found",
+            "client_resolution_status": "no_portfolio_data",
+            "client_resolution_reason": "client_resolved_but_portfolio_missing",
+            "requires_client_selection": False,
+            "client_id": client_id,
+            "client_name": client_name,
+        },
+        "gate_results": {"schema": "pass", "domain": "fail", "critique": "skip"},
+    }
+
+
 _AGENT_PROMPT_MAP: dict[str, str] = {
     "stock": "stock_system",
     "crypto": "crypto_system",
@@ -281,7 +622,9 @@ def _run_step_sync(step: CopilotStep, user_query: str = "") -> dict[str, Any]:
     }
 
 
-async def _fetch_portfolio_context() -> dict[str, Any]:
+async def _fetch_portfolio_context(
+    *, client_id: str = _DEFAULT_COPILOT_CLIENT_ID, client_name: str | None = None
+) -> dict[str, Any]:
     from sqlalchemy import select
 
     from app.db.models import Holding
@@ -289,18 +632,51 @@ async def _fetch_portfolio_context() -> dict[str, Any]:
     from app.services.portfolio import compute_summary, get_period_snapshot, get_prev_snapshot
 
     async with AsyncSessionLocal() as db:
-        result = await db.execute(select(Holding).where(Holding.user_id == "demo"))
-        holdings_rows = list(result.scalars().all())
-        prev_snap = await get_prev_snapshot(db, user_id="demo")
-        period_snap = await get_period_snapshot(db, user_id="demo", period_days=30)
+        holdings_rows = []
+        user_id = _PORTFOLIO_USER_IDS[0]
+        for candidate_user_id in _PORTFOLIO_USER_IDS:
+            result = await db.execute(
+                select(Holding).where(
+                    Holding.user_id == candidate_user_id,
+                    Holding.client_id == client_id,
+                )
+            )
+            holdings_rows = list(result.scalars().all())
+            if holdings_rows:
+                user_id = candidate_user_id
+                break
+
+        if not holdings_rows:
+            return {
+                "portfolio_context_unavailable": True,
+                "reason": "client_portfolio_not_found",
+                "client_context": {
+                    "client_id": client_id,
+                    "client_name": client_name or _client_display_name(client_id),
+                },
+                "indicators": {},
+                "holdings": [],
+            }
+
+        prev_snap = await get_prev_snapshot(db, user_id=user_id, client_id=client_id)
+        period_snap = await get_period_snapshot(
+            db, user_id=user_id, period_days=30, client_id=client_id
+        )
         summary = await compute_summary(
             holdings_rows,
             prev_snapshot=prev_snap,
             period_snapshot=period_snap,
             period_days=30,
+            user_id=user_id,
+            client_id=client_id,
+            client_name=client_name or _client_display_name(client_id),
         )
 
     return {
+        "client_context": {
+            "client_id": client_id,
+            "client_name": client_name or _client_display_name(client_id),
+        },
         "indicators": {
             "total_value": str(summary.total_value_krw),
             "pnl_pct": str(summary.total_pnl_pct),
@@ -335,6 +711,7 @@ async def _run_agent_llm(
     if prompt_name is None:
         return _run_step_sync(step, user_query)
 
+    portfolio_text: str | None = None
     try:
         memory_context = (
             format_context_for_agent(active_context)
@@ -342,15 +719,34 @@ async def _run_agent_llm(
             else "Conversation context: none."
         )
         if agent in {"portfolio", "rebalance"}:
+            (
+                client_id,
+                client_was_explicit,
+                resolved_client_name,
+                client_resolution,
+            ) = await _resolve_client_for_copilot(step, user_query)
+            if client_resolution is not None and client_resolution.status != "resolved":
+                return _client_resolution_result(client_resolution)
             try:
-                ctx = await _fetch_portfolio_context()
+                ctx = await _fetch_portfolio_context(
+                    client_id=client_id,
+                    client_name=resolved_client_name,
+                )
             except Exception as exc:  # noqa: BLE001
                 ctx = {
                     "portfolio_context_unavailable": True,
                     "reason": type(exc).__name__,
+                    "client_context": {
+                        "client_id": client_id,
+                        "client_name": resolved_client_name or _client_display_name(client_id),
+                    },
                     "indicators": {},
                     "holdings": [],
                 }
+            if client_was_explicit and ctx.get("portfolio_context_unavailable"):
+                return _missing_portfolio_context_result(ctx)
+            if agent == "portfolio":
+                portfolio_text = _portfolio_context_to_text(ctx)
             user_content = (
                 f"{memory_context}\n\n"
                 f"User question: {user_query}\n\n"
@@ -373,11 +769,24 @@ async def _run_agent_llm(
         cleaned = _coerce_llm_answer_to_text(_strip_code_fence(raw)) or _fallback_text(
             agent, user_query
         )
+        critique_gate = "pass"
+        if portfolio_text:
+            cleaned = portfolio_text
+            critique_gate = "skip"
         return {
             "card": {"type": "text", "content": cleaned, "degraded": False},
-            "gate_results": {"schema": "pass", "domain": "pass", "critique": "pass"},
+            "gate_results": {"schema": "pass", "domain": "pass", "critique": critique_gate},
         }
     except LLMUnavailableError:
+        if portfolio_text:
+            return {
+                "card": {
+                    "type": "text",
+                    "content": portfolio_text,
+                    "degraded": True,
+                },
+                "gate_results": {"schema": "pass", "domain": "pass", "critique": "skip"},
+            }
         return {
             "card": {
                 "type": "text",
@@ -598,6 +1007,91 @@ def _card_to_final_text(card: dict[str, Any]) -> str:
     return "분석 결과를 정리했습니다."
 
 
+def _compose_local_final_text(step_results: dict[str, dict[str, Any]]) -> tuple[str, bool]:
+    bodies: list[str] = []
+    any_step_degraded = False
+    for _sid, result in step_results.items():
+        card = result.get("card", {})
+        degraded = bool(result.get("degraded", False) or card.get("degraded", False))
+        if degraded:
+            any_step_degraded = True
+        content = _card_to_final_text(card)
+        if len(step_results) == 1:
+            bodies.append(content)
+        else:
+            suffix = " (일부 제한)" if degraded else ""
+            bodies.append(f"분석 결과{suffix}\n{content}")
+    return "\n\n".join(bodies) or "분석 결과를 정리했습니다.", any_step_degraded
+
+
+def _client_safety_metadata(step_results: dict[str, dict[str, Any]]) -> dict[str, Any]:
+    for result in step_results.values():
+        card = result.get("card", {})
+        if not isinstance(card, dict):
+            continue
+        status = card.get("client_resolution_status")
+        if status not in _SAFETY_CLIENT_RESOLUTION_STATUSES:
+            continue
+        metadata: dict[str, Any] = {
+            "degraded_reason": card.get("degraded_reason") or status,
+            "client_resolution_status": status,
+            "client_resolution_reason": card.get("client_resolution_reason"),
+            "requires_client_selection": bool(card.get("requires_client_selection", False)),
+        }
+        for key in ("client_id", "client_name", "client_candidates"):
+            if key in card:
+                metadata[key] = card[key]
+        return metadata
+    return {}
+
+
+def _build_synthesizer_payload(
+    step_results: dict[str, dict[str, Any]],
+    query: str,
+) -> dict[str, Any]:
+    steps: list[dict[str, Any]] = []
+    for step_id, result in step_results.items():
+        card = result.get("card", {})
+        steps.append(
+            {
+                "step_id": step_id,
+                "agent": result.get("agent"),
+                "degraded": bool(result.get("degraded", False) or card.get("degraded", False)),
+                "card": card,
+                "gate_results": result.get("gate_results", {}),
+            }
+        )
+    return {
+        "user_query": query,
+        "steps": steps,
+        "instructions": {
+            "language": "ko",
+            "audience": "PB",
+            "no_new_numbers": True,
+            "degraded_if_any_step_degraded": True,
+        },
+    }
+
+
+async def _run_final_synthesizer_llm(
+    step_results: dict[str, dict[str, Any]],
+    query: str,
+) -> str:
+    from app.agents.llm import LLMUnavailableError, call_llm
+
+    payload = _build_synthesizer_payload(step_results, query)
+    raw = await call_llm(
+        system_prompt_name="copilot_synthesizer_system",
+        user_content=json.dumps(payload, ensure_ascii=False, default=str),
+        temperature=0.2,
+        max_tokens=1200,
+    )
+    content = _coerce_llm_answer_to_text(_strip_code_fence(raw))
+    if not content or content in {"{}", "[]"}:
+        raise LLMUnavailableError("empty synthesizer output")
+    return content
+
+
 async def _run_final_gate(
     step_results: dict[str, dict[str, Any]],
     query: str,
@@ -607,26 +1101,25 @@ async def _run_final_gate(
 
     sprint-05: 세션 컨텍스트를 썼더라도 매번 전부 재실행 (캐시 금지).
     """
-    # 최종 통합 카드 합성
-    bodies = []
-    any_step_degraded = False
-    for _sid, r in step_results.items():
-        card = r.get("card", {})
-        degraded = r.get("degraded", False) or card.get("degraded", False)
-        if degraded:
-            any_step_degraded = True
-        content = _card_to_final_text(card)
-        if len(step_results) == 1:
-            bodies.append(content)
-        else:
-            suffix = " (일부 제한)" if degraded else ""
-            bodies.append(f"분석 결과{suffix}\n{content}")
+    local_content, any_step_degraded = _compose_local_final_text(step_results)
+    safety_metadata = _client_safety_metadata(step_results)
+    synthesizer_degraded = False
+    if safety_metadata:
+        final_content = local_content
+    else:
+        try:
+            final_content = await _run_final_synthesizer_llm(step_results, query)
+        except Exception:  # noqa: BLE001
+            final_content = local_content
+            synthesizer_degraded = True
 
     final_card: dict[str, Any] = {
         "type": "text",
-        "content": "\n\n".join(bodies) or "분석 결과를 정리했습니다.",
-        "degraded": any_step_degraded,
+        "content": final_content,
+        "degraded": any_step_degraded or synthesizer_degraded,
     }
+    if safety_metadata:
+        final_card.update(safety_metadata)
 
     final_step = CopilotStep.model_construct(
         step_id="final",
@@ -662,7 +1155,12 @@ async def _run_final_gate(
         )
     )
 
-    critique_status, critique_reason = await _critique_gate(final_card, final_step, is_final=True)
+    if safety_metadata:
+        critique_status, critique_reason = "pass", "deterministic_client_resolution"
+    else:
+        critique_status, critique_reason = await _critique_gate(
+            final_card, final_step, is_final=True
+        )
     await queue.put(
         _sse(
             {
@@ -810,14 +1308,14 @@ async def stream_copilot_query(
             yield chunk
         return
 
-    try:
-        plan: CopilotPlan = await build_copilot_plan(
-            query=context_str, session_id=resolved_session_id
-        )
-    except Exception as exc:  # noqa: BLE001
-        yield _sse({"type": "error", "code": "PLANNER_ERROR", "message": str(exc)})
-        yield _sse({"type": "done", "session_id": resolved_session_id, "turn_id": turn_id})
-        return
+    plan = _build_client_portfolio_plan(query, session_id=resolved_session_id)
+    if plan is None:
+        try:
+            plan = await build_copilot_plan(query=context_str, session_id=resolved_session_id)
+        except Exception as exc:  # noqa: BLE001
+            yield _sse({"type": "error", "code": "PLANNER_ERROR", "message": str(exc)})
+            yield _sse({"type": "done", "session_id": resolved_session_id, "turn_id": turn_id})
+            return
 
     yield _sse({"type": "plan.ready", "plan": plan.model_dump()})
 

@@ -53,6 +53,52 @@ describe("ThreadView", () => {
     expect(textarea.value).toBe("");
   });
 
+  it("renders ambiguous client candidates and selects only the clicked client id", () => {
+    const onClientCandidateSelect = vi.fn();
+
+    renderWithProviders(
+      <ThreadView
+        sessionId="s1"
+        messages={[
+          {
+            role: "assistant",
+            content: "일치하는 고객이 여러 명입니다. 고객을 선택해 주세요.",
+            card: {
+              type: "text",
+              content: "일치하는 고객이 여러 명입니다. 고객을 선택해 주세요.",
+              degraded: true,
+              client_resolution_status: "ambiguous",
+              requires_client_selection: true,
+              client_candidates: [
+                {
+                  client_id: "client-007",
+                  display_label: "김민수",
+                  holdings_count: 4,
+                  last_activity_at: "2026-05-01T09:00:00",
+                },
+                {
+                  client_id: "client-003",
+                  display_label: "김민수",
+                  holdings_count: 1,
+                  last_activity_at: "2026-04-01T09:00:00",
+                },
+              ],
+            },
+          },
+        ]}
+        streamState={initialCopilotState}
+        onSendMessage={vi.fn()}
+        onClientCandidateSelect={onClientCandidateSelect}
+      />,
+    );
+
+    expect(screen.getByTestId("client-candidate-list")).toBeInTheDocument();
+    fireEvent.click(screen.getByTestId("client-candidate-client-007"));
+
+    expect(onClientCandidateSelect).toHaveBeenCalledWith("client-007");
+    expect(onClientCandidateSelect).toHaveBeenCalledTimes(1);
+  });
+
   it("shows a typing skeleton while the stream is running and hides raw gate details", () => {
     renderWithProviders(
       <ThreadView

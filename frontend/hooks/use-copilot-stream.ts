@@ -17,6 +17,18 @@ export interface CopilotPlanStep {
   gate_policy: { schema: boolean; domain: boolean; critique: boolean };
 }
 
+export interface CopilotClientCandidate {
+  user_id?: string;
+  client_id: string;
+  label?: string | null;
+  display_name?: string | null;
+  display_label?: string | null;
+  match_type?: string;
+  matched_value?: string;
+  holdings_count?: number;
+  last_activity_at?: string | null;
+}
+
 export interface CopilotCard {
   type:
     | "text"
@@ -27,6 +39,13 @@ export interface CopilotCard {
     | "simulator_result"
     | "news_rag_list";
   degraded?: boolean;
+  degraded_reason?: string | null;
+  client_resolution_status?: string | null;
+  client_resolution_reason?: string | null;
+  requires_client_selection?: boolean;
+  client_id?: string | null;
+  client_name?: string | null;
+  client_candidates?: CopilotClientCandidate[];
   body?: string;
   content?: string;
   [key: string]: unknown;

@@ -88,6 +88,14 @@ _FIELD_ALIASES: dict[str, tuple[str, ...]] = {
     "market": ("market", "exchange", "broker", "거래소", "시장"),
     "account": ("account", "account_no", "account number", "계좌", "계좌번호", "계좌 번호"),
     "client_id": ("client_id", "customer_id", "고객id", "고객 id", "고객번호"),
+    "client_name": (
+        "client_name",
+        "customer_name",
+        "customer",
+        "고객명",
+        "고객 이름",
+        "고객이름",
+    ),
     "broker": ("broker", "증권사", "브로커"),
     "date": ("date", "trade_date", "as_of_date", "기준일", "거래일", "일자"),
 }
@@ -329,6 +337,7 @@ def build_mapping_candidates(
         "currency",
         "market",
         "client_id",
+        "client_name",
         "account",
         "broker",
         "name",
@@ -573,6 +582,7 @@ def _normalize_holdings_from_csv_legacy(
     name_col = schema.mapped_columns.get("name")
     account_col = schema.mapped_columns.get("account")
     client_col = schema.mapped_columns.get("client_id")
+    client_name_col = schema.mapped_columns.get("client_name")
 
     holdings: list[NormalizedCsvHolding] = []
     needs_confirmation = bool(schema.review_fields)
@@ -621,6 +631,7 @@ def _normalize_holdings_from_csv_legacy(
         holdings.append(
             NormalizedCsvHolding(
                 client_id=_string_value(row.get(client_col)) if client_col else None,
+                client_name=_string_value(row.get(client_name_col)) if client_name_col else None,
                 account=_string_value(row.get(account_col)) if account_col else None,
                 market=market,
                 code=code.upper(),
@@ -677,6 +688,7 @@ def normalize_holdings_from_csv(
     name_col = schema.mapped_columns.get("name")
     account_col = schema.mapped_columns.get("account")
     client_col = schema.mapped_columns.get("client_id")
+    client_name_col = schema.mapped_columns.get("client_name")
 
     holdings: list[NormalizedCsvHolding] = []
     needs_confirmation = bool(schema.review_fields)
@@ -763,6 +775,7 @@ def normalize_holdings_from_csv(
         holdings.append(
             NormalizedCsvHolding(
                 client_id=_string_value(row.get(client_col)) if client_col else None,
+                client_name=_string_value(row.get(client_name_col)) if client_name_col else None,
                 account=_string_value(row.get(account_col)) if account_col else None,
                 market=market,
                 code=code.upper(),

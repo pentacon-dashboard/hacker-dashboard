@@ -53,6 +53,63 @@ class WatchlistItem(Base):
     user: Mapped[User] = relationship(back_populates="watchlist")
 
 
+class Client(Base):
+    """PB-managed client registry.
+
+    `client_id` is the canonical key used by portfolio ledgers. `label` is a
+    work label such as "Client C" or "고객 C"; `display_name` is the real client
+    name when the PB has confirmed it.
+    """
+
+    __tablename__ = "clients"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[str] = mapped_column(String(50), nullable=False, default="pb-demo", index=True)
+    client_id: Mapped[str] = mapped_column(String(50), nullable=False, index=True)
+    label: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    display_name: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    normalized_label: Mapped[str | None] = mapped_column(String(128), nullable=True, index=True)
+    normalized_name: Mapped[str | None] = mapped_column(String(128), nullable=True, index=True)
+    status: Mapped[str] = mapped_column(String(32), nullable=False, default="active")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+
+    __table_args__ = (
+        UniqueConstraint("user_id", "client_id", name="uq_clients_user_client_id"),
+    )
+
+
+class ClientAlias(Base):
+    """Additional deterministic client lookup terms.
+
+    alias_type separates `name`, `label`, `upload_source`, and manual aliases so
+    the resolver can apply the correct precedence without treating labels as
+    real names.
+    """
+
+    __tablename__ = "client_aliases"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[str] = mapped_column(String(50), nullable=False, default="pb-demo", index=True)
+    client_id: Mapped[str] = mapped_column(String(50), nullable=False, index=True)
+    alias_type: Mapped[str] = mapped_column(String(32), nullable=False)
+    alias_value: Mapped[str] = mapped_column(String(128), nullable=False)
+    normalized_value: Mapped[str] = mapped_column(String(128), nullable=False, index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    __table_args__ = (
+        UniqueConstraint(
+            "user_id",
+            "client_id",
+            "alias_type",
+            "normalized_value",
+            name="uq_client_aliases_user_client_type_value",
+        ),
+    )
+
+
 class Holding(Base):
     """week-3: 포트폴리오 보유 종목. user_id='demo' 고정 (데모 단일 사용자)."""
 
