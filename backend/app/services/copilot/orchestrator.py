@@ -565,15 +565,15 @@ def _missing_portfolio_context_result(ctx: dict[str, Any]) -> dict[str, Any]:
     client_name = str(client_context.get("client_name") or _client_display_name(client_id))
     content = (
         f"{client_name}({client_id})의 포트폴리오 원장 데이터가 없습니다. "
-        "존재하지 않거나 아직 업로드되지 않은 고객에 대해 총 평가금액, 수익률, 자산 비중을 "
-        "산출하지 않겠습니다. 고객 목록 또는 업로드 원장을 확인해 주세요."
+        "해당 고객은 식별됐지만 업로드된 원장이 없어 총 평가금액, 수익률, 자산 비중을 "
+        "산출하지 않겠습니다. 업로드 원장 또는 고객별 보유자산을 확인해 주세요."
     )
     return {
         "card": {
             "type": "text",
             "content": content,
             "degraded": True,
-            "degraded_reason": "client_portfolio_not_found",
+            "degraded_reason": "no_portfolio_data",
             "client_resolution_status": "no_portfolio_data",
             "client_resolution_reason": "client_resolved_but_portfolio_missing",
             "requires_client_selection": False,
@@ -667,7 +667,7 @@ async def _fetch_portfolio_context(
         if not holdings_rows:
             return {
                 "portfolio_context_unavailable": True,
-                "reason": "client_portfolio_not_found",
+                "reason": "no_portfolio_data",
                 "client_context": {
                     "client_id": client_id,
                     "client_name": client_name or _client_display_name(client_id),

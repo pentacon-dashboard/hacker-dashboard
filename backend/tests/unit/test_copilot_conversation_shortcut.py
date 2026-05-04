@@ -242,7 +242,7 @@ async def test_portfolio_agent_degrades_when_requested_client_has_no_data(
         captured_client_ids.append(client_id)
         return {
             "portfolio_context_unavailable": True,
-            "reason": "client_portfolio_not_found",
+            "reason": "no_portfolio_data",
             "client_context": {"client_id": client_id, "client_name": "고객 B"},
             "indicators": {},
             "holdings": [],
@@ -279,8 +279,12 @@ async def test_portfolio_agent_degrades_when_requested_client_has_no_data(
 
     assert captured_client_ids == ["client-002"]
     assert result["card"]["degraded"] is True
+    assert result["card"]["degraded_reason"] == "no_portfolio_data"
+    assert result["card"]["client_resolution_status"] == "no_portfolio_data"
     assert "고객 B" in result["card"]["content"]
     assert "포트폴리오 원장 데이터가 없습니다" in result["card"]["content"]
+    assert "해당 고객은 식별됐지만" in result["card"]["content"]
+    assert "존재하지 않거나" not in result["card"]["content"]
 
 
 @pytest.mark.parametrize(
