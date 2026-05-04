@@ -76,9 +76,7 @@ class Client(Base):
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
     )
 
-    __table_args__ = (
-        UniqueConstraint("user_id", "client_id", name="uq_clients_user_client_id"),
-    )
+    __table_args__ = (UniqueConstraint("user_id", "client_id", name="uq_clients_user_client_id"),)
 
 
 class ClientAlias(Base):
