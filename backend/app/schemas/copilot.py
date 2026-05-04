@@ -35,6 +35,13 @@ class TextCard(BaseModel):
     content: str
     citations: list[dict[str, Any]] = Field(default_factory=list)
     degraded: bool = False
+    degraded_reason: str | None = None
+    client_resolution_status: str | None = None
+    client_resolution_reason: str | None = None
+    requires_client_selection: bool = False
+    client_id: str | None = None
+    client_name: str | None = None
+    client_candidates: list[dict[str, Any]] = Field(default_factory=list)
 
 
 class ChartSeries(BaseModel):

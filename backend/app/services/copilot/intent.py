@@ -77,8 +77,38 @@ _INVESTMENT_JUDGEMENT_KEYWORDS = (
     "recommend",
 )
 
+_CORRECTION_OR_EXISTENCE_KEYWORDS = (
+    "없는데",
+    "없어",
+    "없습니다",
+    "없는 고객",
+    "존재하지",
+    "아닌데",
+    "틀렸",
+    "잘못",
+    "오류",
+    "not exist",
+    "doesn't exist",
+    "does not exist",
+    "wrong",
+    "incorrect",
+)
+
 _TICKER_OR_NUMERIC_RE = re.compile(
     r"(\b[A-Z]{2,5}\b|\b\d+(?:\.\d+)?\s?%|\b\d+(?:\.\d+)?\s?(?:주|원|달러|krw|usd)\b)",
+    re.IGNORECASE,
+)
+_CLIENT_OR_PORTFOLIO_ANALYSIS_RE = re.compile(
+    r"("
+    r"\bclient-\d{3}\b|"
+    r"\bclient\s*[-_ ]?\s*[a-z0-9]+\b|"
+    r"\bcustomer\s*[-_ ]?\s*[a-z0-9]+\b|"
+    r"\uace0\uac1d\s*[-_:]?\s*[a-z0-9]+|"
+    r"\ud3ec\ud2b8\ud3f4\ub9ac\uc624|"
+    r"portfolio|"
+    r"\ub9ac\ubc38\ub7f0\uc2f1|"
+    r"rebalance"
+    r")",
     re.IGNORECASE,
 )
 
@@ -99,6 +129,12 @@ def classify_copilot_intent(
 
     if not active_context.prior_turns:
         return CopilotIntentDecision(route="analysis", reason="no_prior_context")
+
+    if any(keyword in lowered for keyword in _CORRECTION_OR_EXISTENCE_KEYWORDS):
+        return CopilotIntentDecision(route="analysis", reason="correction_or_missing_context")
+
+    if _CLIENT_OR_PORTFOLIO_ANALYSIS_RE.search(normalized):
+        return CopilotIntentDecision(route="analysis", reason="client_or_portfolio_reference")
 
     if any(keyword in lowered for keyword in _INVESTMENT_JUDGEMENT_KEYWORDS):
         return CopilotIntentDecision(route="analysis", reason="investment_judgement_keyword")

@@ -19,6 +19,7 @@ from app.schemas.upload import (
     UploadErrorDetail,
     UploadImportResponse,
 )
+from app.services.clients import ensure_client_registry, normalize_client_name
 from app.services.upload import (
     _schema_from_confirmed_mapping,
     build_mapping_candidates,
@@ -106,6 +107,17 @@ def _selected_client_warnings(
                 f"imported into selected client '{selected_client_id}'"
             )
     return warnings
+
+
+def _source_client_names(holdings: list[NormalizedCsvHolding]) -> list[str]:
+    names_by_key: dict[str, str] = {}
+    for holding in holdings:
+        if not holding.client_name:
+            continue
+        normalized = normalize_client_name(holding.client_name)
+        if normalized:
+            names_by_key.setdefault(normalized, holding.client_name)
+    return sorted(names_by_key.values())
 
 
 def _mapping_payload(confirmed_mapping: dict[str, ConfirmedCsvMapping] | None) -> dict[str, Any]:
@@ -229,6 +241,12 @@ async def import_holdings_from_df(
             selected_client_id=client_id,
         )
     )
+    source_client_names = _source_client_names(normalized.holdings)
+    if len(source_client_names) > 1:
+        warnings.append(
+            "multiple source client_name values imported into selected client "
+            f"'{client_id}': {', '.join(source_client_names)}"
+        )
     mapping_candidates = build_mapping_candidates(df, schema)
     normalized_preview = build_normalized_preview(df, schema)
     mapping_hash = _confirmed_mapping_hash(confirmed_mapping)
@@ -343,6 +361,13 @@ async def import_holdings_from_df(
         confirmed_mapping=confirmed_mapping,
         status="imported",
         warnings=warnings,
+    )
+    await ensure_client_registry(
+        db,
+        user_id=_DEMO_USER,
+        client_id=client_id,
+        display_name=source_client_names[0] if len(source_client_names) == 1 else None,
+        source_names=source_client_names,
     )
 
     await db.commit()

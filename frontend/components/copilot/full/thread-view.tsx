@@ -3,7 +3,11 @@
 import { FormEvent, KeyboardEvent, useRef } from "react";
 import { Bot, Loader2, Send, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import type { CopilotStreamState } from "@/hooks/use-copilot-stream";
+import type {
+  CopilotCard,
+  CopilotClientCandidate,
+  CopilotStreamState,
+} from "@/hooks/use-copilot-stream";
 import { cn } from "@/lib/utils";
 import {
   artifactChipLabel,
@@ -16,6 +20,7 @@ import {
 interface ThreadMessage {
   role: "user" | "assistant";
   content: string;
+  card?: CopilotCard;
   turn_id?: string;
   analyzer?: string;
   analyzer_reason?: string;
@@ -28,6 +33,7 @@ interface ThreadViewProps {
   messages?: ThreadMessage[];
   streamState: CopilotStreamState;
   onSendMessage: (query: string) => void;
+  onClientCandidateSelect?: (clientId: string) => void;
   onArtifactSelect?: (tab: ArtifactTab) => void;
   disabled?: boolean;
 }
@@ -60,6 +66,64 @@ function ArtifactChips({
   );
 }
 
+function formatCandidateActivity(value?: string | null) {
+  if (!value) return "최근 활동 없음";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "최근 활동 있음";
+  return new Intl.DateTimeFormat("ko-KR", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(date);
+}
+
+function clientCandidatesForMessage(message: ThreadMessage): CopilotClientCandidate[] {
+  const card = message.card;
+  if (!card?.requires_client_selection || !Array.isArray(card.client_candidates)) {
+    return [];
+  }
+  return card.client_candidates.filter((candidate) => Boolean(candidate.client_id));
+}
+
+function ClientCandidateChoices({
+  candidates,
+  onSelect,
+}: {
+  candidates: CopilotClientCandidate[];
+  onSelect?: (clientId: string) => void;
+}) {
+  if (!candidates.length || !onSelect) return null;
+
+  return (
+    <div className="mt-3 flex flex-col gap-2" data-testid="client-candidate-list">
+      {candidates.map((candidate) => {
+        const label =
+          candidate.display_label ||
+          candidate.display_name ||
+          candidate.label ||
+          candidate.client_id;
+        return (
+          <button
+            key={`${candidate.user_id ?? "default"}-${candidate.client_id}`}
+            type="button"
+            className="flex w-full flex-col rounded-md border border-border px-3 py-2 text-left text-xs hover:border-primary/50 hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            onClick={() => onSelect(candidate.client_id)}
+            data-testid={`client-candidate-${candidate.client_id}`}
+          >
+            <span className="font-medium text-foreground">
+              {label} ({candidate.client_id})
+            </span>
+            <span className="mt-1 text-muted-foreground">
+              보유 {candidate.holdings_count ?? 0}개 ·{" "}
+              {formatCandidateActivity(candidate.last_activity_at)}
+            </span>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
 function AssistantTyping() {
   return (
     <div className="flex justify-start" data-testid="assistant-typing">
@@ -88,6 +152,7 @@ export function ThreadView({
   messages = [],
   streamState,
   onSendMessage,
+  onClientCandidateSelect,
   onArtifactSelect,
   disabled,
 }: ThreadViewProps) {
@@ -133,6 +198,7 @@ export function ThreadView({
 
           {messages.map((msg, index) => {
             const isUser = msg.role === "user";
+            const clientCandidates = clientCandidatesForMessage(msg);
             return (
               <div
                 key={`${msg.role}-${index}-${msg.turn_id ?? ""}`}
@@ -155,6 +221,10 @@ export function ThreadView({
                         </span>
                       )}
                       <p className="whitespace-pre-wrap text-foreground">{msg.content}</p>
+                      <ClientCandidateChoices
+                        candidates={clientCandidates}
+                        onSelect={onClientCandidateSelect}
+                      />
                       <ArtifactChips summary={msg.artifacts} onSelect={onArtifactSelect} />
                     </div>
                   </div>

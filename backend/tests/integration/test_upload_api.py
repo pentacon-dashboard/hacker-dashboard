@@ -8,7 +8,17 @@ from typing import Any
 
 import pytest
 from httpx import ASGITransport, AsyncClient
-from sqlalchemy import Column, DateTime, Integer, MetaData, Numeric, String, Table, Text
+from sqlalchemy import (
+    Column,
+    DateTime,
+    Integer,
+    MetaData,
+    Numeric,
+    String,
+    Table,
+    Text,
+    UniqueConstraint,
+)
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from app.db.session import get_db
@@ -30,6 +40,39 @@ def _csv_bytes(
 
 def _create_upload_import_tables(conn: Any) -> None:
     metadata = MetaData()
+    Table(
+        "clients",
+        metadata,
+        Column("id", Integer, primary_key=True, autoincrement=True),
+        Column("user_id", String(50), nullable=False, default="pb-demo"),
+        Column("client_id", String(50), nullable=False),
+        Column("label", String(128), nullable=True),
+        Column("display_name", String(128), nullable=True),
+        Column("normalized_label", String(128), nullable=True),
+        Column("normalized_name", String(128), nullable=True),
+        Column("status", String(32), nullable=False, default="active"),
+        Column("created_at", DateTime(timezone=True)),
+        Column("updated_at", DateTime(timezone=True)),
+        UniqueConstraint("user_id", "client_id", name="uq_clients_user_client_id"),
+    )
+    Table(
+        "client_aliases",
+        metadata,
+        Column("id", Integer, primary_key=True, autoincrement=True),
+        Column("user_id", String(50), nullable=False, default="pb-demo"),
+        Column("client_id", String(50), nullable=False),
+        Column("alias_type", String(32), nullable=False),
+        Column("alias_value", String(128), nullable=False),
+        Column("normalized_value", String(128), nullable=False),
+        Column("created_at", DateTime(timezone=True)),
+        UniqueConstraint(
+            "user_id",
+            "client_id",
+            "alias_type",
+            "normalized_value",
+            name="uq_client_aliases_user_client_type_value",
+        ),
+    )
     Table(
         "holdings",
         metadata,

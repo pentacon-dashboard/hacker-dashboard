@@ -1809,6 +1809,8 @@ export interface components {
         NormalizedCsvHolding: {
             /** Client Id */
             client_id?: string | null;
+            /** Client Name */
+            client_name?: string | null;
             /** Account */
             account?: string | null;
             /** Market */

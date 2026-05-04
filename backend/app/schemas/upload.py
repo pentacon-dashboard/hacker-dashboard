@@ -46,6 +46,7 @@ class ConfirmedCsvMapping(BaseModel):
 
 class NormalizedCsvHolding(BaseModel):
     client_id: str | None = None
+    client_name: str | None = None
     account: str | None = None
     market: str | None = None
     code: str
