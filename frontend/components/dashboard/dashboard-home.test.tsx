@@ -1,4 +1,4 @@
-import { screen } from "@testing-library/react";
+import { fireEvent, screen, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { renderWithProviders } from "@/tests/helpers/render-with-providers";
 import { SelectedClientDashboard } from "./dashboard-home";
@@ -97,6 +97,92 @@ describe("SelectedClientDashboard monitoring links", () => {
     expect(screen.getByRole("link", { name: /관련 뉴스/ })).toHaveAttribute(
       "href",
       "/news?client_id=client-001",
+    );
+  });
+});
+
+describe("SelectedClientDashboard KPI evidence", () => {
+  beforeEach(() => {
+    portfolioMocks.getPortfolioSummary.mockReset();
+    portfolioMocks.getSnapshots.mockReset();
+    portfolioMocks.getPortfolioSummary.mockResolvedValue(SUMMARY);
+    portfolioMocks.getSnapshots.mockResolvedValue([
+      {
+        id: 1,
+        user_id: "pb-demo",
+        client_id: "client-001",
+        client_name: "고객 A",
+        snapshot_date: "2026-04-07",
+        total_value_krw: "90000000",
+        total_pnl_krw: "0",
+        asset_class_breakdown: {},
+        holdings_detail: [],
+        created_at: "2026-04-07T00:00:00Z",
+      },
+      {
+        id: 2,
+        user_id: "pb-demo",
+        client_id: "client-001",
+        client_name: "고객 A",
+        snapshot_date: "2026-05-07",
+        total_value_krw: "100000000",
+        total_pnl_krw: "0",
+        asset_class_breakdown: {},
+        holdings_detail: [],
+        created_at: "2026-05-07T00:00:00Z",
+      },
+    ]);
+  });
+
+  it("opens total-assets evidence by default in customer-book mode", async () => {
+    renderWithProviders(
+      <SelectedClientDashboard clientId="client-001" clientName="고객 A" variant="clientBook" />,
+      { withQuery: true },
+    );
+
+    expect(await screen.findByRole("region", { name: /총자산 근거/ })).toBeInTheDocument();
+    const totalCard = screen.getByRole("button", { name: /총자산/ });
+    expect(totalCard).toHaveAttribute("aria-expanded", "true");
+  });
+
+  it("switches evidence panel when a KPI card is clicked", async () => {
+    renderWithProviders(
+      <SelectedClientDashboard clientId="client-001" clientName="고객 A" variant="clientBook" />,
+      { withQuery: true },
+    );
+
+    await screen.findByRole("region", { name: /총자산 근거/ });
+    fireEvent.click(screen.getByRole("button", { name: /일간 변동/ }));
+    expect(screen.getByRole("region", { name: /일간 변동 근거/ })).toBeInTheDocument();
+    expect(screen.getByText(/종목별 일간 기여를 산출할 수 없습니다/)).toBeInTheDocument();
+  });
+
+  it("does not render KPI evidence controls in full dashboard mode", async () => {
+    renderWithProviders(<SelectedClientDashboard clientId="client-001" />, {
+      withQuery: true,
+    });
+
+    expect(await screen.findByTestId("section-risk")).toBeInTheDocument();
+    expect(screen.queryByTestId("kpi-evidence-panel")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /총자산/ })).not.toBeInTheDocument();
+  });
+
+  it("keeps evidence actions scoped to the selected client", async () => {
+    renderWithProviders(
+      <SelectedClientDashboard clientId="client-001" clientName="고객 A" variant="clientBook" />,
+      { withQuery: true },
+    );
+
+    const panel = await screen.findByTestId("kpi-evidence-panel");
+    expect(within(panel).getByRole("link", { name: "고객 상세 보기" })).toHaveAttribute(
+      "href",
+      "/clients/client-001",
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: /집중도 리스크/ }));
+    expect(screen.getByRole("link", { name: "리밸런싱 검토" })).toHaveAttribute(
+      "href",
+      "/clients/client-001#rebalance",
     );
   });
 });

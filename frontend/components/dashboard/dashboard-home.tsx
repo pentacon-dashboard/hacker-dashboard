@@ -19,6 +19,10 @@ import {
   type AllocationSlice,
 } from "@/components/dashboard/allocation-breakdown";
 import { DimensionBars } from "@/components/dashboard/dimension-bars";
+import {
+  KpiEvidencePanel,
+  type KpiEvidenceKey,
+} from "@/components/dashboard/kpi-evidence-panel";
 import { KpiCard } from "@/components/dashboard/kpi-card";
 import { MarketLeaders } from "@/components/dashboard/market-leaders";
 import { NewsPanel } from "@/components/dashboard/news-panel";
@@ -111,6 +115,9 @@ export function SelectedClientDashboard({
   const { t } = useLocale();
   const { refreshIntervalMs, autoRefresh } = useDataSettings();
   const [period, setPeriod] = useState<PeriodKey>("1M");
+  const [activeEvidenceKey, setActiveEvidenceKey] =
+    useState<KpiEvidenceKey>("totalAssets");
+  const evidencePanelId = "client-book-kpi-evidence-panel";
   const range = useMemo(() => rangeForPeriod(period), [period]);
 
   const summaryQuery = useQuery({
@@ -285,6 +292,13 @@ export function SelectedClientDashboard({
               icon={<Wallet className="h-4 w-4" />}
               accent="blue"
               testId="kpi-total-value"
+              onClick={
+                isClientBookPreview
+                  ? () => setActiveEvidenceKey("totalAssets")
+                  : undefined
+              }
+              selected={isClientBookPreview && activeEvidenceKey === "totalAssets"}
+              controlsId={isClientBookPreview ? evidencePanelId : undefined}
             />
             <KpiCard
               label={t("dashboard.kpi.dailyChange")}
@@ -296,6 +310,13 @@ export function SelectedClientDashboard({
               icon={<TrendingUp className="h-4 w-4" />}
               accent="green"
               testId="kpi-daily-change"
+              onClick={
+                isClientBookPreview
+                  ? () => setActiveEvidenceKey("dailyChange")
+                  : undefined
+              }
+              selected={isClientBookPreview && activeEvidenceKey === "dailyChange"}
+              controlsId={isClientBookPreview ? evidencePanelId : undefined}
             />
             <KpiCard
               label={t("dashboard.kpi.monthlyChange")}
@@ -304,6 +325,13 @@ export function SelectedClientDashboard({
               icon={<LineChartIcon className="h-4 w-4" />}
               accent="violet"
               testId="kpi-period-change"
+              onClick={
+                isClientBookPreview
+                  ? () => setActiveEvidenceKey("periodChange")
+                  : undefined
+              }
+              selected={isClientBookPreview && activeEvidenceKey === "periodChange"}
+              controlsId={isClientBookPreview ? evidencePanelId : undefined}
             />
             <KpiCard
               label={t("dashboard.kpi.holdings")}
@@ -316,6 +344,13 @@ export function SelectedClientDashboard({
               icon={<Layers className="h-4 w-4" />}
               accent="slate"
               testId="kpi-holdings-count"
+              onClick={
+                isClientBookPreview
+                  ? () => setActiveEvidenceKey("holdings")
+                  : undefined
+              }
+              selected={isClientBookPreview && activeEvidenceKey === "holdings"}
+              controlsId={isClientBookPreview ? evidencePanelId : undefined}
             />
             {!isClientBookPreview ? (
               <KpiCard
@@ -348,10 +383,30 @@ export function SelectedClientDashboard({
               icon={<AlertTriangle className="h-4 w-4" />}
               accent="amber"
               testId="kpi-risk-score"
+              onClick={
+                isClientBookPreview
+                  ? () => setActiveEvidenceKey("concentration")
+                  : undefined
+              }
+              selected={isClientBookPreview && activeEvidenceKey === "concentration"}
+              controlsId={isClientBookPreview ? evidencePanelId : undefined}
             />
           </>
         )}
       </section>
+
+      {isClientBookPreview && summary ? (
+        <div data-testid="kpi-evidence-panel">
+          <KpiEvidencePanel
+            activeKey={activeEvidenceKey}
+            clientId={clientId}
+            summary={summary}
+            snapshots={snapshotsQuery.data ?? []}
+            hiddenHoldingCount={hiddenHoldingCount}
+            panelId={evidencePanelId}
+          />
+        </div>
+      ) : null}
 
       <section
         className={
@@ -360,30 +415,34 @@ export function SelectedClientDashboard({
             : "grid grid-cols-1 gap-4 lg:grid-cols-12"
         }
       >
-        <SectionCard
-          title={t("dashboard.assetTrend")}
+        <div
+          id={isClientBookPreview ? "client-book-asset-trend" : undefined}
           className={
             isClientBookPreview
               ? "xl:col-span-1 2xl:col-span-5"
               : "lg:col-span-5"
           }
-          testId="section-networth"
-          action={
-            isClientBookPreview ? (
-              <PeriodTabs value={period} onChange={setPeriod} />
-            ) : (
-              <span className="text-xs text-muted-foreground">
-                {PERIOD_DAYS[period]}일
-              </span>
-            )
-          }
         >
-          {snapshotsQuery.isLoading ? (
-            <Skeleton className="h-56 w-full" />
-          ) : (
-            <NetworthChart snapshots={snapshotsQuery.data ?? []} />
-          )}
-        </SectionCard>
+          <SectionCard
+            title={t("dashboard.assetTrend")}
+            testId="section-networth"
+            action={
+              isClientBookPreview ? (
+                <PeriodTabs value={period} onChange={setPeriod} />
+              ) : (
+                <span className="text-xs text-muted-foreground">
+                  {PERIOD_DAYS[period]}일
+                </span>
+              )
+            }
+          >
+            {snapshotsQuery.isLoading ? (
+              <Skeleton className="h-56 w-full" />
+            ) : (
+              <NetworthChart snapshots={snapshotsQuery.data ?? []} />
+            )}
+          </SectionCard>
+        </div>
 
         <SectionCard
           title={t("dashboard.allocation")}

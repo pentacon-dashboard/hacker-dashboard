@@ -338,7 +338,7 @@ export function KpiEvidencePanel({
     return (
       <EvidenceShell
         panelId={panelId}
-        title="일간 변화 근거"
+        title="일간 변동 근거"
         value={formatPct(dailyPct, { signed: true })}
         summary={`${formatKRWCompact(summary.daily_change_krw)} 변동은 요약 API의 확정 지표만 사용합니다.`}
         action={<EvidenceAction href={clientNewsHref(clientId)} label="관련 뉴스 보기" />}

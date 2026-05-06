@@ -297,18 +297,19 @@ export function ClientWorkspace({ clientId }: ClientWorkspaceProps) {
           </div>
         </SectionCard>
 
-        <SectionCard
-          title={t("portfolio.holdingsOverview")}
-          className="lg:col-span-8"
-          testId="portfolio-section-holdings"
-        >
-          {hiddenHoldingCount > 0 && (
-            <p className="mb-3 text-xs text-muted-foreground">
-              가격 또는 통화 데이터가 안전하게 표시되지 않아 {hiddenHoldingCount}개 보유종목을 숨겼습니다.
-            </p>
-          )}
-          <HoldingsTable holdings={displayHoldings} />
-        </SectionCard>
+        <div id="holdings" className="lg:col-span-8">
+          <SectionCard
+            title={t("portfolio.holdingsOverview")}
+            testId="portfolio-section-holdings"
+          >
+            {hiddenHoldingCount > 0 && (
+              <p className="mb-3 text-xs text-muted-foreground">
+                가격 또는 통화 데이터가 안전하게 표시되지 않아 {hiddenHoldingCount}개 보유종목을 숨겼습니다.
+              </p>
+            )}
+            <HoldingsTable holdings={displayHoldings} />
+          </SectionCard>
+        </div>
       </section>
 
       <SectionCard title={t("portfolio.sectorHeatmap")} testId="portfolio-section-heatmap">
@@ -347,6 +348,7 @@ export function ClientWorkspace({ clientId }: ClientWorkspaceProps) {
       </section>
 
       <section
+        id="rebalance"
         aria-labelledby="portfolio-rebalance-title"
         className="space-y-4"
         data-testid="portfolio-section-rebalance"
