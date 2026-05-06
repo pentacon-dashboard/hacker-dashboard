@@ -48,9 +48,9 @@ Vercel의 배포 고유 URL은 보호될 수 있으므로 GitHub README에서는
 
 ## Screenshots
 
-| Copilot query | Final answer card |
+| Customer book dashboard | CSV upload and mapping flow |
 | --- | --- |
-| ![Copilot query](docs/screenshots/copilot-query.png) | ![Copilot final card](docs/screenshots/copilot-final-card.png) |
+| ![Current customer book dashboard](docs/screenshots/current-dashboard.png) | ![Current CSV upload flow](docs/screenshots/current-upload.png) |
 
 ## CSV Upload
 
