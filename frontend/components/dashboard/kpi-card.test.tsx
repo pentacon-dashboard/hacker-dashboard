@@ -1,16 +1,47 @@
-import { describe, it, expect } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { fireEvent, screen } from "@testing-library/react";
+import { describe, expect, it, vi } from "vitest";
+
+import { renderWithProviders } from "@/tests/helpers/render-with-providers";
+
 import { KpiCard } from "./kpi-card";
 
 describe("KpiCard", () => {
-  it("label과 value를 렌더한다", () => {
-    render(<KpiCard label="총자산" value="₩18.76M" />);
-    expect(screen.getByText("총자산")).toBeInTheDocument();
-    expect(screen.getByText("₩18.76M")).toBeInTheDocument();
+  it("renders as a non-interactive card by default", () => {
+    renderWithProviders(
+      <KpiCard label="총자산" value="₩1.00B" testId="plain-kpi" />,
+    );
+
+    expect(screen.getByTestId("plain-kpi").tagName).toBe("DIV");
+    expect(
+      screen.queryByRole("button", { name: /총자산/ }),
+    ).not.toBeInTheDocument();
   });
 
-  it("icon prop이 있을 때 아이콘 컨테이너를 렌더한다", () => {
-    const { container } = render(
+  it("renders as an accessible selected button when onClick is provided", () => {
+    const onClick = vi.fn();
+
+    renderWithProviders(
+      <KpiCard
+        label="총자산"
+        value="₩1.00B"
+        delta="+1.00%"
+        onClick={onClick}
+        selected
+        controlsId="kpi-evidence-panel"
+        testId="button-kpi"
+      />,
+    );
+
+    const button = screen.getByRole("button", { name: /총자산/ });
+    expect(button).toHaveAttribute("aria-expanded", "true");
+    expect(button).toHaveAttribute("aria-controls", "kpi-evidence-panel");
+    expect(button.className).toContain("ring-2");
+    fireEvent.click(button);
+    expect(onClick).toHaveBeenCalledTimes(1);
+  });
+
+  it("renders the icon container when an icon is provided", () => {
+    const { container } = renderWithProviders(
       <KpiCard
         label="수익률"
         value="+4.77%"
@@ -18,30 +49,37 @@ describe("KpiCard", () => {
         accent="green"
       />,
     );
+
     expect(screen.getByTestId("kpi-icon")).toBeInTheDocument();
-    // accent=green 이면 emerald 계열 클래스 적용
-    const iconWrap = container.querySelector('[aria-hidden="true"]');
-    expect(iconWrap?.className).toMatch(/bg-emerald-100/);
+    expect(container.querySelector('[aria-hidden="true"]')?.className).toMatch(
+      /bg-emerald-100/,
+    );
   });
 
-  it("icon 이 없으면 아이콘 컨테이너를 렌더하지 않는다", () => {
-    const { container } = render(<KpiCard label="종목 수" value="23" />);
+  it("does not render the icon container without an icon", () => {
+    const { container } = renderWithProviders(
+      <KpiCard label="종목 수" value="23" />,
+    );
+
     expect(
       container.querySelector('[aria-hidden="true"]'),
     ).not.toBeInTheDocument();
   });
 
-  it("accent prop 별로 배경 클래스가 다르게 매핑된다", () => {
-    const cases: Array<{ accent: "blue" | "amber" | "rose" | "violet" | "slate"; expectSubstring: string }> = [
+  it("maps accent props to their expected background classes", () => {
+    const cases: Array<{
+      accent: "blue" | "amber" | "rose" | "violet" | "slate";
+      expectSubstring: string;
+    }> = [
       { accent: "blue", expectSubstring: "blue" },
       { accent: "amber", expectSubstring: "amber" },
       { accent: "rose", expectSubstring: "rose" },
-      // violet accent 는 테마 accent 를 따라가도록 bg-primary 토큰 매핑됨 (accent 팔레트 반영)
       { accent: "violet", expectSubstring: "primary" },
       { accent: "slate", expectSubstring: "slate" },
     ];
+
     for (const { accent, expectSubstring } of cases) {
-      const { container } = render(
+      const { container } = renderWithProviders(
         <KpiCard
           label="x"
           value="y"
@@ -49,27 +87,28 @@ describe("KpiCard", () => {
           accent={accent}
         />,
       );
-      const wrap = container.querySelector('[aria-hidden="true"]');
-      expect(wrap?.className).toContain(expectSubstring);
+
+      expect(container.querySelector('[aria-hidden="true"]')?.className).toContain(
+        expectSubstring,
+      );
     }
   });
 
-  it("deltaValue 양수이면 초록, 음수이면 빨강 색 클래스를 적용한다", () => {
-    const { rerender, container } = render(
+  it("applies positive and negative delta value colors", () => {
+    const { container, rerender } = renderWithProviders(
       <KpiCard label="일일" value="₩373K" delta="+2.04%" deltaValue={2.04} />,
     );
-    const posSpan = container.querySelector("span.shrink-0.text-xs");
-    expect(posSpan?.className).toMatch(/green/);
+
+    expect(container.querySelector("span.shrink-0.text-xs")?.className).toMatch(
+      /green/,
+    );
 
     rerender(
       <KpiCard label="일일" value="-₩500" delta="-0.03%" deltaValue={-0.03} />,
     );
-    const negSpan = container.querySelector("span.shrink-0.text-xs");
-    expect(negSpan?.className).toMatch(/red/);
-  });
 
-  it("testId prop이 data-testid 로 투영된다", () => {
-    render(<KpiCard label="x" value="y" testId="kpi-total" />);
-    expect(screen.getByTestId("kpi-total")).toBeInTheDocument();
+    expect(container.querySelector("span.shrink-0.text-xs")?.className).toMatch(
+      /red/,
+    );
   });
 });

@@ -20,6 +20,9 @@ interface KpiCardProps {
   accent?: KpiAccent;
   tone?: "neutral" | "positive" | "negative";
   testId?: string;
+  onClick?: () => void;
+  selected?: boolean;
+  controlsId?: string;
 }
 
 const accentBg: Record<KpiAccent, string> = {
@@ -44,6 +47,9 @@ export function KpiCard({
   accent = "slate",
   tone = "neutral",
   testId,
+  onClick,
+  selected,
+  controlsId,
 }: KpiCardProps) {
   const deltaColor =
     deltaValue != null
@@ -54,16 +60,18 @@ export function KpiCard({
           ? "text-red-600 dark:text-red-400"
           : "text-muted-foreground";
 
-  return (
-    <div
-      data-testid={testId}
-      className={cn(
-        "rounded-xl border bg-card p-4 shadow-sm transition-colors",
-        "flex min-w-0 flex-col gap-2",
-      )}
-    >
-      <div className="flex items-start justify-between gap-2">
-        <span className="min-w-0 break-keep text-xs font-medium leading-tight text-muted-foreground">
+  const cardClassName = cn(
+    "rounded-xl border bg-card p-4 shadow-sm transition-colors",
+    "flex min-h-[118px] min-w-0 flex-col gap-2 text-left",
+    onClick &&
+      "w-full cursor-pointer hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+    selected && "bg-primary/5 ring-2 ring-primary/35",
+  );
+
+  const content = (
+    <>
+      <div className="flex min-w-0 items-start justify-between gap-2">
+        <span className="min-w-0 overflow-hidden text-ellipsis break-keep text-xs font-medium leading-tight text-muted-foreground">
           {label}
         </span>
         {icon && (
@@ -80,17 +88,38 @@ export function KpiCard({
       </div>
       <div className="flex min-w-0 flex-col items-start gap-1">
         <span
-          className="min-w-0 max-w-full break-keep text-base font-semibold leading-tight tracking-tight sm:text-lg md:text-xl"
+          className="min-w-0 max-w-full overflow-hidden text-ellipsis break-keep text-base font-semibold leading-tight text-foreground sm:text-lg md:text-xl"
           title={value}
         >
           {value}
         </span>
         {delta && (
-          <span className={cn("shrink-0 break-keep text-xs font-semibold leading-tight", deltaColor)}>
+          <span className={cn("max-w-full shrink-0 overflow-hidden text-ellipsis break-keep text-xs font-semibold leading-tight", deltaColor)}>
             {delta}
           </span>
         )}
       </div>
+    </>
+  );
+
+  if (onClick) {
+    return (
+      <button
+        type="button"
+        data-testid={testId}
+        className={cardClassName}
+        onClick={onClick}
+        aria-expanded={selected}
+        aria-controls={controlsId}
+      >
+        {content}
+      </button>
+    );
+  }
+
+  return (
+    <div data-testid={testId} className={cardClassName}>
+      {content}
     </div>
   );
 }
