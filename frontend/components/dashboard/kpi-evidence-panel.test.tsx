@@ -84,13 +84,17 @@ const snapshots: SnapshotResponse[] = [
   },
 ];
 
-function renderPanel(activeKey: KpiEvidenceKey, hiddenHoldingCount = 0) {
+function renderPanel(
+  activeKey: KpiEvidenceKey,
+  hiddenHoldingCount = 0,
+  panelSnapshots: SnapshotResponse[] = snapshots,
+) {
   renderWithProviders(
     <KpiEvidencePanel
       activeKey={activeKey}
       clientId="client-001"
       summary={summary}
-      snapshots={snapshots}
+      snapshots={panelSnapshots}
       hiddenHoldingCount={hiddenHoldingCount}
       panelId="kpi-evidence-panel"
     />,
@@ -128,9 +132,11 @@ describe("KpiEvidencePanel", () => {
     );
   });
 
-  it("renders degraded period comparison text without per-holding inference", () => {
-    renderPanel("periodChange");
-    expect(screen.getByText(/종목별 기간 기여를 산출할 수 없습니다/)).toBeInTheDocument();
+  it("renders degraded period comparison text when snapshots are insufficient", () => {
+    renderPanel("periodChange", 0, snapshots.slice(0, 1));
+    expect(
+      screen.getByText(/스냅샷이 2개 미만이라 기간 시작값과 종료값을 비교할 수 없습니다/),
+    ).toBeInTheDocument();
   });
 
   it("renders hidden holdings warning inside holdings evidence", () => {
