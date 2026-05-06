@@ -1,232 +1,194 @@
 # hacker-dashboard
 
-임의 투자 데이터 스키마에서 **자동으로 분석 뷰를 생성**하는 범용 금융 대시보드.
+PB/WM 투자 분석을 위한 고객 포트폴리오 대시보드입니다. 고객 또는 브로커 CSV를 업로드하면 컬럼 스키마를 감지하고 보유 종목을 정규화한 뒤, 결정론적 지표와 근거 기반 LLM 설명을 함께 제공합니다.
 
-**공모전 차별점 3:**
-1. **Router Meta Agent** — 업로드한 CSV 스키마를 분석해 자산군(주식/코인/환율/매크로)을 자동 판별, 적절한 Analyzer 를 동적 선택
-2. **3단 품질 게이트** — LLM 응답이 검증 없이 UI 에 직결되지 않도록 스키마·도메인·self-critique 3단계 검증
-3. **5초 자동 대시보드** — 임의 CSV 드롭 → 자산군 배지 + 분석 카드 + 실시간 차트 자동 구성
+> 투자 판단 보조용 도구입니다. 보장 수익, 확정적 가격 방향, 근거 없는 개인화 매수/매도 조언을 생성하지 않도록 게이트와 evidence 규칙을 둡니다.
 
----
+## Production
 
-## 아키텍처
+| Service | URL |
+| --- | --- |
+| Frontend | https://hacker-dashboard-fe.vercel.app |
+| Backend API | https://hacker-dashboard-api.fly.dev |
+| Swagger | https://hacker-dashboard-api.fly.dev/docs |
+
+Vercel의 배포 고유 URL은 보호될 수 있으므로 GitHub README에서는 public alias인 `hacker-dashboard-fe.vercel.app`을 기준 URL로 사용합니다.
+
+## Features
+
+- 범용 CSV 업로드: `symbol`, `quantity`를 코어 필드로 보고, `avg_cost`, `currency`, `market`은 컬럼 별칭 또는 종목 패턴으로 매핑/추론합니다.
+- PB 확인 흐름: 매입단가, 시장, 통화처럼 확신도가 낮은 필드는 자동으로 채우지 않고 확인 상태로 남깁니다.
+- 고객 포트폴리오 정규화: 고객, 계좌, 시장, 통화, 보유 수량, 평균단가를 공통 모델로 통합합니다.
+- 결정론적 지표 계산: 평가금액, 손익, 수익률, 자산 배분, 집중도, 리밸런싱 후보를 코드로 계산합니다.
+- Router/Analyzer: CSV 구조와 자산 패턴을 보고 주식, 코인, FX, mixed 포트폴리오 분석 흐름을 선택합니다.
+- Evidence gate: 숫자 인사이트와 보고서 문장은 입력 행, 계산 지표, API 데이터, fixture 중 하나 이상의 근거를 요구합니다.
+- Copilot: 자연어 질의를 planner, comparison, simulator, news RAG 흐름으로 분해해 스트리밍 응답을 제공합니다.
+
+## CSV Upload
+
+필수 코어 필드는 두 개입니다.
+
+| Standard field | 예시 컬럼명 |
+| --- | --- |
+| `symbol` | `symbol`, `ticker`, `ticker symbol`, `stock code`, `종목코드`, `티커심볼` |
+| `quantity` | `quantity`, `qty`, `holding qty`, `share count`, `보유수량`, `보유주식수`, `잔고 수량` |
+
+있으면 저장하고 없으면 추론 또는 PB 확인 대상으로 남기는 필드입니다.
+
+| Standard field | 예시 컬럼명 |
+| --- | --- |
+| `avg_cost` | `avg cost`, `unit cost`, `purchase price`, `book price`, `매입단가`, `평균단가` |
+| `currency` | `currency`, `ccy`, `currency code`, `통화`, `통화코드` |
+| `market` | `market`, `exchange`, `market name`, `거래시장`, `시장` |
+
+예시:
+
+```csv
+고객번호,계좌번호,거래시장,티커심볼,상품이름,보유주식수,매입단가,통화코드
+client-001,acc-001,yahoo,AAPL,Apple Inc.,3,180,USD
+```
+
+## Architecture
 
 ```mermaid
 graph TB
-    subgraph FE["Frontend (Next.js 15 + Vercel)"]
-        Upload["CSV 업로드"]
-        Dashboard["대시보드 렌더"]
-        Charts["TradingView 차트"]
-    end
+    CSV["Customer/Broker CSV"] --> Upload["Upload + Schema Detection"]
+    Upload --> Normalize["Portfolio Normalization"]
+    Normalize --> Router["Router Meta Agent"]
+    Router --> Metrics["Deterministic Metrics"]
+    Metrics --> Gates["Schema / Domain / Evidence / Critique Gates"]
+    Gates --> UI["Dashboard / Report / Copilot UI"]
 
-    subgraph BE["Backend (FastAPI + Fly.io)"]
-        Router["Router Meta Agent\n(자산군 판별)"]
-        Gate["3단 품질 게이트\nZod/Pydantic → Domain → LLM"]
-        subgraph Analyzers["Analyzers (LangGraph 서브그래프)"]
-            StockA["Stock Analyzer"]
-            CryptoA["Crypto Analyzer"]
-            FxA["FX Analyzer"]
-        end
-        Cache["Redis 캐시\n(30min TTL)"]
-    end
-
-    subgraph Data["Data Layer (Neon Postgres)"]
-        DB["hacker_dashboard DB"]
-        Snap["Portfolio Snapshots"]
-    end
-
-    Upload -->|"OpenAPI 계약"| Router
-    Router --> Gate
-    Gate --> Analyzers
-    Analyzers --> Cache
-    Cache --> Dashboard
-    Dashboard --> Charts
-    BE --> DB
-    BE --> Snap
+    UI --> FE["Next.js Frontend"]
+    Router --> BE["FastAPI Backend"]
+    BE --> DB["Postgres + pgvector"]
+    BE --> Cache["Redis optional"]
 ```
 
----
+## Tech Stack
 
-## 기술 스택
+| Area | Stack |
+| --- | --- |
+| Frontend | Next.js App Router, React 19, TypeScript, Tailwind CSS, shadcn/ui, Recharts, lightweight-charts, TanStack Query, Zustand |
+| Backend | FastAPI, Python 3.12, Pydantic v2, SQLAlchemy async, LangGraph-style agent services |
+| LLM / Search | OpenAI SDK, planner/analyzer prompts, news RAG with pgvector |
+| Data | Postgres, pgvector, Redis optional cache/session support |
+| Infra | Vercel frontend, Fly.io backend, Neon/Postgres-compatible database |
+| Test | pytest, Vitest, Playwright E2E, OpenAPI contract checks |
 
-| 계층 | 기술 |
-|------|------|
-| Frontend | Next.js 15 (App Router), React 19, TypeScript, Tailwind CSS, shadcn/ui, TradingView Lightweight Charts |
-| Backend | FastAPI, LangGraph, Pydantic v2, Python 3.12 |
-| LLM | Claude Sonnet 4.6 (기본), Opus 4.7 (고난도 분석) |
-| Data | Neon Postgres 16, Redis 7 (캐시) |
-| Infra | Docker Compose, Vercel (FE), Fly.io (BE) |
-| 테스트 | pytest, vitest, Playwright, schemathesis |
+## Local Development
 
----
+### 1. Install prerequisites
 
-## 3단 품질 게이트
+- Node.js compatible with the frontend project
+- Python 3.12 and `uv`
+- Docker Desktop for Postgres/Redis compose setup
 
-```
-입력 데이터
-    │
-    ▼
-1. 스키마/타입 검증 ── Zod (FE) + Pydantic v2 (BE)
-    │                   형식 오류, 필수 필드 누락
-    ▼
-2. 도메인 sanity check ── 가격 범위, 시간 정합성, 이상치 탐지
-    │
-    ▼
-3. LLM self-critique ── 분석 근거 인용 검증, 할루시네이션 플래그
-    │
-    ▼
-UI 렌더 (검증 배지 + 근거 출처 표시)
-```
-
-모든 단계 통과 시 초록 배지, 실패 시 오렌지/빨간 배지 + 원인 메시지.
-
----
-
-## Router 결정 근거
-
-Router 가 어떤 기준으로 Analyzer 를 선택하는지 전체 로직은 [router-decisions.md](docs/agents/router-decisions.md) 참조.
-
-UI 에서 "Router 근거 보기" 토글로 의사결정 체인 원문 확인 가능.
-
----
-
-## 스크린샷
-
-| 페이지 | 미리보기 |
-|--------|---------|
-| 홈 / CSV 업로드 | `docs/screenshots/home.png` |
-| 워치리스트 | `docs/screenshots/watchlist.png` |
-| 종목 상세 | `docs/screenshots/symbol-detail.png` |
-| 포트폴리오 | `docs/screenshots/portfolio.png` |
-| Lighthouse | `docs/screenshots/lighthouse-final.png` |
-
----
-
-## 로컬 실행
+### 2. Configure environment
 
 ```bash
-# 전제: Docker Desktop, .env 파일 (ANTHROPIC_API_KEY 주입)
-cp frontend/.env.production.example frontend/.env.local
-# ANTHROPIC_API_KEY 값 편집 후
-
-docker compose up -d --wait
-
-# 접속: http://localhost:3000 (FE), http://localhost:8000/docs (BE Swagger)
+cp backend/.env.example backend/.env
+cp frontend/.env.example frontend/.env.local
 ```
 
-**Quickstart (5단계)**
+For Docker Compose, also create a root `.env` when API keys or shared compose variables are needed. Do not commit `.env*` files.
 
-1. Docker Desktop 실행
-2. `docker compose up -d --wait`
-3. `cd backend && DATABASE_URL="postgresql+asyncpg://hacker:hacker@localhost:5432/hacker_dashboard" uv run alembic upgrade head`
-4. `make seed-db` — 데모 포트폴리오 5종(삼성전자/AAPL/TSLA/BTC/ETH) 삽입
-5. http://localhost:3000 접속
+### 3. Run with Docker Compose
 
-시드 후 `/portfolio` 페이지에 5종 holdings가 보입니다.
-
-`curl http://localhost:8000/health` → `{"status": "ok"}` 로 BE 정상 확인.
-
-시드 CSV 업로드:
 ```bash
-make seed
+docker compose up --build -d
 ```
 
-테스트 실행:
+Then run migrations against the local compose database:
+
 ```bash
-make test      # BE pytest + FE vitest
-make e2e       # Playwright smoke
-make contract  # schemathesis (서버 기동 중 필요)
+cd backend
+DATABASE_URL="postgresql+asyncpg://hacker:hacker@localhost:5432/hacker_dashboard" uv run alembic upgrade head
 ```
 
----
+Seed demo holdings:
 
-## 배포 URL
-
-| 서비스 | URL |
-|--------|-----|
-| Frontend (Vercel) | https://hacker-dashboard-fe.vercel.app |
-| Backend API (Fly.io) | https://hacker-dashboard-api.fly.dev |
-| API 문서 (Swagger) | https://hacker-dashboard-api.fly.dev/docs |
-
----
-
-## 테스트 / 커버리지
-
-[![CI](https://github.com/your-org/hacker-dashboard/actions/workflows/ci.yml/badge.svg)](https://github.com/your-org/hacker-dashboard/actions/workflows/ci.yml)
-[![Contract](https://github.com/your-org/hacker-dashboard/actions/workflows/contract.yml/badge.svg)](https://github.com/your-org/hacker-dashboard/actions/workflows/contract.yml)
-[![E2E](https://github.com/your-org/hacker-dashboard/actions/workflows/e2e.yml/badge.svg)](https://github.com/your-org/hacker-dashboard/actions/workflows/e2e.yml)
-[![Lighthouse](https://github.com/your-org/hacker-dashboard/actions/workflows/lighthouse.yml/badge.svg)](https://github.com/your-org/hacker-dashboard/actions/workflows/lighthouse.yml)
-
-| 영역 | 수치 |
-|------|------|
-| Backend pytest | 276 통과 |
-| Frontend vitest | 60 통과 |
-| E2E Playwright | 13 시나리오 |
-| Router heuristic 커버리지 | 100% |
-| OpenAPI 스키마 | 1692 라인 |
-
----
-
-## 팀 역할 (4 에이전트)
-
-| 역할 | 담당 |
-|------|------|
-| `frontend-engineer` | Next.js 페이지·컴포넌트·차트·상태관리 |
-| `backend-engineer` | FastAPI 라우트·LangGraph 노드·DB |
-| `analyzer-designer` | Router/Analyzer 프롬프트·품질 게이트 설계 |
-| `integration-qa` | E2E·계약 테스트·배포·데모 리허설 |
-
----
-
-## 자연어 Copilot
-
-헤더 커맨드바에 자연어를 입력하면 Router가 멀티스텝 에이전트 플랜을 수립해 기존 Analyzer에
-신규 서브-에이전트(comparison/simulator/news-rag)를 체인 실행하고, 결과를 SSE 스트리밍으로
-progressive하게 렌더합니다.
-
-**주요 기능:**
-- 단일 턴: `"TSLA vs NVDA 비교"` → comparison_table + chart 카드
-- follow-up: `"그럼 엔비디아 -30% 시 내 포트폴리오?"` → simulator_result (세션 메모리 carry-over)
-- news-rag: 뉴스/공시 pgvector 검색 + Claude citations 인용 강제
-- 3단 게이트: 서브-스텝 레벨 + 최종 통합 레벨 양쪽 적용
-
-**스크린샷:**
-
-| 화면 | 미리보기 |
-|------|---------|
-| Copilot 쿼리 입력 | `docs/screenshots/copilot-query.png` |
-| 최종 카드 렌더 | `docs/screenshots/copilot-final-card.png` |
-
-- Playwright E2E: `npm run test:e2e` (3종: single-turn / follow-up / degraded)
-- 골든 샘플 10건: `backend/tests/golden/samples/copilot/`
-- 데모 스크립트: [demo-rehearsal-2026-04-22.md](docs/qa/demo-rehearsal-2026-04-22.md)
-
-**stub 모드 실행 (API 키 불필요):**
 ```bash
-# NEXT_PUBLIC_COPILOT_MOCK=1 환경에서 MSW SSE mock 사용
-NEXT_PUBLIC_COPILOT_MOCK=1 npm run dev  # FE
-# 또는 make copilot-demo (docker compose + stub mode)
+make seed-db
 ```
 
----
+Open:
 
-## Copilot (자연어 질의)
+- Frontend: http://localhost:3000
+- Backend docs: http://localhost:8000/docs
+- Health: http://localhost:8000/health
 
-> 상세 내용은 위 "자연어 Copilot" 섹션 참조.
+### 4. Run services manually
 
----
+Backend:
 
-## ADR (아키텍처 결정 로그)
+```bash
+cd backend
+uv run uvicorn app.main:app --reload
+```
 
-- [0001 — 기술 스택 선택](docs/adr/0001-stack-selection.md)
-- [0007 — 포트폴리오 컨텍스트 주입](docs/adr/0007-portfolio-context-injection.md)
-- [0008 — 리밸런싱 제안 설계](docs/adr/0008-rebalance-proposal.md)
-- [0011 — Copilot SSE + 멀티스텝 오케스트레이션](docs/adr/0011-copilot-sse-and-multistep-orchestration.md)
-- [0012 — 뉴스 RAG pgvector 벡터 스토어](docs/adr/0012-news-rag-vector-store.md)
+Frontend:
 
----
+```bash
+cd frontend
+npm install
+npm run dev
+```
 
-## 배포 런북
+## Verification
 
-- [Fly.io BE 배포](docs/ops/deploy-runbook.md)
-- [Neon Postgres 운영](docs/ops/neon-runbook.md)
+Focused checks:
+
+```bash
+cd backend && uv run pytest tests/unit/test_upload_service.py -q
+cd backend && uv run pytest tests/integration/test_upload_api.py -q
+cd frontend && npm run test -- components/upload/mapping-review-card.test.tsx
+cd frontend && npm run typecheck
+cd frontend && npm run lint
+```
+
+Broader checks:
+
+```bash
+cd backend && uv run pytest -q
+cd frontend && npm run test
+cd frontend && npm run build
+make ci-local
+```
+
+E2E smoke:
+
+```bash
+cd frontend
+npx playwright test e2e/smoke.spec.ts --config=e2e/playwright.config.ts
+```
+
+## Deployment
+
+- Frontend deploys to Vercel project `hacker-dashboard-fe`.
+- Backend deploys to Fly.io app `hacker-dashboard-api`.
+- Backend `/health` with `services.db != ok` is a runtime blocker.
+- Customer demo routes should not be treated as passing if linked clients have zero holdings unless the test explicitly targets an empty state.
+
+Runbooks:
+
+- [Fly.io backend deployment](docs/ops/deploy-runbook.md)
+- [Neon/Postgres operations](docs/ops/neon-runbook.md)
+- [Production deployment checklist](docs/ops/prod-deployment-checklist.md)
+
+## Project Docs
+
+- [Codex project instructions](AGENTS.md)
+- [Investment dashboard skill](.agents/skills/investment-dashboard/SKILL.md)
+- [Competition Skills entrypoint](Skills.md)
+- [Expanded competition specification](.codex/competition/Skills.md)
+- [Router decision notes](docs/agents/router-decisions.md)
+- [Architecture ADRs](docs/adr/)
+- [Demo scenario](demo/scenario.md)
+
+## GitHub Actions
+
+[![CI](https://github.com/pentacon-dashboard/hacker-dashboard/actions/workflows/ci.yml/badge.svg)](https://github.com/pentacon-dashboard/hacker-dashboard/actions/workflows/ci.yml)
+[![Contract](https://github.com/pentacon-dashboard/hacker-dashboard/actions/workflows/contract.yml/badge.svg)](https://github.com/pentacon-dashboard/hacker-dashboard/actions/workflows/contract.yml)
+[![E2E](https://github.com/pentacon-dashboard/hacker-dashboard/actions/workflows/e2e.yml/badge.svg)](https://github.com/pentacon-dashboard/hacker-dashboard/actions/workflows/e2e.yml)
+[![Production Smoke](https://github.com/pentacon-dashboard/hacker-dashboard/actions/workflows/production-smoke.yml/badge.svg)](https://github.com/pentacon-dashboard/hacker-dashboard/actions/workflows/production-smoke.yml)
