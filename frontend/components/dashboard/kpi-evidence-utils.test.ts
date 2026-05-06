@@ -174,6 +174,24 @@ describe("kpi evidence utils", () => {
     ).toBeNull();
   });
 
+  it("returns null snapshot stats when the end value is zero", () => {
+    expect(
+      buildPeriodSnapshotStats([
+        snapshot(1, "2026-04-07", "90000000"),
+        snapshot(2, "2026-05-07", "0"),
+      ]),
+    ).toBeNull();
+  });
+
+  it("returns null snapshot stats when the end value is negative", () => {
+    expect(
+      buildPeriodSnapshotStats([
+        snapshot(1, "2026-04-07", "90000000"),
+        snapshot(2, "2026-05-07", "-1000000"),
+      ]),
+    ).toBeNull();
+  });
+
   it("returns null snapshot stats when the start or end value is invalid", () => {
     expect(
       buildPeriodSnapshotStats([

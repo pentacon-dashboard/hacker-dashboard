@@ -136,7 +136,7 @@ describe("KpiEvidencePanel", () => {
   it("renders degraded period comparison text when snapshots are insufficient", () => {
     renderPanel("periodChange", 0, snapshots.slice(0, 1));
     expect(
-      screen.getByText(/스냅샷이 2개 미만이라 기간 시작값과 종료값을 비교할 수 없습니다/),
+      screen.getByText(/스냅샷이 2개 미만이거나 시작\/종료 평가금액이 유효하지 않아/),
     ).toBeInTheDocument();
   });
 
@@ -147,9 +147,23 @@ describe("KpiEvidencePanel", () => {
     ]);
 
     expect(
-      screen.getByText(/스냅샷이 2개 미만이라 기간 시작값과 종료값을 비교할 수 없습니다/),
+      screen.getByText(/스냅샷이 2개 미만이거나 시작\/종료 평가금액이 유효하지 않아/),
     ).toBeInTheDocument();
     expect(screen.queryByText("+0.00%")).not.toBeInTheDocument();
+  });
+
+  it("does not render zero summary period percent when snapshot evidence is unusable", () => {
+    renderPanel(
+      "periodChange",
+      0,
+      [snapshots[0]!, { ...snapshots[1]!, total_value_krw: "0" }],
+      { ...summary, period_change_pct: "0.00" },
+    );
+
+    expect(screen.queryByText("+0.00%")).not.toBeInTheDocument();
+    expect(screen.getByText("근거 부족")).toBeInTheDocument();
+    expect(screen.getByText("검증 지표 근거 부족")).toBeInTheDocument();
+    expect(screen.queryByText("요약 API 기간 변화율")).not.toBeInTheDocument();
   });
 
   it("renders hidden holdings warning inside holdings evidence", () => {

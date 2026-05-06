@@ -378,12 +378,13 @@ export function KpiEvidencePanel({
 
   if (activeKey === "periodChange") {
     const periodPct = toNumber(summary.period_change_pct);
+    const hasPeriodEvidence = periodStats !== null;
 
     return (
       <EvidenceShell
         panelId={panelId}
         title={`${summary.period_days}일 변화 근거`}
-        value={formatPct(periodPct, { signed: true })}
+        value={hasPeriodEvidence ? formatPct(periodPct, { signed: true }) : "근거 부족"}
         summary="기간 변화는 스냅샷 총 평가금액의 시작값과 종료값을 비교해 검증합니다."
         action={<EvidenceAction href="#client-book-asset-trend" label="추이 자세히 보기" />}
       >
@@ -405,25 +406,32 @@ export function KpiEvidencePanel({
             </dl>
           ) : (
             <DegradedBlock title="기간 비교 근거 부족">
-              스냅샷이 2개 미만이라 기간 시작값과 종료값을 비교할 수 없습니다.
+              스냅샷이 2개 미만이거나 시작/종료 평가금액이 유효하지 않아 기간 수익률을
+              비교할 수 없습니다.
             </DegradedBlock>
           )}
         </EvidenceBlock>
         <EvidenceBlock title="검증 지표">
-          <dl>
-            <MetricTerm
-              label="요약 API 기간 변화율"
-              value={formatPct(periodPct, { signed: true })}
-              valueClassName={signedColorClass(periodPct)}
-            />
-            {periodStats ? (
+          {periodStats ? (
+            <dl>
+              <MetricTerm
+                label="요약 API 기간 변화율"
+                value={formatPct(periodPct, { signed: true })}
+                valueClassName={signedColorClass(periodPct)}
+              />
               <MetricTerm
                 label="스냅샷 산출 변화율"
                 value={formatPct(periodStats.returnPct, { signed: true })}
                 valueClassName={signedColorClass(periodStats.returnPct)}
               />
-            ) : null}
-          </dl>
+            </dl>
+          ) : (
+            <div className="mt-3">
+              <DegradedBlock title="검증 지표 근거 부족">
+                유효한 시작/종료 스냅샷이 없어 요약 기간 수익률을 검증 지표로 표시하지 않습니다.
+              </DegradedBlock>
+            </div>
+          )}
           <div className="mt-3">
             <DegradedBlock title="기간 종목 기여 근거 부족">
               종목별 기간 기여를 산출할 수 없습니다. 기간 비교는 총 평가금액
