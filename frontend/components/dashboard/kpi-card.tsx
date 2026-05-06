@@ -94,7 +94,7 @@ export function KpiCard({
           {value}
         </span>
         {delta && (
-          <span className={cn("max-w-full shrink-0 overflow-hidden text-ellipsis break-keep text-xs font-semibold leading-tight", deltaColor)}>
+          <span className={cn("min-w-0 max-w-full shrink-0 overflow-hidden text-ellipsis break-keep text-xs font-semibold leading-tight", deltaColor)}>
             {delta}
           </span>
         )}

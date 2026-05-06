@@ -111,4 +111,23 @@ describe("KpiCard", () => {
       /red/,
     );
   });
+
+  it("uses safe text handling classes for delta text", () => {
+    renderWithProviders(
+      <KpiCard label="delta" value="value" delta="+1234567890.00%" />,
+    );
+
+    expect(screen.getByText("+1234567890.00%").className).toEqual(
+      expect.stringContaining("min-w-0"),
+    );
+    expect(screen.getByText("+1234567890.00%").className).toEqual(
+      expect.stringContaining("overflow-hidden"),
+    );
+    expect(screen.getByText("+1234567890.00%").className).toEqual(
+      expect.stringContaining("text-ellipsis"),
+    );
+    expect(screen.getByText("+1234567890.00%").className).toEqual(
+      expect.stringContaining("break-keep"),
+    );
+  });
 });
