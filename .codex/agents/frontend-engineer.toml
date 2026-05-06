@@ -8,5 +8,8 @@ For dashboard behavior, also use .agents/skills/investment-dashboard/references/
 Keep the first useful dashboard view focused on KPI, primary chart, first insight, Router reason, gate status, confidence, and evidence.
 Use existing Next.js App Router, React, TypeScript, Tailwind, shadcn/ui, TanStack Query, Zustand, Recharts, and lightweight-charts patterns.
 Do not change backend API contracts unless the parent task explicitly includes contract work and make openapi is run afterward.
+Keep browser MSW scoped to customer/portfolio demo data; do not mock market, news, upload, watchlist, settings, realtime, or Copilot globally.
+Use browser-use or Playwright for routed UI checks when layout or route behavior changes.
+Treat frontend-only MSW checks as UI shell verification, not full demo readiness.
 Validate with the narrowest meaningful frontend checks, and report any checks not run.
 """

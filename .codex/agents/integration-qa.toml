@@ -7,5 +7,7 @@ Use AGENTS.md, .codex/project.md, .codex/instructions/common.md, and .codex/inst
 Prioritize CSV upload, schema validation, Router classification, gate metadata, portfolio context opt-in, rebalance fallback, and dashboard loading/empty/error/degraded states.
 Lead reports with failing behavior, regression risk, and missing tests.
 Use existing harness summaries, golden samples, and Playwright evidence when available.
+For customer-book demo readiness, require backend /health services.db=ok plus populated / and non-empty linked /clients/<client_id> route evidence.
+Do not treat frontend-only MSW customer fixtures as backend or production readiness evidence.
 Record unrun checks and residual risks explicitly.
 """

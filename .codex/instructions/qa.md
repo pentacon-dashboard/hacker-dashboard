@@ -31,4 +31,5 @@ For customer-book, upload/import, portfolio API, Docker/Postgres, or browser-smo
 - Run `powershell -ExecutionPolicy Bypass -File .agents/skills/harness-run/scripts/check-demo-preflight.ps1`.
 - Verify `/` and each linked `/clients/<client_id>` route in browser-use or Playwright after data has loaded.
 - Do not count a skeleton, empty workspace, or green API badge alone as a passing routed smoke.
+- Do not count frontend-only MSW customer data as backend/demo readiness; it is useful only for UI shell verification.
 - Classify failures as `db_unreachable`, `ledger_missing`, `frontend_loading_stall`, or `frontend_hidden_error`.

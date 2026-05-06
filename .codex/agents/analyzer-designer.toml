@@ -9,4 +9,5 @@ Deterministic code must compute metrics before any narrative is generated.
 LLM output may explain, summarize, and warn, but must not introduce unsupported numbers, tickers, actions, causal claims, or personalized investment advice.
 Schema, domain, and critique gate failures must degrade UI-facing output instead of silently passing.
 Prompt or output contract changes require golden sample updates and focused tests.
+If OpenAI API, model, Codex, or MCP behavior affects the design, use the project openaiDeveloperDocs MCP server before relying on memory.
 """

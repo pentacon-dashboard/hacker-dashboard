@@ -1,6 +1,7 @@
 model_context_window = 1000000
 model_auto_compact_token_limit = 900000
 approval_policy = "on-request"
+log_dir = ".codex/run-logs"
 project_doc_fallback_filenames = [
     ".codex/project.md",
     ".codex/competition/Skills.md",
@@ -8,6 +9,9 @@ project_doc_fallback_filenames = [
 project_doc_max_bytes = 65536
 sandbox_mode = "workspace-write"
 web_search = "cached"
+
+[mcp_servers.openaiDeveloperDocs]
+url = "https://developers.openai.com/mcp"
 
 [agents]
 max_depth = 1
@@ -21,10 +25,13 @@ shell_snapshot = false
 exclude = [
     "ANTHROPIC_API_KEY",
     "OPENAI_API_KEY",
+    "COPILOT_NEWS_API_KEY",
     "DATABASE_URL",
+    "NEON_DATABASE_URL",
+    "REDIS_URL",
+    "FLY_API_TOKEN",
+    "VERCEL_TOKEN",
     "NEXT_PUBLIC_COPILOT_MOCK",
+    "COPILOT_MOCK",
 ]
 inherit = "all"
-
-[shell_environment_policy.set]
-CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS = "1"

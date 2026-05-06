@@ -28,6 +28,12 @@ The Codex-readable skill lives at `.agents/skills/investment-dashboard/SKILL.md`
 - `.codex/prompts/`: reusable project prompts. Load them only when a workflow references them.
 - `.codex/competition/`: competition-facing specs and submission support docs.
 
+## OpenAI Codex Docs
+
+Use the OpenAI developer documentation MCP server whenever work depends on current OpenAI API, ChatGPT Apps SDK, Codex, model, MCP, or official platform behavior. The project-scoped server is configured in `.codex/config.toml` as `openaiDeveloperDocs`.
+
+If the MCP server is unavailable in the current session, use only official OpenAI domains (`developers.openai.com`, `platform.openai.com`, `openai.com`, or `help.openai.com`) as fallback sources and cite them in the final answer.
+
 ## Project Shape
 
 - Frontend: `frontend/` with Next.js App Router, React 19, TypeScript, Tailwind, shadcn/ui, Recharts, lightweight-charts, TanStack Query, Zustand.

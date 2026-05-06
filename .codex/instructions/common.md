@@ -6,6 +6,13 @@
 - Do not modify `~/.codex`, `$HOME/.agents`, or machine-level Codex configuration.
 - Do not modify `.claude/` unless the user explicitly asks for Claude compatibility.
 - Preserve user changes in the worktree.
+- Treat `.codex/` as project-scoped Codex configuration, agents, prompts, rules, and support instructions.
+- Treat `.agents/skills/` as the repository skill layer. Put reusable project workflows there, not in `.codex/`.
+
+## OpenAI Docs
+
+- For OpenAI API, ChatGPT Apps SDK, Codex, model, MCP, or official platform questions, use the `openaiDeveloperDocs` MCP server configured in `.codex/config.toml`.
+- If that server is unavailable, use only official OpenAI domains as fallback sources and cite them.
 
 ## Git Safety
 
