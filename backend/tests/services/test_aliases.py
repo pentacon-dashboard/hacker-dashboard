@@ -128,10 +128,7 @@ class TestAliasCount:
         kr_stocks = [
             v
             for v in ALIASES.values()
-            if v[0] == "naver_kr"
-            and v[2] == "stock"
-            and len(v[1]) == 6
-            and v[1].isdigit()
+            if v[0] == "naver_kr" and v[2] == "stock" and len(v[1]) == 6 and v[1].isdigit()
         ]
         assert len(kr_stocks) >= 20
 

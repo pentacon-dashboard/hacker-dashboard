@@ -197,10 +197,9 @@ class TestSearchSamsung:
         data = resp.json()
         assert len(data) >= 1
 
-        assert any(
-            item["market"] == "naver_kr" and item["symbol"] == "005930"
-            for item in data
-        ), f"naver_kr 005930 결과 없음: {data}"
+        assert any(item["market"] == "naver_kr" and item["symbol"] == "005930" for item in data), (
+            f"naver_kr 005930 결과 없음: {data}"
+        )
 
     @respx.mock
     @pytest.mark.asyncio
