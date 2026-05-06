@@ -99,10 +99,31 @@ describe("kpi evidence utils", () => {
     ]);
   });
 
+  it("sorts top holdings by value, slices by limit, and guards non-positive totals", () => {
+    const holdings = [
+      holding({ id: 3, market: "nyse", code: "MSFT", value_krw: "10000000" }),
+      holding({ id: 1, market: "naver_kr", code: "005930", value_krw: "70000000" }),
+      holding({ id: 2, market: "nasdaq", code: "AAPL", value_krw: "30000000" }),
+    ];
+
+    expect(buildTopHoldingWeightRows(holdings, 100000000, 2)).toMatchObject([
+      { code: "005930", valueKrw: 70000000, weightPct: 70 },
+      { code: "AAPL", valueKrw: 30000000, weightPct: 30 },
+    ]);
+    expect(buildTopHoldingWeightRows(holdings, 100000000, 2)).toHaveLength(2);
+    expect(buildTopHoldingWeightRows(holdings, 0, 1)).toMatchObject([
+      { code: "005930", weightPct: 0 },
+    ]);
+  });
+
   it("classifies markets using backend-compatible asset classes", () => {
     expect(classifyMarketAssetClass("upbit")).toBe("crypto");
+    expect(classifyMarketAssetClass("binance")).toBe("crypto");
+    expect(classifyMarketAssetClass("yahoo")).toBe("stock_us");
     expect(classifyMarketAssetClass("nasdaq")).toBe("stock_us");
+    expect(classifyMarketAssetClass("nyse")).toBe("stock_us");
     expect(classifyMarketAssetClass("naver_kr")).toBe("stock_kr");
+    expect(classifyMarketAssetClass("krx")).toBe("stock_kr");
     expect(classifyMarketAssetClass("unknown")).toBe("other");
   });
 
@@ -113,12 +134,12 @@ describe("kpi evidence utils", () => {
     ]);
   });
 
-  it("builds snapshot period stats from ordered values", () => {
+  it("builds snapshot period stats by sorting snapshot dates", () => {
     expect(
       buildPeriodSnapshotStats([
+        snapshot(3, "2026-05-07", "100000000"),
         snapshot(1, "2026-04-07", "90000000"),
         snapshot(2, "2026-04-20", "110000000"),
-        snapshot(3, "2026-05-07", "100000000"),
       ]),
     ).toEqual({
       startDate: "2026-04-07",
@@ -155,6 +176,34 @@ describe("kpi evidence utils", () => {
     ];
     expect(hasComparableHoldingSnapshots(comparable)).toBe(true);
     expect(hasComparableHoldingSnapshots(notComparable)).toBe(false);
+  });
+
+  it("rejects comparable holding snapshots without shared numeric identities", () => {
+    const noSharedIdentity = [
+      {
+        ...snapshot(1, "2026-05-06", "90000000"),
+        holdings_detail: [{ market: "nasdaq", code: "AAPL", value_krw: "10" }],
+      },
+      {
+        ...snapshot(2, "2026-05-07", "100000000"),
+        holdings_detail: [{ market: "nyse", code: "MSFT", value_krw: "12" }],
+      },
+    ];
+    const nonNumericValue = [
+      {
+        ...snapshot(1, "2026-05-06", "90000000"),
+        holdings_detail: [
+          { market: "nasdaq", code: "AAPL", value_krw: "not-a-number" },
+        ],
+      },
+      {
+        ...snapshot(2, "2026-05-07", "100000000"),
+        holdings_detail: [{ market: "nasdaq", code: "AAPL", value_krw: "12" }],
+      },
+    ];
+
+    expect(hasComparableHoldingSnapshots(noSharedIdentity)).toBe(false);
+    expect(hasComparableHoldingSnapshots(nonNumericValue)).toBe(false);
   });
 
   it("uses asset-class HHI language for concentration score", () => {
