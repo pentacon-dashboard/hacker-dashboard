@@ -154,7 +154,7 @@ smoke-prod:
 	cd frontend && \
 	PROD_URL=https://hacker-dashboard-fe.vercel.app \
 	BE_URL=https://hacker-dashboard-api.fly.dev \
-	npx playwright test e2e/production.spec.ts --project=chromium
+	npx playwright test e2e/production.spec.ts --config=e2e/playwright.config.ts --project=chromium
 
 # ── 데모 준비 ─────────────────────────────────────────────────────────────────
 
