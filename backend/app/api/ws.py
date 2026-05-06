@@ -143,6 +143,8 @@ async def ws_ticks(websocket: WebSocket, markets: str = "") -> None:
             except TimeoutError:
                 # keepalive ping
                 await websocket.send_json({"type": "ping"})
+    except asyncio.CancelledError:
+        pass
     except (WebSocketDisconnect, Exception):
         pass
     finally:
