@@ -8,7 +8,8 @@ RebalanceAnalyzer 단위 테스트.
   4. Domain gate fail: narrative 가 너무 짧으면 fail
   5. Domain gate fail: 금지어 포함 시 fail
   6. Critique gate warn: narrative 에 actions 에 없는 종목 언급 시 warn
-  7. LLM unavailable 시 schema_gate=fail, analysis=None
+  7. 영어 산문 잔존 시 결정적 한국어 해석으로 대체
+  8. LLM unavailable 시 schema_gate=fail, analysis=None
 """
 
 from __future__ import annotations
@@ -179,9 +180,9 @@ async def test_normal_case_all_gates_pass(fake_llm: FakeClient) -> None:
         "headline": "코인 비중 74% → 30% 축소 권장",
         "narrative": (
             "crypto 비중이 목표 대비 44%p 초과되어 집중 리스크가 큽니다. "
-            "KRW-BTC 약 170만원을 매도하고 AAPL 3주를 매수해 다변화를 회복합니다."
+            "KRW-BTC 약 170만원을 매도하고 stock_us 보강을 위해 AAPL 3주를 매수합니다."
         ),
-        "warnings": ["거래 수수료 누적 유의"],
+        "warnings": ["max_single_weight 제약 확인"],
         "confidence": 0.82,
     }
     analyzer = RebalanceAnalyzer()
@@ -217,6 +218,10 @@ async def test_normal_case_all_gates_pass(fake_llm: FakeClient) -> None:
     assert gates["critique_gate"] == "pass"
     assert "KRW-BTC" in analysis.narrative
     assert "AAPL" in analysis.narrative
+    assert "crypto" not in analysis.narrative
+    assert "stock_us" not in analysis.narrative
+    assert "44퍼센트포인트" in analysis.narrative
+    assert analysis.warnings == ["단일 종목 최대 비중 제약 확인"]
 
 
 # ───────────────────────────── 4. Domain gate fail — narrative too short ───────
@@ -322,7 +327,58 @@ async def test_schema_gate_fail_invalid_json(fake_llm: FakeClient) -> None:
     assert gates["critique_gate"] == "pending"
 
 
-# ───────────────────────────── 8. LLM unavailable ──────────────────────────────
+# ───────────────────────────── 8. Korean fallback for English prose ───────────
+
+
+@pytest.mark.asyncio
+async def test_english_prose_falls_back_to_korean(fake_llm: FakeClient) -> None:
+    """영어 산문이 남으면 결정적 한국어 해석으로 대체한다."""
+    fake_llm.next_response = {
+        "headline": "Recommend reducing crypto exposure",
+        "narrative": "Reduce KRW-BTC and buy AAPL because allocation drift is high.",
+        "warnings": ["Check trade costs"],
+        "confidence": 0.86,
+    }
+    analyzer = RebalanceAnalyzer()
+    actions = [
+        _make_action(action="sell", code="KRW-BTC", asset_class="crypto"),
+        _make_action(
+            action="buy",
+            market="yahoo",
+            code="AAPL",
+            asset_class="stock_us",
+            quantity="3",
+            value="850000",
+            reason="미국 주식 부족분 매수",
+        ),
+    ]
+    analysis, gates = await analyzer.analyze(
+        actions=actions,
+        drift={"crypto": 0.44, "stock_us": -0.21, "stock_kr": -0.13, "cash": -0.1, "fx": 0},
+        current_allocation={
+            "crypto": 0.74,
+            "stock_us": 0.19,
+            "stock_kr": 0.07,
+            "cash": 0.0,
+            "fx": 0,
+        },
+        target_allocation=_target(),
+        constraints=_constraints(),
+    )
+
+    assert analysis is not None
+    assert gates["schema_gate"] == "pass"
+    assert gates["domain_gate"].startswith("warn: korean_fallback")
+    combined = f"{analysis.headline} {analysis.narrative} {' '.join(analysis.warnings)}"
+    assert "Recommend" not in combined
+    assert "Reduce" not in combined
+    assert "allocation" not in combined
+    assert "암호화폐" in combined
+    assert "KRW-BTC" in combined
+    assert "AAPL" in combined
+
+
+# ───────────────────────────── 9. LLM unavailable ──────────────────────────────
 
 
 @pytest.mark.asyncio
@@ -355,7 +411,7 @@ async def test_llm_unavailable() -> None:
         config_module.settings.openai_api_key = original_key
 
 
-# ───────────────────────────── 9. Payload construction ─────────────────────────
+# ───────────────────────────── 10. Payload construction ────────────────────────
 
 
 @pytest.mark.asyncio
@@ -389,14 +445,14 @@ async def test_payload_includes_all_required_fields(fake_llm: FakeClient) -> Non
     assert payload["actions"][0]["code"] == "KRW-BTC"
 
 
-# ───────────────────────────── 10. target_allocation as dict ───────────────────
+# ───────────────────────────── 11. target_allocation as dict ───────────────────
 
 
 @pytest.mark.asyncio
 async def test_target_allocation_accepts_plain_dict(fake_llm: FakeClient) -> None:
     """target_allocation 이 TargetAllocation 이 아닌 plain dict 여도 동작."""
     fake_llm.next_response = {
-        "headline": "test headline 조정",
+        "headline": "리밸런싱 조정",
         "narrative": "KRW-BTC 매도해 비중을 조정합니다. 서술이 충분히 깁니다.",
         "warnings": [],
         "confidence": 0.7,

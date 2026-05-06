@@ -35,6 +35,13 @@ _MARKET_TO_ASSET_CLASS: dict[str, str] = {
 }
 
 _ALL_ASSET_CLASSES = ["stock_kr", "stock_us", "crypto", "cash", "fx"]
+_ASSET_CLASS_LABELS: dict[str, str] = {
+    "stock_kr": "한국 주식",
+    "stock_us": "미국 주식",
+    "crypto": "암호화폐",
+    "cash": "현금",
+    "fx": "외화",
+}
 
 _ZERO = Decimal("0")
 _ONE = Decimal("1")
@@ -54,6 +61,10 @@ def infer_asset_class(market: str, code: str) -> str:  # noqa: ARG001 (code rese
     if key == "fx":
         return "fx"
     return _MARKET_TO_ASSET_CLASS.get(key, "other")
+
+
+def _asset_class_label(asset_class: str) -> str:
+    return _ASSET_CLASS_LABELS.get(asset_class, "기타 자산")
 
 
 def _d(v: Any) -> Decimal:
@@ -148,6 +159,7 @@ def calculate_rebalance_actions(
             # cash는 현금 — 실제 매매 불가
             continue
 
+        ac_label = _asset_class_label(ac)
         current_w = current_alloc.get(ac, 0.0)
         target_w = target_dict.get(ac, 0.0)
         drift_val = current_w - target_w
@@ -205,7 +217,7 @@ def calculate_rebalance_actions(
                         quantity=quantity,
                         estimated_value_krw=actual_value,
                         reason=(
-                            f"{ac} 비중 {current_w * 100:.1f}% → 목표 {target_w * 100:.1f}%. "
+                            f"{ac_label} 비중 {current_w * 100:.1f}% → 목표 {target_w * 100:.1f}%. "
                             f"가장 비중이 큰 {h.code}부터 일부 매도"
                         ),
                     )
@@ -265,7 +277,7 @@ def calculate_rebalance_actions(
                         quantity=quantity,
                         estimated_value_krw=actual_value,
                         reason=(
-                            f"{ac} 목표까지 +{abs(drift_val) * 100:.1f}% 부족. "
+                            f"{ac_label} 목표까지 +{abs(drift_val) * 100:.1f}% 부족. "
                             f"기존 보유 종목 {h.code} 추가 매수로 다변화 유지"
                         ),
                     )

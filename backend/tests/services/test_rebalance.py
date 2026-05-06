@@ -186,6 +186,10 @@ def test_crypto_heavy_to_mixed():
     assert len(buy_actions) >= 1, "주식 매수 액션이 1건 이상이어야 함"
     assert sell_actions[0].code == "KRW-BTC"
     assert buy_actions[0].code == "AAPL"
+    assert "암호화폐" in sell_actions[0].reason
+    assert "미국 주식" in buy_actions[0].reason
+    assert "crypto" not in sell_actions[0].reason
+    assert "stock_us" not in buy_actions[0].reason
 
 
 def test_min_trade_krw_filters_small_actions():

@@ -17,6 +17,7 @@ from __future__ import annotations
 import json
 import logging
 import re
+from decimal import Decimal
 from typing import Any
 
 from app.agents.llm import (
@@ -70,6 +71,54 @@ _KNOWN_TOKENS: frozenset[str] = frozenset(
 
 # 대문자 토큰 추출 (예: AAPL, BTC, KRW-BTC, TSLA). 2~6글자 기본 + 하이픈 조합.
 _TOKEN_RE = re.compile(r"\b[A-Z]{2,6}(?:-[A-Z]{2,6})?\b")
+_ENGLISH_WORD_RE = re.compile(r"\b[A-Za-z][A-Za-z_-]*\b")
+_KOREAN_RE = re.compile(r"[가-힣]")
+
+_ASSET_CLASS_LABELS: dict[str, str] = {
+    "stock_kr": "한국 주식",
+    "stock_us": "미국 주식",
+    "crypto": "암호화폐",
+    "cash": "현금",
+    "fx": "외화",
+    "other": "기타 자산",
+}
+
+_ACTION_LABELS: dict[str, str] = {
+    "buy": "매수",
+    "sell": "매도",
+}
+
+_TEXT_REPLACEMENTS: tuple[tuple[re.Pattern[str], str], ...] = (
+    (re.compile(r"\bmax_single_weight\b", re.IGNORECASE), "단일 종목 최대 비중"),
+    (re.compile(r"\bmin_trade_krw\b", re.IGNORECASE), "최소 거래액"),
+    (re.compile(r"\ballow_fractional\b", re.IGNORECASE), "소수점 수량 허용"),
+    (re.compile(r"\btarget[_ ]allocation\b", re.IGNORECASE), "목표 비중"),
+    (re.compile(r"\bcurrent[_ ]allocation\b", re.IGNORECASE), "현재 비중"),
+    (re.compile(r"\bstock_kr\b", re.IGNORECASE), "한국 주식"),
+    (re.compile(r"\bstock_us\b", re.IGNORECASE), "미국 주식"),
+    (re.compile(r"\bcrypto\b", re.IGNORECASE), "암호화폐"),
+    (re.compile(r"\bcash\b", re.IGNORECASE), "현금"),
+    (re.compile(r"\bfx\b", re.IGNORECASE), "외화"),
+    (re.compile(r"\bdrift\b", re.IGNORECASE), "괴리"),
+    (re.compile(r"\bholdings?\b", re.IGNORECASE), "보유 종목"),
+    (re.compile(r"\brebalanc(?:e|ing)\b", re.IGNORECASE), "리밸런싱"),
+    (re.compile(r"\ballocation\b", re.IGNORECASE), "비중"),
+    (re.compile(r"\bportfolio\b", re.IGNORECASE), "포트폴리오"),
+    (re.compile(r"\bconstraints?\b", re.IGNORECASE), "제약"),
+    (re.compile(r"\btarget\b", re.IGNORECASE), "목표"),
+    (re.compile(r"\bcurrent\b", re.IGNORECASE), "현재"),
+    (re.compile(r"\btrades?\b", re.IGNORECASE), "거래"),
+    (re.compile(r"\bbuy\b", re.IGNORECASE), "매수"),
+    (re.compile(r"\bsell\b", re.IGNORECASE), "매도"),
+    (re.compile(r"\brisk\b", re.IGNORECASE), "위험"),
+    (re.compile(r"\bupbit\b", re.IGNORECASE), "업비트"),
+    (re.compile(r"\byahoo\b", re.IGNORECASE), "야후"),
+    (re.compile(r"\bnaver_kr\b", re.IGNORECASE), "네이버 국내"),
+    (re.compile(r"\bbinance\b", re.IGNORECASE), "바이낸스"),
+    (re.compile(r"\bkrx\b", re.IGNORECASE), "한국거래소"),
+    (re.compile(r"\bnasdaq\b", re.IGNORECASE), "나스닥"),
+    (re.compile(r"\bnyse\b", re.IGNORECASE), "뉴욕거래소"),
+)
 
 
 class RebalanceAnalyzer:
@@ -137,11 +186,30 @@ class RebalanceAnalyzer:
         try:
             parsed = extract_json(raw)
             analysis = LLMAnalysis.model_validate(parsed)
+            analysis = _localize_analysis_language(analysis)
             gates["schema_gate"] = "pass"
         except Exception as exc:  # ValueError from extract_json OR pydantic ValidationError
             logger.warning("rebalance schema gate fail: %s; raw=%r", exc, raw[:200])
             gates["schema_gate"] = f"fail: {exc}"
             return None, gates
+
+        # ── Korean language guard ─────────────────────────────────────────────
+        # 프롬프트가 한국어를 요구해도 모델이 일부 영어 도메인 용어를 남길 수 있으므로,
+        # UI 로 보내기 전 한국어화하고 그래도 영어 산문이 남으면 결정적 한국어 해석으로 대체한다.
+        language_result = _language_check(analysis, actions)
+        if language_result.startswith("fail"):
+            logger.info("rebalance language guard fallback: %s", language_result)
+            fallback = self._korean_fallback_analysis(
+                actions=actions,
+                drift=drift,
+                current_allocation=current_allocation,
+                target_allocation=target_allocation,
+                constraints=constraints,
+                source_confidence=analysis.confidence,
+            )
+            gates["domain_gate"] = f"warn: korean_fallback: {language_result}"
+            gates["critique_gate"] = "pass"
+            return fallback, gates
 
         # ── Domain gate ───────────────────────────────────────────────────────
         domain_result = _domain_check(analysis)
@@ -165,19 +233,19 @@ class RebalanceAnalyzer:
                 headline="포트폴리오가 이미 목표 비중에 도달했습니다",
                 narrative=(
                     "현재 자산군 비중이 목표와 거의 일치합니다 "
-                    f"(최대 drift {max_abs_drift * 100:.2f}% < 1%). 리밸런싱이 불필요합니다."
+                    f"(최대 괴리 {max_abs_drift * 100:.2f}% < 1%). 리밸런싱이 불필요합니다."
                 ),
                 warnings=[],
                 confidence=0.95,
             )
         return LLMAnalysis(
-            headline="리밸런싱 제안 없음 — 제약 조건 검토 필요",
+            headline="리밸런싱 제안 없음: 제약 조건 검토 필요",
             narrative=(
-                "자산군 drift 는 존재하지만 min_trade_krw 또는 max_single_weight 제약, "
-                "혹은 해당 자산군 holdings 부재로 실행 가능한 액션이 없습니다. "
-                "제약을 완화하거나 수동 조정을 고려하세요."
+                "자산군 괴리는 존재하지만 최소 거래액 또는 단일 종목 최대 비중 제약, "
+                "혹은 해당 자산군 보유 종목 부재로 실행 가능한 항목이 없습니다. "
+                "제약 완화 또는 수동 조정 검토가 필요합니다."
             ),
-            warnings=["제약 조건 재검토 권장"],
+            warnings=["제약 조건 재검토가 필요합니다"],
             confidence=0.75,
         )
 
@@ -205,8 +273,157 @@ class RebalanceAnalyzer:
             "constraints": constraints.model_dump(mode="json"),
         }
 
+    def _korean_fallback_analysis(
+        self,
+        *,
+        actions: list[RebalanceAction],
+        drift: dict[str, float],
+        current_allocation: dict[str, float],
+        target_allocation: dict[str, float] | TargetAllocation,
+        constraints: RebalanceConstraints,
+        source_confidence: float,
+    ) -> LLMAnalysis:
+        """LLM 산문에 영어가 남은 경우 UI 에 노출할 결정적 한국어 해석."""
+        target_dict = _target_allocation_dict(target_allocation)
+        top_asset, top_drift = max(
+            drift.items(),
+            key=lambda item: abs(item[1]),
+            default=("other", 0.0),
+        )
+        asset_label = _asset_label(top_asset)
+        current_pct = current_allocation.get(top_asset, 0.0) * 100
+        target_pct = target_dict.get(top_asset, 0.0) * 100
+        drift_pct = abs(top_drift) * 100
+
+        if top_drift > 0:
+            direction = "과대"
+        elif top_drift < 0:
+            direction = "부족"
+        else:
+            direction = "목표와 유사"
+
+        headline = (
+            f"{asset_label} 비중 {current_pct:.1f}%에서 목표 {target_pct:.1f}%로 조정 필요"
+        )
+        buy_count = sum(1 for action in actions if action.action == "buy")
+        sell_count = sum(1 for action in actions if action.action == "sell")
+        action_text = ", ".join(_format_action_summary(action) for action in actions[:3])
+
+        narrative_parts = [
+            (
+                f"현재 {asset_label} 비중은 {current_pct:.1f}%이고 목표는 "
+                f"{target_pct:.1f}%로, 괴리는 {drift_pct:.1f}퍼센트포인트 {direction}입니다."
+            ),
+            (
+                f"결정적 계산은 매도 {sell_count}건과 매수 {buy_count}건을 "
+                "제안했습니다."
+            ),
+        ]
+        if action_text:
+            narrative_parts.append(f"주요 실행 항목은 {action_text}입니다.")
+        narrative_parts.append(
+            "단일 종목 최대 비중과 최소 거래액 제약을 반영한 결과입니다."
+        )
+
+        warnings: list[str] = []
+        if any(action.estimated_value_krw is None for action in actions):
+            warnings.append("가격이 없는 항목은 실행 전에 기준가 재확인이 필요합니다.")
+        if not constraints.allow_fractional:
+            warnings.append("정수 수량 조건이 적용되어 실제 주문 수량이 달라질 수 있습니다.")
+        if drift_pct >= 10:
+            warnings.append("괴리가 큰 자산군은 거래 비용과 분할 실행 여부 확인이 필요합니다.")
+
+        return LLMAnalysis(
+            headline=headline,
+            narrative=" ".join(narrative_parts),
+            warnings=warnings[:3],
+            confidence=min(max(source_confidence, 0.5), 0.75),
+        )
+
 
 # ──────────────────────── domain / critique helpers ────────────────────────
+
+
+def _target_allocation_dict(target_allocation: dict[str, float] | TargetAllocation) -> dict[str, float]:
+    if isinstance(target_allocation, TargetAllocation):
+        return target_allocation.model_dump()
+    return dict(target_allocation)
+
+
+def _asset_label(asset_class: str) -> str:
+    return _ASSET_CLASS_LABELS.get(asset_class, "해당 자산군")
+
+
+def _format_krw(value: Decimal | None) -> str:
+    if value is None:
+        return "금액 미확인"
+    amount = int(value)
+    if amount >= 10_000:
+        return f"{amount / 10_000:,.0f}만원"
+    return f"{amount:,.0f}원"
+
+
+def _format_action_summary(action: RebalanceAction) -> str:
+    action_label = _ACTION_LABELS.get(action.action, action.action)
+    if action.estimated_value_krw is None:
+        return f"{action.code} {action_label} 수량 {action.quantity}"
+    return f"{action.code} {action_label} 약 {_format_krw(action.estimated_value_krw)}"
+
+
+def _localize_text(text: str) -> str:
+    localized = re.sub(
+        r"(\d+(?:\.\d+)?)\s*%p\b",
+        r"\1퍼센트포인트",
+        text,
+        flags=re.IGNORECASE,
+    )
+    for pattern, replacement in _TEXT_REPLACEMENTS:
+        localized = pattern.sub(replacement, localized)
+    return re.sub(r"\s+", " ", localized).strip()
+
+
+def _localize_analysis_language(analysis: LLMAnalysis) -> LLMAnalysis:
+    """LLM 이 남긴 영어 도메인 용어를 UI 노출 전 한국어로 치환."""
+    return analysis.model_copy(
+        update={
+            "headline": _localize_text(analysis.headline),
+            "narrative": _localize_text(analysis.narrative),
+            "warnings": [_localize_text(warning) for warning in analysis.warnings],
+        }
+    )
+
+
+def _allowed_english_tokens(actions: list[RebalanceAction]) -> set[str]:
+    allowed = {token.upper() for token in _KNOWN_TOKENS}
+    allowed.update({"PB", "WM"})
+    for action in actions:
+        code = action.code.upper()
+        allowed.add(code)
+        allowed.update(part for part in re.split(r"[-/._:]", code) if part)
+    return allowed
+
+
+def _language_check(analysis: LLMAnalysis, actions: list[RebalanceAction]) -> str:
+    """종목/통화 표준 코드를 제외한 영어 산문이 남았는지 검증."""
+    combined = f"{analysis.headline} {analysis.narrative} {' '.join(analysis.warnings)}"
+    if not _KOREAN_RE.search(combined):
+        return "fail: missing korean text"
+
+    allowed = _allowed_english_tokens(actions)
+    unknown_terms: set[str] = set()
+    for match in _ENGLISH_WORD_RE.finditer(combined):
+        term = match.group(0)
+        upper = term.upper()
+        if upper in allowed:
+            continue
+        # 알려지지 않은 대문자 티커는 언어 문제가 아니라 critique gate 에서 다룬다.
+        if term.isupper() and 2 <= len(term) <= 6:
+            continue
+        unknown_terms.add(term)
+
+    if unknown_terms:
+        return f"fail: non_korean_terms: {sorted(unknown_terms)[:5]}"
+    return "pass"
 
 
 def _domain_check(analysis: LLMAnalysis) -> str:

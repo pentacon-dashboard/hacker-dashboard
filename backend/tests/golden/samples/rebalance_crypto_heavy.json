@@ -52,7 +52,7 @@
   },
   "expected": {
     "shortcut": false,
-    "headline_contains_any": ["코인", "crypto", "축소", "비중"],
+    "headline_contains_any": ["코인", "암호화폐", "축소", "비중"],
     "narrative_must_include_codes": ["KRW-BTC", "AAPL"],
     "narrative_must_not_include_codes": ["NVDA", "DOGE", "ETH", "TSLA"],
     "warnings_min_count": 0,
@@ -67,7 +67,7 @@
   },
   "mock_analyzer_output": {
     "headline": "코인 비중 74% → 30% 축소, 주식 보강 권장",
-    "narrative": "crypto 비중이 목표 대비 44%p 초과되어 집중 리스크가 큽니다. KRW-BTC 약 170만원을 매도해 비중을 낮추고, stock_us 가 21%p 부족하므로 AAPL 3주 매수로 다변화를 회복합니다. stock_kr 도 13%p 부족하지만 기존 holdings 범위 내 조정만 가능합니다.",
+    "narrative": "암호화폐 비중이 목표 대비 44퍼센트포인트 초과되어 집중 리스크가 큽니다. KRW-BTC 약 170만원을 매도해 비중을 낮추고, 미국 주식이 21퍼센트포인트 부족하므로 AAPL 3주 매수로 다변화를 회복합니다. 한국 주식도 13퍼센트포인트 부족하지만 기존 보유 종목 범위 내 조정만 가능합니다.",
     "warnings": ["KRW-BTC 매도 양도소득세 검토 필요", "거래 수수료 누적 유의"],
     "confidence": 0.82
   }
