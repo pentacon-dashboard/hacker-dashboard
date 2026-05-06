@@ -302,9 +302,7 @@ class RebalanceAnalyzer:
         else:
             direction = "목표와 유사"
 
-        headline = (
-            f"{asset_label} 비중 {current_pct:.1f}%에서 목표 {target_pct:.1f}%로 조정 필요"
-        )
+        headline = f"{asset_label} 비중 {current_pct:.1f}%에서 목표 {target_pct:.1f}%로 조정 필요"
         buy_count = sum(1 for action in actions if action.action == "buy")
         sell_count = sum(1 for action in actions if action.action == "sell")
         action_text = ", ".join(_format_action_summary(action) for action in actions[:3])
@@ -314,16 +312,11 @@ class RebalanceAnalyzer:
                 f"현재 {asset_label} 비중은 {current_pct:.1f}%이고 목표는 "
                 f"{target_pct:.1f}%로, 괴리는 {drift_pct:.1f}퍼센트포인트 {direction}입니다."
             ),
-            (
-                f"결정적 계산은 매도 {sell_count}건과 매수 {buy_count}건을 "
-                "제안했습니다."
-            ),
+            (f"결정적 계산은 매도 {sell_count}건과 매수 {buy_count}건을 제안했습니다."),
         ]
         if action_text:
             narrative_parts.append(f"주요 실행 항목은 {action_text}입니다.")
-        narrative_parts.append(
-            "단일 종목 최대 비중과 최소 거래액 제약을 반영한 결과입니다."
-        )
+        narrative_parts.append("단일 종목 최대 비중과 최소 거래액 제약을 반영한 결과입니다.")
 
         warnings: list[str] = []
         if any(action.estimated_value_krw is None for action in actions):
@@ -344,7 +337,9 @@ class RebalanceAnalyzer:
 # ──────────────────────── domain / critique helpers ────────────────────────
 
 
-def _target_allocation_dict(target_allocation: dict[str, float] | TargetAllocation) -> dict[str, float]:
+def _target_allocation_dict(
+    target_allocation: dict[str, float] | TargetAllocation,
+) -> dict[str, float]:
     if isinstance(target_allocation, TargetAllocation):
         return target_allocation.model_dump()
     return dict(target_allocation)
