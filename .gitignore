@@ -80,6 +80,9 @@ Thumbs.db
 # Codex harness local workspaces and per-sprint worktrees
 .harness/
 
+# Superpowers brainstorming companion local mockups
+.superpowers/
+
 # Misc
 tmp_out.json
 *.log
