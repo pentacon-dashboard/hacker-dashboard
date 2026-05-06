@@ -186,8 +186,8 @@ class TestSearchTesla:
 class TestSearchSamsung:
     @respx.mock
     @pytest.mark.asyncio
-    async def test_samsung_yahoo_ticker_in_results(self, api_client):
-        """'삼성전자' 검색 시 005930.KS (Yahoo 티커) 가 반환됨."""
+    async def test_samsung_naver_symbol_in_results(self, api_client):
+        """'삼성전자' 검색 시 naver_kr 005930 이 반환됨."""
         _mock_upbit_all()
         _mock_naver_samsung()
         _mock_yahoo_empty()
@@ -197,14 +197,15 @@ class TestSearchSamsung:
         data = resp.json()
         assert len(data) >= 1
 
-        symbols = [item["symbol"] for item in data]
-        # alias 에서 005930.KS 또는 naver 결과도 005930.KS 형식
-        assert any("005930" in s for s in symbols), f"005930 포함 심볼 없음: {symbols}"
+        assert any(
+            item["market"] == "naver_kr" and item["symbol"] == "005930"
+            for item in data
+        ), f"naver_kr 005930 결과 없음: {data}"
 
     @respx.mock
     @pytest.mark.asyncio
-    async def test_samsung_market_is_yahoo(self, api_client):
-        """삼성전자 검색 결과의 market='yahoo' — 워치리스트 후 시세 조회 가능."""
+    async def test_samsung_market_prefers_naver_kr(self, api_client):
+        """삼성전자 검색 결과는 Yahoo .KS 대신 naver_kr 6자리 코드를 우선한다."""
         _mock_upbit_all()
         _mock_naver_samsung()
         _mock_yahoo_empty()
@@ -215,8 +216,9 @@ class TestSearchSamsung:
 
         samsung_items = [item for item in data if "005930" in item["symbol"]]
         assert len(samsung_items) >= 1
-        assert samsung_items[0]["market"] == "yahoo"
-        # dedupe 후 005930.KS 는 한 번만 등장
+        assert samsung_items[0]["market"] == "naver_kr"
+        assert samsung_items[0]["symbol"] == "005930"
+        # dedupe 후 삼성전자 canonical 결과는 한 번만 등장
         assert len(samsung_items) == 1
 
 

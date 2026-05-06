@@ -9,10 +9,12 @@
 
 from __future__ import annotations
 
+import json
 import logging
 import os
 import re
 from email.utils import parsedate_to_datetime
+from html import unescape
 from typing import Any
 
 import httpx
@@ -24,8 +26,6 @@ logger = logging.getLogger(__name__)
 
 _BASE_URL = "https://openapi.naver.com/v1/search/news.json"
 _TAG_RE = re.compile(r"</?b>", re.IGNORECASE)
-_HTML_ENTITY_RE = re.compile(r"&(quot|amp|lt|gt|apos|nbsp|#\d+);")
-_ENTITY_MAP = {"&quot;": '"', "&amp;": "&", "&lt;": "<", "&gt;": ">", "&apos;": "'", "&nbsp;": " "}
 
 
 def is_naver_configured() -> bool:
@@ -44,7 +44,7 @@ def _get_client_secret() -> str:
 def _strip_html(text: str) -> str:
     """`<b>` 태그 + HTML entity 정규화."""
     text = _TAG_RE.sub("", text)
-    return _HTML_ENTITY_RE.sub(lambda m: _ENTITY_MAP.get(m.group(0), m.group(0)), text)
+    return unescape(text).replace("\xa0", " ")
 
 
 def _parse_pubdate(rfc822: str) -> str:
@@ -98,7 +98,8 @@ async def _fetch_one(
     try:
         r = await client.get(_BASE_URL, headers=headers, params=params)
         r.raise_for_status()
-        return list(r.json().get("items", []))
+        data = json.loads(r.content.decode("utf-8"))
+        return list(data.get("items", []))
     except httpx.HTTPStatusError as exc:
         logger.warning(
             "naver HTTP %d for %r: %s", exc.response.status_code, query, exc.response.text[:160]

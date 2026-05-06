@@ -169,22 +169,38 @@ async def search_symbols(
             return ("kr_stock", kr_stock.group("code"))
         return (item.market, normalized_symbol)
 
+    def _source_priority(item: SymbolInfo) -> int:
+        key = _canonical_search_key(item)
+        if key[0] == "kr_stock":
+            if item.market == "naver_kr":
+                return 30
+            if item.market in {"krx", "kiwoom"}:
+                return 20
+            if item.market == "yahoo":
+                return 10
+        return 0
+
     all_scored: list[tuple[SymbolInfo, int]] = []
     all_scored.extend(_assign_adapter_scores(upbit_res, 200))
     all_scored.extend(_assign_adapter_scores(yahoo_res, 200))
     all_scored.extend(_assign_adapter_scores(naver_res, 200))
     all_scored.extend(alias_res)
 
-    best: dict[tuple[str, str], tuple[SymbolInfo, int]] = {}
+    best: dict[tuple[str, str], tuple[SymbolInfo, int, int]] = {}
     for item, score in all_scored:
         key = _canonical_search_key(item)
-        if key not in best or score > best[key][1]:
-            best[key] = (item, score)
+        priority = _source_priority(item)
+        if (
+            key not in best
+            or score > best[key][1]
+            or (score == best[key][1] and priority > best[key][2])
+        ):
+            best[key] = (item, score, priority)
 
-    ranked = sorted(best.values(), key=lambda x: x[1], reverse=True)
+    ranked = sorted(best.values(), key=lambda x: (x[1], x[2]), reverse=True)
 
     result: list[SymbolInfo] = []
-    for item, _score in ranked[:50]:
+    for item, _score, _priority in ranked[:50]:
         item.score = _score
         result.append(item)
 

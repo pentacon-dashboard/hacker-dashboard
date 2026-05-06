@@ -32,9 +32,9 @@ class TestAliasLookupExactMatch:
         results = lookup("삼성전자")
         assert len(results) >= 1
         info, score = results[0]
-        # 국내주식은 Yahoo .KS 티커로 변환되어 Yahoo 어댑터로 시세 조회 가능
-        assert info.symbol == "005930.KS"
-        assert info.market == "yahoo"
+        # 국내 주식은 Naver 어댑터로 조회하도록 6자리 종목코드를 유지한다.
+        assert info.symbol == "005930"
+        assert info.market == "naver_kr"
         assert info.asset_class == "stock"
         assert info.currency == "KRW"
         assert score == 2000
@@ -66,8 +66,8 @@ class TestAliasLookupExactMatch:
         results = lookup("sk하이닉스")
         assert len(results) >= 1
         info, score = results[0]
-        assert info.symbol == "000660.KS"
-        assert info.market == "yahoo"
+        assert info.symbol == "000660"
+        assert info.market == "naver_kr"
 
 
 class TestAliasLookupStartsWith:
@@ -84,11 +84,11 @@ class TestAliasLookupStartsWith:
                 assert score == 1500
 
     def test_samsung_prefix(self):
-        """'삼성' 으로 시작하는 조회. 국내주식은 Yahoo .KS 티커 형식."""
+        """'삼성' 으로 시작하는 조회. 국내주식은 Naver 6자리 코드 형식."""
         results = lookup("삼성")
         symbols = [info.symbol for info, _ in results]
-        # 삼성전자 → 005930.KS
-        assert "005930.KS" in symbols
+        # 삼성전자 → 005930
+        assert "005930" in symbols
 
 
 class TestAliasLookupCaseAndSpace:
@@ -124,13 +124,14 @@ class TestAliasCount:
         assert len(upbit_cryptos) >= 30
 
     def test_kr_stocks_20(self):
-        """국내 주식 20개 이상. Yahoo .KS/.KQ 티커 형식."""
+        """국내 주식 20개 이상. Naver 6자리 코드 형식."""
         kr_stocks = [
             v
             for v in ALIASES.values()
-            if v[0] == "yahoo"
+            if v[0] == "naver_kr"
             and v[2] == "stock"
-            and (v[1].endswith(".KS") or v[1].endswith(".KQ"))
+            and len(v[1]) == 6
+            and v[1].isdigit()
         ]
         assert len(kr_stocks) >= 20
 

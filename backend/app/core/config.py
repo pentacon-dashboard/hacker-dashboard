@@ -1,12 +1,20 @@
+from pathlib import Path
+
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 DEFAULT_REDIS_URL = "redis://localhost:6379/0"
+BACKEND_ROOT = Path(__file__).resolve().parents[2]
+PROJECT_ROOT = BACKEND_ROOT.parent
+ENV_FILES = (
+    str(PROJECT_ROOT / ".env"),
+    str(BACKEND_ROOT / ".env"),
+)
 
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
-        env_file=".env",
-        env_file_encoding="utf-8",
+        env_file=ENV_FILES,
+        env_file_encoding="utf-8-sig",
         extra="ignore",
     )
 

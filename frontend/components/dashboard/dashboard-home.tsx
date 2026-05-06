@@ -92,6 +92,16 @@ interface SelectedClientDashboardProps {
   variant?: "full" | "clientBook";
 }
 
+function clientScopedHref(
+  path: "/watchlist" | "/news",
+  clientId: string,
+  params: Record<string, string> = {},
+): string {
+  const search = new URLSearchParams({ client_id: clientId });
+  Object.entries(params).forEach(([key, value]) => search.set(key, value));
+  return `${path}?${search.toString()}`;
+}
+
 export function SelectedClientDashboard({
   clientId,
   clientName,
@@ -511,7 +521,7 @@ export function SelectedClientDashboard({
           testId="client-monitoring-signals"
           action={
             <Link
-              href="/market-analyze"
+              href={clientScopedHref("/watchlist", clientId)}
               className="inline-flex h-8 items-center rounded-md border px-3 text-xs font-semibold text-primary transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
               모니터링 상세 보기
@@ -527,6 +537,7 @@ export function SelectedClientDashboard({
               count={monitoringSignals.watchCount}
               description="포트폴리오 내 주의 필요 종목"
               tone="red"
+              href={clientScopedHref("/watchlist", clientId, { filter: "attention" })}
               icon={<AlertTriangle className="h-5 w-5" aria-hidden="true" />}
             />
             <MonitoringSignalCard
@@ -534,6 +545,7 @@ export function SelectedClientDashboard({
               count={monitoringSignals.alertCount}
               description="설정된 가격 알림 발생"
               tone="amber"
+              href={clientScopedHref("/watchlist", clientId, { tab: "alerts" })}
               icon={<Bell className="h-5 w-5" aria-hidden="true" />}
             />
             <MonitoringSignalCard
@@ -541,6 +553,7 @@ export function SelectedClientDashboard({
               count={monitoringSignals.newsCount}
               description="포트폴리오 관련 주요 뉴스"
               tone="blue"
+              href={clientScopedHref("/news", clientId)}
               icon={<FileText className="h-5 w-5" aria-hidden="true" />}
             />
           </div>
@@ -555,12 +568,14 @@ function MonitoringSignalCard({
   count,
   description,
   tone,
+  href,
   icon,
 }: {
   title: string;
   count: number;
   description: string;
   tone: "red" | "amber" | "blue";
+  href: string;
   icon: ReactNode;
 }) {
   const toneClass =
@@ -577,7 +592,10 @@ function MonitoringSignalCard({
         : "text-blue-600 dark:text-blue-300";
 
   return (
-    <div className="flex items-center justify-between gap-4 rounded-md border bg-card p-4">
+    <Link
+      href={href}
+      className="flex items-center justify-between gap-4 rounded-md border bg-card p-4 transition-colors hover:border-primary/50 hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+    >
       <div className="flex min-w-0 items-center gap-3">
         <span className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${toneClass}`}>
           {icon}
@@ -591,7 +609,7 @@ function MonitoringSignalCard({
         </div>
       </div>
       <ChevronRight className="h-5 w-5 shrink-0 text-muted-foreground" aria-hidden="true" />
-    </div>
+    </Link>
   );
 }
 
