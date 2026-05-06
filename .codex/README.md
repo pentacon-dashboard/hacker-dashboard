@@ -12,6 +12,15 @@ This folder is project-local for `C:\Users\ehgus\hacker-dashboard`.
 - `instructions/`: project-local work-area instructions referenced by `AGENTS.md`, skills, or custom agents.
 - `prompts/`: reusable planner/generator/evaluator prompts loaded only by workflows that reference them.
 
+## Current Project Settings
+
+- OpenAI Docs MCP: `openaiDeveloperDocs` is configured in `config.toml` with `https://developers.openai.com/mcp`.
+- Logs: Codex log output should stay under `.codex/run-logs/`.
+- Skills: reusable project workflows live under `../.agents/skills/`, not under `.codex/`.
+- Browser verification has two modes:
+  - frontend-only UI shell checks may use customer/portfolio demo MSW;
+  - demo readiness requires backend, database, `/health services.db=ok`, populated `/`, and non-empty linked `/clients/<client_id>` routes.
+
 ## Related Codex Files Outside This Folder
 
 - `../AGENTS.md`: Codex project instructions.

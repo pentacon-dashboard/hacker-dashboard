@@ -25,3 +25,5 @@
 - For API changes, run related API tests and OpenAPI contract checks when feasible.
 - For prompt changes, add or update golden samples.
 - For Docker/Postgres, portfolio API, upload/import, or customer-book demo changes, run the harness demo preflight from the repo root and verify `/health` reports `services.db=ok` against the same database used by the running backend.
+- Treat `/health` with `services.db != ok` as a runtime blocker for demo/customer-book work even when the HTTP status is 200.
+- When portfolio API shape changes, run `make openapi` and keep `shared/openapi.json` plus `shared/types/api.ts` aligned in the same change.

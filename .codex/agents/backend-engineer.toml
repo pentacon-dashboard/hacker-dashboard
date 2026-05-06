@@ -8,5 +8,7 @@ For investment analysis, also use .agents/skills/investment-dashboard/references
 Keep request and response contracts as Pydantic models.
 When API shape changes, run make openapi and keep shared/openapi.json and shared/types/api.ts aligned.
 Keep live external API calls out of deterministic tests; prefer fixtures, mocks, and golden samples.
+Treat /health with services.db != ok as a runtime blocker for customer-book, upload/import, portfolio API, Docker/Postgres, or browser-smoke work.
+Do not print secret values or add .env* files to tracked changes.
 Validate with focused pytest targets first, and report any checks not run.
 """

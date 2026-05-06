@@ -28,3 +28,9 @@
 - Run `npm run typecheck` for typed API/UI changes.
 - Use Playwright for routed visual workflows.
 - For customer-book demo routes, verify loaded data in `/` and linked `/clients/<client_id>` routes. Do not accept a skeleton, hidden error, or empty workspace as a passing smoke when the API has holdings.
+
+## Browser Verification Profiles
+
+- Frontend-only visual check: run the app with customer/portfolio demo MSW only. This can confirm shell, layout, and routed UI, but it does not prove backend health.
+- Full runtime check: run backend, database, and frontend together; verify `/health` has `services.db=ok`, `/` loads customer KPI/list content, and linked `/clients/<client_id>` routes show non-empty holdings.
+- Treat an `API 오류` or long `API 확인 중` header as a runtime signal to investigate unless the task explicitly requested frontend-only mock verification.
