@@ -88,12 +88,13 @@ function renderPanel(
   activeKey: KpiEvidenceKey,
   hiddenHoldingCount = 0,
   panelSnapshots: SnapshotResponse[] = snapshots,
+  panelSummary: PortfolioSummary = summary,
 ) {
   renderWithProviders(
     <KpiEvidencePanel
       activeKey={activeKey}
       clientId="client-001"
-      summary={summary}
+      summary={panelSummary}
       snapshots={panelSnapshots}
       hiddenHoldingCount={hiddenHoldingCount}
       panelId="kpi-evidence-panel"
@@ -157,5 +158,32 @@ describe("KpiEvidencePanel", () => {
       "href",
       "/clients/client-001#rebalance",
     );
+  });
+
+  it("degrades concentration evidence when asset-class evidence is unusable", () => {
+    renderPanel("concentration", 0, snapshots, {
+      ...summary,
+      total_value_krw: "0",
+      asset_class_breakdown: {},
+    });
+
+    expect(screen.queryByText(hhiFormulaLabel)).not.toBeInTheDocument();
+    expect(
+      screen.queryByText(/portfolio\.summary\.asset_class_breakdown/),
+    ).not.toBeInTheDocument();
+    expect(screen.getByText("집중도 근거 저하")).toBeInTheDocument();
+  });
+
+  it("renders source details as a semantic disclosure", () => {
+    renderPanel("totalAssets");
+
+    const summaryElement = screen.getByText("출처 상세");
+    const sourceToken = screen.getByText("portfolio.summary.total_value_krw");
+
+    expect(summaryElement.closest("summary")).not.toBeNull();
+    expect(sourceToken.closest("details")).not.toBeNull();
+    expect(sourceToken).toHaveClass("break-words");
+    expect(sourceToken).toHaveClass("[overflow-wrap:anywhere]");
+    expect(sourceToken).not.toHaveClass("break-keep");
   });
 });

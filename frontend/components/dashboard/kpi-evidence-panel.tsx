@@ -154,14 +154,22 @@ function DegradedBlock({
 
 function SourceDetails({ items }: { items: string[] }) {
   return (
-    <ul className="space-y-2 text-sm text-muted-foreground">
-      {items.map((item) => (
-        <li key={item} className="flex min-w-0 gap-2">
-          <Info className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
-          <span className="min-w-0 break-keep leading-6">{item}</span>
-        </li>
-      ))}
-    </ul>
+    <details open className="min-w-0 text-sm text-muted-foreground">
+      <summary className="flex cursor-pointer items-center gap-2 rounded-md text-sm font-semibold text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+        <Info className="h-4 w-4 shrink-0" aria-hidden="true" />
+        <span>출처 상세</span>
+      </summary>
+      <ul className="mt-3 space-y-2">
+        {items.map((item) => (
+          <li key={item} className="flex min-w-0 gap-2">
+            <Info className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+            <span className="min-w-0 break-words [overflow-wrap:anywhere] leading-6">
+              {item}
+            </span>
+          </li>
+        ))}
+      </ul>
+    </details>
   );
 }
 
@@ -292,6 +300,9 @@ export function KpiEvidencePanel({
   const distributionRows = buildHoldingDistributionRows(summary.holdings);
   const periodStats = buildPeriodSnapshotStats(snapshots);
   const comparableHoldings = hasComparableHoldingSnapshots(snapshots);
+  const hasUsableAssetClassEvidence =
+    totalValueKrw > 0 &&
+    assetClassRows.some((row) => row.ratio > 0 && row.valueKrw > 0);
 
   if (activeKey === "totalAssets") {
     return (
@@ -450,6 +461,27 @@ export function KpiEvidencePanel({
             </DegradedBlock>
           </EvidenceBlock>
         ) : null}
+      </EvidenceShell>
+    );
+  }
+
+  if (!hasUsableAssetClassEvidence) {
+    return (
+      <EvidenceShell
+        panelId={panelId}
+        title="집중도 근거"
+        value={formatPct(summary.risk_score_pct)}
+        summary="사용 가능한 원천 데이터가 확인될 때까지 자산군 HHI 근거를 표시하지 않습니다."
+        action={
+          <EvidenceAction href={`${clientHref(clientId)}#rebalance`} label="리밸런싱 검토" />
+        }
+      >
+        <EvidenceBlock title="HHI 근거 없음" className="lg:col-span-2">
+          <DegradedBlock title="집중도 근거 저하">
+            총자산이 양수가 아니거나 사용 가능한 자산군 비중 근거가 없어 HHI를 뒷받침할 수
+            없습니다. 필요한 입력이 확인될 때까지 자산군 HHI 출처 주장을 표시하지 않습니다.
+          </DegradedBlock>
+        </EvidenceBlock>
       </EvidenceShell>
     );
   }
