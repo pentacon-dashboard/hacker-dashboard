@@ -78,7 +78,8 @@ If the MCP server is unavailable in the current session, use only official OpenA
 - Frontend unit: `cd frontend && npm run test`.
 - Frontend typecheck: `cd frontend && npm run typecheck`.
 - Frontend lint: `cd frontend && npm run lint`.
-- E2E smoke: `cd frontend && npx playwright test e2e/smoke.spec.ts --config=e2e/playwright.config.ts`.
+- Local browser verification: use `browser-use` first for routed UI and upload/import smoke checks.
+- Automated E2E smoke, only when CI-style regression evidence is needed or explicitly requested: `cd frontend && npx playwright test e2e/smoke.spec.ts --config=e2e/playwright.config.ts`.
 - Full local gate: `make ci-local`.
 - Customer-book demo preflight: `powershell -ExecutionPolicy Bypass -File .agents/skills/harness-run/scripts/check-demo-preflight.ps1`, then verify `/` and linked `/clients/<client_id>` routes after data has loaded.
 

@@ -52,5 +52,6 @@ Run the narrowest meaningful check first:
 - Reports or output contracts: update golden samples, then run related backend tests.
 - Frontend component: `cd frontend && npm run test`
 - Type/API changes: `cd frontend && npm run typecheck`
-- Routed UX: Playwright smoke or affected E2E spec.
+- Routed UX and local browser smoke: use `browser-use` first.
+- Automated routed regression: use Playwright only when CI-style E2E evidence is needed or explicitly requested.
 - Client-book demo runtime: `powershell -ExecutionPolicy Bypass -File .agents/skills/harness-run/scripts/check-demo-preflight.ps1`, then verify `/` and each linked `/clients/<client_id>` route after data has loaded.

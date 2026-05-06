@@ -26,7 +26,8 @@
 
 - Run focused Vitest for changed components.
 - Run `npm run typecheck` for typed API/UI changes.
-- Use Playwright for routed visual workflows.
+- Use `browser-use` first for routed visual workflows, upload/import smoke checks, and local UI inspection.
+- Use Playwright only when CI-style automated regression evidence is needed or explicitly requested.
 - For customer-book demo routes, verify loaded data in `/` and linked `/clients/<client_id>` routes. Do not accept a skeleton, hidden error, or empty workspace as a passing smoke when the API has holdings.
 
 ## Browser Verification Profiles

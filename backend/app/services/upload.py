@@ -53,22 +53,44 @@ _FIELD_ALIASES: dict[str, tuple[str, ...]] = {
         "code",
         "pair",
         "issue code",
+        "ticker symbol",
+        "stock code",
+        "security code",
         "종목코드",
         "종목 코드",
         "티커",
+        "티커심볼",
         "종목번호",
         "단축코드",
     ),
-    "name": ("name", "asset name", "asset_name", "종목명", "상품명", "상품 이름", "종목"),
+    "name": (
+        "name",
+        "asset name",
+        "asset_name",
+        "security name",
+        "product name",
+        "종목명",
+        "상품명",
+        "상품 이름",
+        "상품이름",
+        "자산명",
+        "종목",
+    ),
     "quantity": (
         "qty",
         "quantity",
         "shares",
         "units",
+        "holding qty",
+        "balance quantity",
+        "share count",
         "보유수량",
         "보유 수량",
+        "보유주식수",
         "수량",
         "잔고수량",
+        "잔고 수량",
+        "주식수",
         "보유량",
     ),
     "avg_cost": (
@@ -76,16 +98,33 @@ _FIELD_ALIASES: dict[str, tuple[str, ...]] = {
         "avg_cost",
         "average_price",
         "average cost",
+        "unit cost",
+        "purchase price",
+        "book price",
+        "buy price",
         "매입가",
+        "매입단가",
+        "매수단가",
         "평균단가",
         "평균 단가",
         "평균매입단가",
+        "평균 매입가",
         "매수가",
         "취득단가",
     ),
     "price": ("price", "close", "trade_price", "current_price", "현재가", "평가가격", "평가단가"),
-    "currency": ("currency", "ccy", "통화", "결제통화"),
-    "market": ("market", "exchange", "broker", "거래소", "시장"),
+    "currency": ("currency", "ccy", "currency code", "통화", "통화코드", "통화 코드", "결제통화"),
+    "market": (
+        "market",
+        "exchange",
+        "broker",
+        "market name",
+        "exchange name",
+        "거래시장",
+        "거래 시장",
+        "거래소",
+        "시장",
+    ),
     "account": ("account", "account_no", "account number", "계좌", "계좌번호", "계좌 번호"),
     "client_id": ("client_id", "customer_id", "고객id", "고객 id", "고객번호"),
     "client_name": (
@@ -96,8 +135,8 @@ _FIELD_ALIASES: dict[str, tuple[str, ...]] = {
         "고객 이름",
         "고객이름",
     ),
-    "broker": ("broker", "증권사", "브로커"),
-    "date": ("date", "trade_date", "as_of_date", "기준일", "거래일", "일자"),
+    "broker": ("broker", "broker name", "증권사", "브로커"),
+    "date": ("date", "trade_date", "as_of_date", "기준일", "거래일", "일자", "날짜"),
 }
 
 _REQUIRED_IMPORT_FIELDS = ("symbol", "quantity")
@@ -416,7 +455,7 @@ def _schema_from_confirmed_mapping(
     mappings: list[CsvFieldMapping] = []
     missing_required: list[str] = []
     warnings: list[str] = []
-    required_fields = {"symbol", "quantity", "avg_cost", "currency", "market"}
+    required_fields = set(_REQUIRED_IMPORT_FIELDS)
 
     for field_name, mapping in confirmed_mapping.items():
         if mapping.type == "column":
