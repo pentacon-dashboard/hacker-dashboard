@@ -154,7 +154,7 @@ function DegradedBlock({
 
 function SourceDetails({ items }: { items: string[] }) {
   return (
-    <details open className="min-w-0 text-sm text-muted-foreground">
+    <details className="min-w-0 text-sm text-muted-foreground">
       <summary className="flex cursor-pointer items-center gap-2 rounded-md text-sm font-semibold text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
         <Info className="h-4 w-4 shrink-0" aria-hidden="true" />
         <span>출처 상세</span>

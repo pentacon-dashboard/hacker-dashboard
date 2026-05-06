@@ -63,6 +63,11 @@ function toNumber(value: number | string | null | undefined): number {
   return Number.isFinite(parsed) ? parsed : 0;
 }
 
+function parseFiniteNumber(value: number | string | null | undefined): number | null {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
 function labelAssetClass(key: string): string {
   return ASSET_CLASS_LABELS[key] ?? key;
 }
@@ -167,9 +172,17 @@ export function buildPeriodSnapshotStats(
 
   const start = ordered[0]!;
   const end = ordered[ordered.length - 1]!;
-  const values = ordered.map((snapshot) => toNumber(snapshot.total_value_krw));
-  const startValueKrw = toNumber(start.total_value_krw);
-  const endValueKrw = toNumber(end.total_value_krw);
+  const values: number[] = [];
+
+  for (const snapshot of ordered) {
+    const value = parseFiniteNumber(snapshot.total_value_krw);
+    if (value == null) return null;
+    values.push(value);
+  }
+
+  const startValueKrw = values[0]!;
+  const endValueKrw = values[values.length - 1]!;
+  if (startValueKrw <= 0 || endValueKrw <= 0) return null;
 
   return {
     startDate: start.snapshot_date,

@@ -90,7 +90,7 @@ function renderPanel(
   panelSnapshots: SnapshotResponse[] = snapshots,
   panelSummary: PortfolioSummary = summary,
 ) {
-  renderWithProviders(
+  return renderWithProviders(
     <KpiEvidencePanel
       activeKey={activeKey}
       clientId="client-001"
@@ -140,6 +140,18 @@ describe("KpiEvidencePanel", () => {
     ).toBeInTheDocument();
   });
 
+  it("renders degraded period comparison text when snapshot values are invalid", () => {
+    renderPanel("periodChange", 0, [
+      { ...snapshots[0]!, total_value_krw: "0" },
+      snapshots[1]!,
+    ]);
+
+    expect(
+      screen.getByText(/스냅샷이 2개 미만이라 기간 시작값과 종료값을 비교할 수 없습니다/),
+    ).toBeInTheDocument();
+    expect(screen.queryByText("+0.00%")).not.toBeInTheDocument();
+  });
+
   it("renders hidden holdings warning inside holdings evidence", () => {
     renderPanel("holdings", 2);
     expect(screen.getByText(/2개 보유종목/)).toBeInTheDocument();
@@ -179,9 +191,12 @@ describe("KpiEvidencePanel", () => {
 
     const summaryElement = screen.getByText("출처 상세");
     const sourceToken = screen.getByText("portfolio.summary.total_value_krw");
+    const details = sourceToken.closest("details");
 
     expect(summaryElement.closest("summary")).not.toBeNull();
-    expect(sourceToken.closest("details")).not.toBeNull();
+    expect(details).not.toBeNull();
+    expect(details).not.toHaveAttribute("open");
+    expect(sourceToken).not.toBeVisible();
     expect(sourceToken).toHaveClass("break-words");
     expect(sourceToken).toHaveClass("[overflow-wrap:anywhere]");
     expect(sourceToken).not.toHaveClass("break-keep");

@@ -156,6 +156,39 @@ describe("kpi evidence utils", () => {
     expect(buildPeriodSnapshotStats([snapshot(1, "2026-05-07", "100000000")])).toBeNull();
   });
 
+  it("returns null snapshot stats when the start value is zero", () => {
+    expect(
+      buildPeriodSnapshotStats([
+        snapshot(1, "2026-04-07", "0"),
+        snapshot(2, "2026-05-07", "100000000"),
+      ]),
+    ).toBeNull();
+  });
+
+  it("returns null snapshot stats when the start value is negative", () => {
+    expect(
+      buildPeriodSnapshotStats([
+        snapshot(1, "2026-04-07", "-1000000"),
+        snapshot(2, "2026-05-07", "100000000"),
+      ]),
+    ).toBeNull();
+  });
+
+  it("returns null snapshot stats when the start or end value is invalid", () => {
+    expect(
+      buildPeriodSnapshotStats([
+        snapshot(1, "2026-04-07", "not-a-number"),
+        snapshot(2, "2026-05-07", "100000000"),
+      ]),
+    ).toBeNull();
+    expect(
+      buildPeriodSnapshotStats([
+        snapshot(1, "2026-04-07", "90000000"),
+        snapshot(2, "2026-05-07", "not-a-number"),
+      ]),
+    ).toBeNull();
+  });
+
   it("requires aligned holdings_detail for comparable holding snapshots", () => {
     const comparable = [
       {
