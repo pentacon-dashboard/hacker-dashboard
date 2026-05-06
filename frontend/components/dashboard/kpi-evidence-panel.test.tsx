@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import { renderWithProviders } from "@/tests/helpers/render-with-providers";
 import type { PortfolioSummary, SnapshotResponse } from "@/lib/api/portfolio";
 import { KpiEvidencePanel, type KpiEvidenceKey } from "./kpi-evidence-panel";
+import { hhiFormulaLabel } from "./kpi-evidence-utils";
 
 const summary = {
   user_id: "pb-demo",
@@ -127,6 +128,11 @@ describe("KpiEvidencePanel", () => {
     );
   });
 
+  it("renders degraded period comparison text without per-holding inference", () => {
+    renderPanel("periodChange");
+    expect(screen.getByText(/종목별 기간 기여를 산출할 수 없습니다/)).toBeInTheDocument();
+  });
+
   it("renders hidden holdings warning inside holdings evidence", () => {
     renderPanel("holdings", 2);
     expect(screen.getByText(/2개 보유종목/)).toBeInTheDocument();
@@ -138,7 +144,7 @@ describe("KpiEvidencePanel", () => {
 
   it("describes concentration risk as asset-class HHI, not a direct recommendation", () => {
     renderPanel("concentration");
-    expect(screen.getByText(/자산군별 비중 제곱의 합/)).toBeInTheDocument();
+    expect(screen.getByText(hhiFormulaLabel)).toBeInTheDocument();
     expect(screen.queryByText(/매수/)).not.toBeInTheDocument();
     expect(screen.queryByText(/매도/)).not.toBeInTheDocument();
     expect(screen.getByRole("link", { name: "리밸런싱 검토" })).toHaveAttribute(

@@ -42,9 +42,6 @@ const ASSET_CLASS_LABELS: Record<string, string> = {
   other: "기타",
 };
 
-const HHI_FALLBACK_LABEL =
-  "자산군별 비중 제곱의 합(HHI)을 0~100 점수로 환산한 집중도 지표입니다.";
-
 function toNumber(value: number | string | null | undefined): number {
   const parsed = Number(value ?? 0);
   return Number.isFinite(parsed) ? parsed : 0;
@@ -60,12 +57,6 @@ function clientNewsHref(clientId: string): string {
 
 function displayAssetClassLabel(key: string, fallback: string): string {
   return ASSET_CLASS_LABELS[key] ?? fallback;
-}
-
-function hhiDisplayLabel(): string {
-  return hhiFormulaLabel.includes("자산군별 비중 제곱의 합")
-    ? hhiFormulaLabel
-    : HHI_FALLBACK_LABEL;
 }
 
 function EvidenceAction({ href, label }: { href: string; label: string }) {
@@ -422,6 +413,13 @@ export function KpiEvidencePanel({
               />
             ) : null}
           </dl>
+          <div className="mt-3">
+            <DegradedBlock title="기간 종목 기여 근거 부족">
+              종목별 기간 기여를 산출할 수 없습니다. 기간 비교는 총 평가금액
+              스냅샷과 요약 API 지표만으로 검증하며, 종목별 기간 기여는 추론하지
+              않습니다.
+            </DegradedBlock>
+          </div>
         </EvidenceBlock>
       </EvidenceShell>
     );
@@ -468,7 +466,7 @@ export function KpiEvidencePanel({
     >
       <EvidenceBlock title="HHI 산식">
         <p className="break-keep text-sm leading-6 text-muted-foreground">
-          {hhiDisplayLabel()}
+          {hhiFormulaLabel}
         </p>
         <dl className="mt-3">
           <MetricTerm label="집중도 점수" value={formatPct(summary.risk_score_pct)} />
