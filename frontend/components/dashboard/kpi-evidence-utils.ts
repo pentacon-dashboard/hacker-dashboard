@@ -82,6 +82,18 @@ function holdingIdentity(value: unknown): string | null {
   return `${market}:${code}`;
 }
 
+function buildValidHoldingIdentitySet(values: unknown[]): Set<string> | null {
+  const identities = new Set<string>();
+
+  for (const value of values) {
+    const identity = holdingIdentity(value);
+    if (!identity) return null;
+    identities.add(identity);
+  }
+
+  return identities;
+}
+
 export function classifyMarketAssetClass(market: string): string {
   return MARKET_TO_ASSET_CLASS[market.trim().toLowerCase()] ?? "other";
 }
@@ -185,13 +197,9 @@ export function hasComparableHoldingSnapshots(
     return false;
   }
 
-  const firstIds = new Set(
-    first.holdings_detail.map(holdingIdentity).filter((id) => id != null),
-  );
-  const lastIds = new Set(
-    last.holdings_detail.map(holdingIdentity).filter((id) => id != null),
-  );
-  if (firstIds.size === 0 || lastIds.size === 0) return false;
+  const firstIds = buildValidHoldingIdentitySet(first.holdings_detail);
+  const lastIds = buildValidHoldingIdentitySet(last.holdings_detail);
+  if (!firstIds || !lastIds || firstIds.size !== lastIds.size) return false;
 
-  return Array.from(lastIds).some((id) => firstIds.has(id));
+  return Array.from(firstIds).every((id) => lastIds.has(id));
 }

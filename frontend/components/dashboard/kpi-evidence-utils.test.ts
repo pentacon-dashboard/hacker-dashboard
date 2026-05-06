@@ -178,6 +178,82 @@ describe("kpi evidence utils", () => {
     expect(hasComparableHoldingSnapshots(notComparable)).toBe(false);
   });
 
+  it("requires equivalent first and last holding identity sets", () => {
+    const equivalent = [
+      {
+        ...snapshot(1, "2026-05-06", "90000000"),
+        holdings_detail: [
+          { market: "nasdaq", code: "AAPL", value_krw: "10" },
+          { market: "nyse", code: "MSFT", value_krw: "20" },
+        ],
+      },
+      {
+        ...snapshot(2, "2026-05-07", "100000000"),
+        holdings_detail: [
+          { market: "nyse", code: "MSFT", value_krw: "22" },
+          { market: "nasdaq", code: "AAPL", value_krw: "12" },
+        ],
+      },
+    ];
+    const partiallyMismatched = [
+      {
+        ...snapshot(1, "2026-05-06", "90000000"),
+        holdings_detail: [
+          { market: "nasdaq", code: "AAPL", value_krw: "10" },
+          { market: "nyse", code: "MSFT", value_krw: "20" },
+        ],
+      },
+      {
+        ...snapshot(2, "2026-05-07", "100000000"),
+        holdings_detail: [
+          { market: "nasdaq", code: "AAPL", value_krw: "12" },
+          { market: "nasdaq", code: "GOOG", value_krw: "30" },
+        ],
+      },
+    ];
+
+    expect(hasComparableHoldingSnapshots(equivalent)).toBe(true);
+    expect(hasComparableHoldingSnapshots(partiallyMismatched)).toBe(false);
+  });
+
+  it("rejects comparable holding snapshots when either side has an invalid identity", () => {
+    const invalidFirstSide = [
+      {
+        ...snapshot(1, "2026-05-06", "90000000"),
+        holdings_detail: [
+          { market: "nasdaq", code: "AAPL", value_krw: "10" },
+          { market: "nyse", code: "MSFT", value_krw: "not-a-number" },
+        ],
+      },
+      {
+        ...snapshot(2, "2026-05-07", "100000000"),
+        holdings_detail: [
+          { market: "nasdaq", code: "AAPL", value_krw: "12" },
+          { market: "nyse", code: "MSFT", value_krw: "22" },
+        ],
+      },
+    ];
+    const invalidLastSide = [
+      {
+        ...snapshot(1, "2026-05-06", "90000000"),
+        holdings_detail: [
+          { market: "nasdaq", code: "AAPL", value_krw: "10" },
+          { market: "nyse", code: "MSFT", value_krw: "20" },
+        ],
+      },
+      {
+        ...snapshot(2, "2026-05-07", "100000000"),
+        holdings_detail: [
+          { market: "nasdaq", code: "AAPL", value_krw: "12" },
+          { market: "nyse", code: "MSFT", value_krw: "not-a-number" },
+        ],
+      },
+    ];
+
+    expect(hasComparableHoldingSnapshots(invalidFirstSide)).toBe(false);
+    expect(hasComparableHoldingSnapshots(invalidLastSide)).toBe(false);
+  });
+
   it("rejects comparable holding snapshots without shared numeric identities", () => {
     const noSharedIdentity = [
       {
