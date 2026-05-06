@@ -144,7 +144,7 @@ healthcheck:
 healthcheck-prod:
 	@echo "=== Health Check (프로덕션) ==="
 	BE_URL=https://hacker-dashboard-api.fly.dev \
-	FE_URL=https://hacker-dashboard.vercel.app \
+	FE_URL=https://hacker-dashboard-fe.vercel.app \
 	bash scripts/healthcheck.sh
 
 # ── 프로덕션 스모크 테스트 ────────────────────────────────────────────────────
@@ -152,7 +152,7 @@ healthcheck-prod:
 smoke-prod:
 	@echo "=== Production Smoke Test ==="
 	cd frontend && \
-	PROD_URL=https://hacker-dashboard.vercel.app \
+	PROD_URL=https://hacker-dashboard-fe.vercel.app \
 	BE_URL=https://hacker-dashboard-api.fly.dev \
 	npx playwright test e2e/production.spec.ts --project=chromium
 

@@ -25,7 +25,7 @@ def _csv(
     rows: list[str], header: str = "date,market,code,quantity,avg_cost,currency,note"
 ) -> bytes:
     lines = [header] + rows
-    return "\n".join(lines).encode("utf-8")
+    return "\n".join(lines).encode()
 
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -241,7 +241,7 @@ class TestBrokerCsvIntake:
         content = (
             "고객번호,계좌번호,거래시장,티커심볼,상품이름,보유주식수,매입단가,통화코드\n"
             "client-888,acc-1,yahoo,AAPL,Apple Inc.,3,180,USD\n"
-        ).encode("utf-8")
+        ).encode()
 
         df, errors = parse_csv(content)
         result = build_validation_result(df, errors)
@@ -297,7 +297,7 @@ class TestBrokerCsvIntake:
         expected_currency: str,
     ):
         """Broker and user header variants should not require exact template names."""
-        df, errors = parse_csv(f"{header}\n{row}\n".encode("utf-8"))
+        df, errors = parse_csv(f"{header}\n{row}\n".encode())
         result = build_validation_result(df, errors)
 
         assert result.import_status == "imported"

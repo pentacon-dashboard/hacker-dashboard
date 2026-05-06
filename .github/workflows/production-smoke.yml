@@ -6,7 +6,7 @@ on:
       prod_url:
         description: "FE 프로덕션 URL"
         required: false
-        default: "https://hacker-dashboard.vercel.app"
+        default: "https://hacker-dashboard-fe.vercel.app"
       be_url:
         description: "BE 프로덕션 URL"
         required: false
@@ -47,7 +47,7 @@ jobs:
         working-directory: frontend
         env:
           CI: "true"
-          PROD_URL: ${{ github.event.inputs.prod_url || 'https://hacker-dashboard.vercel.app' }}
+          PROD_URL: ${{ github.event.inputs.prod_url || 'https://hacker-dashboard-fe.vercel.app' }}
           BE_URL: ${{ github.event.inputs.be_url || 'https://hacker-dashboard-api.fly.dev' }}
         run: |
           npx playwright test e2e/production.spec.ts --project=chromium
