@@ -16,9 +16,10 @@ type CsvMappingCandidate = CsvMappingCandidateGroup["candidates"] extends
   ? Candidate
   : never;
 
-const REQUIRED_FIELDS = ["symbol", "quantity", "avg_cost", "currency", "market"] as const;
+const REQUIRED_FIELDS = ["symbol", "quantity"] as const;
+const CONFIRMATION_FIELDS = ["avg_cost", "currency", "market"] as const;
 const OPTIONAL_FIELDS = ["client_id", "account", "broker", "name", "date"] as const;
-const ALL_FIELDS = [...REQUIRED_FIELDS, ...OPTIONAL_FIELDS] as const;
+const ALL_FIELDS = [...REQUIRED_FIELDS, ...CONFIRMATION_FIELDS, ...OPTIONAL_FIELDS] as const;
 
 const FIELD_LABELS: Record<(typeof ALL_FIELDS)[number], string> = {
   symbol: "Symbol",
@@ -199,7 +200,8 @@ export function MappingReviewCard({
 
         <div className="flex flex-wrap items-center justify-between gap-3">
           <p className="text-xs text-muted-foreground">
-            필수 5개 필드가 모두 확정되어야 고객 워크스페이스에 저장됩니다.
+            필수 코어 필드는 Symbol과 Quantity입니다. Average cost, Market,
+            Currency는 있으면 저장하고, 없거나 추론이 불확실하면 PB 확인 상태로 남깁니다.
           </p>
           <Button
             type="button"

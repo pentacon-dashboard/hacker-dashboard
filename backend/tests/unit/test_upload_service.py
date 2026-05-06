@@ -236,6 +236,79 @@ class TestBuildValidationResult:
 
 
 class TestBrokerCsvIntake:
+    def test_user_custom_portfolio_headers_auto_map_to_holdings(self):
+        """User-defined customer CSV headers should map to canonical holdings."""
+        content = (
+            "고객번호,계좌번호,거래시장,티커심볼,상품이름,보유주식수,매입단가,통화코드\n"
+            "client-888,acc-1,yahoo,AAPL,Apple Inc.,3,180,USD\n"
+        ).encode("utf-8")
+
+        df, errors = parse_csv(content)
+        result = build_validation_result(df, errors)
+
+        assert result.import_status == "imported"
+        assert result.error_rows == 0
+        assert len(result.normalized_holdings) == 1
+
+        holding = result.normalized_holdings[0]
+        assert holding.client_id == "client-888"
+        assert holding.account == "acc-1"
+        assert holding.market == "yahoo"
+        assert holding.code == "AAPL"
+        assert holding.name == "Apple Inc."
+        assert holding.quantity == "3"
+        assert holding.avg_cost == "180"
+        assert holding.currency == "USD"
+        assert holding.source_columns["symbol"] == "티커심볼"
+        assert holding.source_columns["quantity"] == "보유주식수"
+
+    @pytest.mark.parametrize(
+        ("header", "row", "expected_code", "expected_market", "expected_currency"),
+        [
+            (
+                "Security Code,Holding Qty,Book Price,Currency Code,Market Name",
+                "005930,10,72000,KRW,naver_kr",
+                "005930",
+                "naver_kr",
+                "KRW",
+            ),
+            (
+                "Stock_Code,Share-Count,Unit Cost,Exchange_Name,CURRENCY CODE",
+                "MSFT,2,300,yahoo,USD",
+                "MSFT",
+                "yahoo",
+                "USD",
+            ),
+            (
+                "담당PB,종목코드,보유수량,평균단가,메모",
+                "Kim,005930,10,72000,long-term",
+                "005930",
+                "naver_kr",
+                "KRW",
+            ),
+        ],
+    )
+    def test_additional_header_variants_auto_map_to_holdings(
+        self,
+        header: str,
+        row: str,
+        expected_code: str,
+        expected_market: str,
+        expected_currency: str,
+    ):
+        """Broker and user header variants should not require exact template names."""
+        df, errors = parse_csv(f"{header}\n{row}\n".encode("utf-8"))
+        result = build_validation_result(df, errors)
+
+        assert result.import_status == "imported"
+        assert result.error_rows == 0
+        assert len(result.normalized_holdings) == 1
+
+        holding = result.normalized_holdings[0]
+        assert holding.code == expected_code
+        assert holding.market == expected_market
+        assert holding.currency == expected_currency
+
     def test_korean_broker_columns_normalize_to_holdings(self):
         """한국어 broker CSV 컬럼을 표준 holdings 로 정규화한다."""
         content = (
