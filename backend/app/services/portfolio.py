@@ -221,7 +221,9 @@ async def compute_summary(
     worst_asset_pct = Decimal("0")
     if holding_details and not has_missing_cost_basis:
         try:
-            worst_asset_pct = min(_d(hd.pnl_pct) for hd in holding_details if hd.pnl_pct is not None)
+            worst_asset_pct = min(
+                _d(hd.pnl_pct) for hd in holding_details if hd.pnl_pct is not None
+            )
         except Exception:
             worst_asset_pct = Decimal("0")
 

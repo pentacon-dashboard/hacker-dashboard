@@ -301,11 +301,7 @@ async def import_holdings_from_df(
     import_status: ImportStatus = normalized.status
     has_partial_row_ledger = bool(
         normalized.imported_rows
-        and (
-            normalized.recoverable_rows
-            or normalized.quarantined_rows
-            or normalized.garbage_rows
-        )
+        and (normalized.recoverable_rows or normalized.quarantined_rows or normalized.garbage_rows)
     )
     if normalized.status in {"imported", "partial_imported"} and has_partial_row_ledger:
         import_status = "partial_imported"

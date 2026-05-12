@@ -485,8 +485,7 @@ class TestBrokerCsvIntake:
     def test_total_in_name_or_note_is_not_classified_as_garbage(self):
         """Aggregate words in non-symbol cells do not discard a valid position row."""
         content = (
-            b"code,name,quantity,avg_cost,market,currency,note\n"
-            b"AAPL,Total,3,180,yahoo,USD,total\n"
+            b"code,name,quantity,avg_cost,market,currency,note\nAAPL,Total,3,180,yahoo,USD,total\n"
         )
 
         df, errors = parse_csv(content)
@@ -500,10 +499,7 @@ class TestBrokerCsvIntake:
 
     def test_partial_import_preserves_imported_and_quarantined_row_evidence(self):
         """98 valid rows plus 2 invalid rows produce imported rows and quarantine evidence."""
-        valid_rows = [
-            f"AAPL,{idx},180,yahoo,USD,row-{idx}"
-            for idx in range(1, 99)
-        ]
+        valid_rows = [f"AAPL,{idx},180,yahoo,USD,row-{idx}" for idx in range(1, 99)]
         content = _csv(
             [
                 *valid_rows,

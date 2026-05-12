@@ -360,12 +360,16 @@ async def test_upload_import_persists_imported_row_ledger_and_missing_cost_basis
         assert batch.status == "imported"
 
         ledger_rows = (
-            await session.execute(
-                select(PortfolioImportRow).where(
-                    PortfolioImportRow.import_batch_key == body["import_batch_key"]
+            (
+                await session.execute(
+                    select(PortfolioImportRow).where(
+                        PortfolioImportRow.import_batch_key == body["import_batch_key"]
+                    )
                 )
             )
-        ).scalars().all()
+            .scalars()
+            .all()
+        )
         assert len(ledger_rows) == 1
         assert ledger_rows[0].row_status == "imported"
         assert ledger_rows[0].linked_holding_id == holding.id
@@ -414,18 +418,24 @@ async def test_upload_import_persists_partial_import_rows_and_replaces_same_batc
         assert batch.status == "partial_imported"
 
         holdings = (
-            await session.execute(select(Holding).where(Holding.client_id == "client-902"))
-        ).scalars().all()
+            (await session.execute(select(Holding).where(Holding.client_id == "client-902")))
+            .scalars()
+            .all()
+        )
         assert len(holdings) == 1
         assert holdings[0].code == "AAPL"
 
         ledger_rows = (
-            await session.execute(
-                select(PortfolioImportRow)
-                .where(PortfolioImportRow.import_batch_key == body["import_batch_key"])
-                .order_by(PortfolioImportRow.source_row)
+            (
+                await session.execute(
+                    select(PortfolioImportRow)
+                    .where(PortfolioImportRow.import_batch_key == body["import_batch_key"])
+                    .order_by(PortfolioImportRow.source_row)
+                )
             )
-        ).scalars().all()
+            .scalars()
+            .all()
+        )
         assert [row.row_status for row in ledger_rows] == ["imported", "quarantined"]
         assert ledger_rows[0].linked_holding_id == holdings[0].id
         assert ledger_rows[1].linked_holding_id is None
@@ -473,12 +483,16 @@ async def test_upload_import_returns_partial_when_valid_rows_have_garbage_ledger
         assert batch.status == "partial_imported"
 
         ledger_rows = (
-            await session.execute(
-                select(PortfolioImportRow)
-                .where(PortfolioImportRow.import_batch_key == body["import_batch_key"])
-                .order_by(PortfolioImportRow.source_row)
+            (
+                await session.execute(
+                    select(PortfolioImportRow)
+                    .where(PortfolioImportRow.import_batch_key == body["import_batch_key"])
+                    .order_by(PortfolioImportRow.source_row)
+                )
             )
-        ).scalars().all()
+            .scalars()
+            .all()
+        )
         assert [row.row_status for row in ledger_rows] == ["imported", "garbage"]
         assert ledger_rows[1].linked_holding_id is None
         assert ledger_rows[1].reason_codes == ["total_row"]

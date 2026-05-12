@@ -140,7 +140,7 @@ def build_market_leaders(holdings: list[HoldingDetail]) -> list[MarketLeader]:
         else:
             pnl_krw = _d(h.pnl_krw)
             krw_sign = "+" if pnl_krw >= 0 else ""
-        # 간략 표기 (천 단위 쉼표)
+            # 간략 표기 (천 단위 쉼표)
             krw_display = f"{krw_sign}{int(pnl_krw):,}"
 
         # 현재가 display

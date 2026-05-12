@@ -1411,9 +1411,7 @@ def parse_csv(
                 errors.append(
                     UploadErrorDetail(
                         row=row_num,
-                        column=_original_column(df, quantity_col)
-                        if quantity_col
-                        else "quantity",
+                        column=_original_column(df, quantity_col) if quantity_col else "quantity",
                         code="invalid_quantity",
                         message=f"invalid quantity format: '{qty_val}'",
                     )
@@ -1422,9 +1420,7 @@ def parse_csv(
                 errors.append(
                     UploadErrorDetail(
                         row=row_num,
-                        column=_original_column(df, quantity_col)
-                        if quantity_col
-                        else "quantity",
+                        column=_original_column(df, quantity_col) if quantity_col else "quantity",
                         code="negative_quantity",
                         message=f"quantity must be greater than zero: {qty_val}",
                     )

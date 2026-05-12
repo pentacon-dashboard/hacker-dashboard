@@ -153,9 +153,7 @@ def build_client_briefing_report(
         gate_results={
             "schema_gate": "pass",
             "domain_gate": "pass",
-            "evidence_gate": (
-                "degraded: missing cost basis" if has_missing_cost_basis else "pass"
-            ),
+            "evidence_gate": ("degraded: missing cost basis" if has_missing_cost_basis else "pass"),
             "critique_gate": "degraded" if has_missing_cost_basis else "pass",
         },
         export_ready=not has_missing_cost_basis,

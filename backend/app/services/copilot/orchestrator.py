@@ -291,9 +291,7 @@ def _portfolio_context_to_text(ctx: dict[str, Any]) -> str | None:
         holding_pnl_pct = holding.get("pnl_pct")
         if code and not _is_missing_metric_value(value_krw):
             holding_pnl_text = _format_pct_or_unavailable(holding_pnl_pct)
-            holding_summaries.append(
-                f"{code}({_format_krw(value_krw)}, {holding_pnl_text})"
-            )
+            holding_summaries.append(f"{code}({_format_krw(value_krw)}, {holding_pnl_text})")
     if holding_summaries:
         lines.append(f"주요 보유 종목은 {', '.join(holding_summaries)}입니다.")
 
@@ -801,9 +799,7 @@ async def _run_agent_llm(
             if agent == "portfolio":
                 portfolio_text = _portfolio_context_to_text(ctx)
             portfolio_text_block = (
-                f"Deterministic portfolio summary:\n{portfolio_text}\n\n"
-                if portfolio_text
-                else ""
+                f"Deterministic portfolio summary:\n{portfolio_text}\n\n" if portfolio_text else ""
             )
             user_content = (
                 f"{memory_context}\n\n"

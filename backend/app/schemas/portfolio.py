@@ -183,7 +183,9 @@ class PortfolioSummary(BaseModel):
     holdings: list[HoldingDetail]
     # ── 대시보드 KPI 확장 ─────────────────────────────
     holdings_count: int = Field(0, description="보유 종목 수")
-    worst_asset_pct: str | None = Field("0.00", description="보유 종목 중 최저 손익률 %% (예: '-3.85')")
+    worst_asset_pct: str | None = Field(
+        "0.00", description="보유 종목 중 최저 손익률 %% (예: '-3.85')"
+    )
     risk_score_pct: str = Field(
         "0.00",
         description="HHI 기반 집중도 리스크 점수 %% (0: 완전분산 ~ 100: 단일자산)",
