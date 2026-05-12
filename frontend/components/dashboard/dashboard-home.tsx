@@ -55,6 +55,10 @@ import {
   formatKRWCompact,
   formatPct,
 } from "@/lib/utils/format";
+import {
+  addDaysToDateKey,
+  getDateKeyInTimeZone,
+} from "@/lib/utils/stable-date";
 
 const ASSET_CLASS_LABEL_KEYS: Record<string, string> = {
   stock_kr: "dashboard.alloc.stockKr",
@@ -74,21 +78,13 @@ const ASSET_CLASS_COLORS: Record<string, string> = {
   other: "#94a3b8",
 };
 
-function formatDate(date: Date): string {
-  const yyyy = date.getFullYear();
-  const mm = String(date.getMonth() + 1).padStart(2, "0");
-  const dd = String(date.getDate()).padStart(2, "0");
-  return `${yyyy}-${mm}-${dd}`;
-}
-
 function rangeForPeriod(period: PeriodKey) {
-  const to = new Date();
-  const from = new Date();
-  from.setDate(to.getDate() - PERIOD_DAYS[period]);
+  const to = getDateKeyInTimeZone();
+  const from = addDaysToDateKey(to, -PERIOD_DAYS[period]);
   return {
-    from: formatDate(from),
-    to: formatDate(to),
-    label: `${formatDate(from)} ~ ${formatDate(to)}`,
+    from,
+    to,
+    label: `${from} ~ ${to}`,
   };
 }
 

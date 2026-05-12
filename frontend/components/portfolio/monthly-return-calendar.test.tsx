@@ -4,7 +4,7 @@ import { MonthlyReturnCalendar, type MonthlyReturnCell } from "./monthly-return-
 
 function buildCells(count: number): MonthlyReturnCell[] {
   return Array.from({ length: count }, (_, i) => {
-    const date = new Date(2026, 0, 1 + i);
+    const date = new Date(Date.UTC(2026, 0, 1 + i));
     const iso = date.toISOString().slice(0, 10);
     const ret = Math.sin(i * 0.3) * 3;
     return {

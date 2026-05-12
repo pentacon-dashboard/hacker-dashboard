@@ -9,19 +9,24 @@ import { CalendarIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { useLocale } from "@/lib/i18n/locale-provider";
+import {
+  addDaysToDateKey,
+  dateKeyToDate,
+  formatDateInAppTimeZone,
+  getDateKeyInTimeZone,
+} from "@/lib/utils/stable-date";
 
 function formatDate(date: Date, localeTag: string): string {
-  return new Intl.DateTimeFormat(localeTag, {
+  return formatDateInAppTimeZone(date, localeTag, {
     month: "short",
     day: "numeric",
-  }).format(date);
+  });
 }
 
 function getDefaultRange(): DateRange {
-  const to = new Date();
-  const from = new Date();
-  from.setDate(to.getDate() - 30);
-  return { from, to };
+  const to = getDateKeyInTimeZone();
+  const from = addDaysToDateKey(to, -30);
+  return { from: dateKeyToDate(from), to: dateKeyToDate(to) };
 }
 
 /**
@@ -46,8 +51,8 @@ export function DateRangePicker() {
     const fromParam = searchParams.get("from");
     const toParam = searchParams.get("to");
     if (fromParam && toParam) {
-      const from = new Date(fromParam);
-      const to = new Date(toParam);
+      const from = dateKeyToDate(fromParam);
+      const to = dateKeyToDate(toParam);
       if (!isNaN(from.getTime()) && !isNaN(to.getTime())) {
         return { from, to };
       }

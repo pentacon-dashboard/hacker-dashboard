@@ -3,6 +3,7 @@
 import { CheckCircle2, XCircle, Loader2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useLocale } from "@/lib/i18n/locale-provider";
+import { formatDateInAppTimeZone } from "@/lib/utils/stable-date";
 
 export interface AiInsightResponse {
   summary: string;
@@ -108,12 +109,16 @@ export function AiInsightCard({ insight, isLoading = false }: AiInsightCardProps
             </Badge>
           )}
           <span className="text-[10px] text-muted-foreground">
-            {new Date(insight.generated_at).toLocaleString(locale === "en" ? "en-US" : "ko-KR", {
-              month: "short",
-              day: "numeric",
-              hour: "2-digit",
-              minute: "2-digit",
-            })}
+            {formatDateInAppTimeZone(
+              new Date(insight.generated_at),
+              locale === "en" ? "en-US" : "ko-KR",
+              {
+                month: "short",
+                day: "numeric",
+                hour: "2-digit",
+                minute: "2-digit",
+              },
+            )}
           </span>
         </div>
         {/* 3 gates 배지 */}

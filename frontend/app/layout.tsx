@@ -12,6 +12,10 @@ const inter = Inter({ subsets: ["latin"] });
 export const metadata: Metadata = {
   title: "Hacker Dashboard",
   description: "임의 투자 데이터에서 자동으로 분석 뷰를 생성하는 금융 대시보드",
+  icons: {
+    icon: "/favicon.svg",
+    shortcut: "/favicon.svg",
+  },
 };
 
 const themeInitScript = `(function(){try{var s=localStorage.getItem('hd-theme')||'system';var m=s==='system'?(window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light'):s;var r=document.documentElement;if(m==='dark'){r.classList.add('dark');}r.style.colorScheme=m;}catch(e){}})();`;

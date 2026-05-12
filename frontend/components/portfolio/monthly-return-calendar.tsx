@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useLocale } from "@/lib/i18n/locale-provider";
+import { getYearInTimeZone } from "@/lib/utils/stable-date";
 
 export interface MonthlyReturnCell {
   date: string; // "YYYY-MM-DD"
@@ -71,7 +72,7 @@ export function MonthlyReturnCalendar({ cells, year }: MonthlyReturnCalendarProp
     );
   }
 
-  const displayYear = year ?? new Date().getFullYear();
+  const displayYear = year ?? getYearInTimeZone();
 
   // 날짜 맵 구성
   const cellMap: CellMap = {};
@@ -80,9 +81,9 @@ export function MonthlyReturnCalendar({ cells, year }: MonthlyReturnCalendarProp
   }
 
   // 연도의 첫날
-  const firstDay = new Date(displayYear, 0, 1);
+  const firstDay = new Date(Date.UTC(displayYear, 0, 1));
   // 첫 번째 일요일 시작 기준으로 열(week) 계산
-  const startOffset = firstDay.getDay(); // 0=Sun
+  const startOffset = firstDay.getUTCDay(); // 0=Sun
   const totalWeeks = Math.ceil((365 + startOffset) / 7) + 1; // 53 or 54
 
   // 전체 격자 구성: [weekIndex][dayIndex]
@@ -94,7 +95,7 @@ export function MonthlyReturnCalendar({ cells, year }: MonthlyReturnCalendarProp
       if (dayOffset < 0 || dayOffset >= 365 + (isLeapYear(displayYear) ? 1 : 0)) {
         week.push(null);
       } else {
-        const date = new Date(displayYear, 0, 1 + dayOffset);
+        const date = new Date(Date.UTC(displayYear, 0, 1 + dayOffset));
         const iso = date.toISOString().slice(0, 10);
         week.push(cellMap[iso] ?? null);
       }
@@ -105,7 +106,7 @@ export function MonthlyReturnCalendar({ cells, year }: MonthlyReturnCalendarProp
   // 월 라벨 위치 계산 (각 월 첫 날이 속한 week 인덱스)
   const monthPositions: Array<{ label: string; weekIdx: number }> = [];
   for (let m = 0; m < 12; m++) {
-    const firstOfMonth = new Date(displayYear, m, 1);
+    const firstOfMonth = new Date(Date.UTC(displayYear, m, 1));
     const dayOfYear = Math.floor(
       (firstOfMonth.getTime() - firstDay.getTime()) / 86400000,
     );

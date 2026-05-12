@@ -38,6 +38,7 @@ import {
   formatSignedNumber,
   signedColorClass,
 } from "@/lib/utils/format";
+import { getYearInTimeZone } from "@/lib/utils/stable-date";
 import { getDisplayableHoldings } from "@/lib/portfolio/display-safety";
 
 interface ClientWorkspaceProps {
@@ -47,7 +48,7 @@ interface ClientWorkspaceProps {
 export function ClientWorkspace({ clientId }: ClientWorkspaceProps) {
   const { t } = useLocale();
   const { refreshIntervalMs, autoRefresh } = useDataSettings();
-  const currentYear = new Date().getFullYear();
+  const currentYear = getYearInTimeZone();
 
   const clientsQuery = useQuery({
     queryKey: ["portfolio", "clients"],
