@@ -1122,13 +1122,13 @@ def normalize_holdings_from_csv(
         )
 
     if not holdings:
-        status = (
+        empty_status: Literal["needs_confirmation", "insufficient_data"] = (
             "needs_confirmation"
             if recoverable_rows or quarantined_rows or schema.review_fields
             else "insufficient_data"
         )
         return CsvNormalizationResult(
-            status=status,
+            status=empty_status,
             holdings=[],
             warnings=warnings,
             blocking_errors=blocking_errors,

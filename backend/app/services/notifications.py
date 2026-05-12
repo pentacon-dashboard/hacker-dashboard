@@ -202,13 +202,14 @@ async def _build_holding_notifications(
     notifications: list[Notification] = []
     for h in recent_holdings:
         nid_source = str(h.id)
+        avg_cost_text = "-" if h.avg_cost is None else f"{float(h.avg_cost):,.2f}"
         notifications.append(
             Notification(
                 id=_make_id("holding", nid_source),
                 title=f"{h.code} 신규 보유 추가",
                 message=(
                     f"{h.market} / {h.code} "
-                    f"수량 {float(h.quantity):.4f} @ 평단 {float(h.avg_cost):,.2f} {h.currency}"
+                    f"수량 {float(h.quantity):.4f} @ 평단 {avg_cost_text} {h.currency}"
                 ),
                 severity="info",
                 category="portfolio",
