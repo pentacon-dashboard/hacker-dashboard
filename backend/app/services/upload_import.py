@@ -11,13 +11,14 @@ from typing import Any, Literal
 from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.db.models import Holding, PortfolioImportBatch
+from app.db.models import Holding, PortfolioImportBatch, PortfolioImportRow
 from app.schemas.portfolio import HoldingResponse
 from app.schemas.upload import (
     ConfirmedCsvMapping,
     NormalizedCsvHolding,
     UploadErrorDetail,
     UploadImportResponse,
+    UploadImportRow,
 )
 from app.services.clients import ensure_client_registry, normalize_client_name
 from app.services.upload import (
@@ -28,7 +29,7 @@ from app.services.upload import (
     normalize_holdings_from_csv,
 )
 
-ImportStatus = Literal["imported", "needs_confirmation", "insufficient_data"]
+ImportStatus = Literal["imported", "partial_imported", "needs_confirmation", "insufficient_data"]
 
 _DEMO_USER = "pb-demo"
 _DEFAULT_CLIENT_ID = "client-001"
@@ -84,8 +85,6 @@ def _blocking_warnings(holding: NormalizedCsvHolding) -> list[str]:
         warnings.append(f"row {holding.source_row}: market missing")
     elif holding.market not in _SUPPORTED_MARKETS:
         warnings.append(f"row {holding.source_row}: unsupported market '{holding.market}'")
-    if holding.avg_cost is None:
-        warnings.append(f"row {holding.source_row}: avg_cost missing")
     if holding.currency is None:
         warnings.append(f"row {holding.source_row}: currency missing")
     elif holding.currency.upper() not in _SUPPORTED_CURRENCIES:
@@ -156,6 +155,10 @@ def _response(
     normalized_preview: list[dict[str, Any]],
     warnings: list[str],
     blocking_errors: list[UploadErrorDetail],
+    imported_rows: list[UploadImportRow] | None = None,
+    recoverable_rows: list[UploadImportRow] | None = None,
+    quarantined_rows: list[UploadImportRow] | None = None,
+    garbage_rows: list[UploadImportRow] | None = None,
     import_batch_key: str | None = None,
 ) -> UploadImportResponse:
     return UploadImportResponse(
@@ -171,6 +174,10 @@ def _response(
         normalized_holdings=normalized,
         normalization_warnings=warnings,
         blocking_errors=blocking_errors,
+        imported_rows=imported_rows or [],
+        recoverable_rows=recoverable_rows or [],
+        quarantined_rows=quarantined_rows or [],
+        garbage_rows=garbage_rows or [],
     )
 
 
@@ -218,6 +225,42 @@ async def _upsert_import_batch(
     batch.updated_at = now
 
 
+def _row_reason_codes(row: UploadImportRow) -> list[str]:
+    reason_codes: list[str] = []
+    if row.reason_code:
+        reason_codes.append(row.reason_code)
+    for error in row.errors:
+        if error.code not in reason_codes:
+            reason_codes.append(error.code)
+    return reason_codes
+
+
+def _row_ledger(
+    row: UploadImportRow,
+    *,
+    client_id: str,
+    import_batch_key: str,
+    linked_holding_id: int | None,
+    created_at: datetime,
+) -> PortfolioImportRow:
+    return PortfolioImportRow(
+        user_id=_DEMO_USER,
+        client_id=client_id,
+        import_batch_key=import_batch_key,
+        source_row=row.source_row,
+        row_status=row.classification,
+        raw_row_json=dict(row.source_columns),
+        normalized_payload_json=(
+            row.normalized_holding.model_dump(mode="json")
+            if row.normalized_holding is not None
+            else None
+        ),
+        reason_codes=_row_reason_codes(row),
+        linked_holding_id=linked_holding_id,
+        created_at=created_at,
+    )
+
+
 async def import_holdings_from_df(
     df: Any,
     *,
@@ -255,10 +298,21 @@ async def import_holdings_from_df(
         file_content_hash=file_content_hash,
         confirmed_mapping_hash=mapping_hash,
     )
+    import_status: ImportStatus = normalized.status
+    has_partial_row_ledger = bool(
+        normalized.imported_rows
+        and (
+            normalized.recoverable_rows
+            or normalized.quarantined_rows
+            or normalized.garbage_rows
+        )
+    )
+    if normalized.status in {"imported", "partial_imported"} and has_partial_row_ledger:
+        import_status = "partial_imported"
 
-    if normalized.status != "imported":
+    if import_status not in {"imported", "partial_imported"}:
         return _response(
-            status=normalized.status,
+            status=import_status,
             client_id=client_id,
             imported=[],
             normalized=normalized.holdings,
@@ -268,6 +322,10 @@ async def import_holdings_from_df(
             normalized_preview=normalized_preview,
             warnings=warnings,
             blocking_errors=normalized.blocking_errors,
+            imported_rows=normalized.imported_rows,
+            recoverable_rows=normalized.recoverable_rows,
+            quarantined_rows=normalized.quarantined_rows,
+            garbage_rows=normalized.garbage_rows,
             import_batch_key=import_batch_key if confirmed_mapping else None,
         )
 
@@ -306,9 +364,20 @@ async def import_holdings_from_df(
             normalized_preview=normalized_preview,
             warnings=warnings + blocking,
             blocking_errors=blocking_errors,
+            imported_rows=normalized.imported_rows,
+            recoverable_rows=normalized.recoverable_rows,
+            quarantined_rows=normalized.quarantined_rows,
+            garbage_rows=normalized.garbage_rows,
             import_batch_key=import_batch_key,
         )
 
+    await db.execute(
+        delete(PortfolioImportRow).where(
+            PortfolioImportRow.user_id == _DEMO_USER,
+            PortfolioImportRow.client_id == client_id,
+            PortfolioImportRow.import_batch_key == import_batch_key,
+        )
+    )
     await db.execute(
         delete(Holding).where(
             Holding.user_id == _DEMO_USER,
@@ -321,17 +390,21 @@ async def import_holdings_from_df(
     imported: list[Holding] = []
     for normalized_holding in normalized.holdings:
         assert normalized_holding.market is not None
-        assert normalized_holding.avg_cost is not None
         assert normalized_holding.currency is not None
         quantity, _ = _decimal_from_text(
             normalized_holding.quantity,
             field_name="quantity",
             source_row=normalized_holding.source_row,
         )
-        avg_cost, _ = _decimal_from_text(
-            normalized_holding.avg_cost,
-            field_name="avg_cost",
-            source_row=normalized_holding.source_row,
+        avg_cost: Decimal | None = None
+        if normalized_holding.avg_cost is not None:
+            avg_cost, _ = _decimal_from_text(
+                normalized_holding.avg_cost,
+                field_name="avg_cost",
+                source_row=normalized_holding.source_row,
+            )
+        cost_basis_status = normalized_holding.cost_basis_status or (
+            "missing" if avg_cost is None else "provided"
         )
         holding = Holding(
             user_id=_DEMO_USER,
@@ -340,6 +413,7 @@ async def import_holdings_from_df(
             code=normalized_holding.code,
             quantity=quantity,
             avg_cost=avg_cost,
+            cost_basis_status=cost_basis_status,
             currency=normalized_holding.currency.upper(),
             import_batch_key=import_batch_key,
             source_row=normalized_holding.source_row,
@@ -351,6 +425,7 @@ async def import_holdings_from_df(
         db.add(holding)
         imported.append(holding)
 
+    await db.flush()
     await _upsert_import_batch(
         db,
         client_id=client_id,
@@ -359,9 +434,27 @@ async def import_holdings_from_df(
         file_content_hash=file_content_hash,
         confirmed_mapping_hash=mapping_hash,
         confirmed_mapping=confirmed_mapping,
-        status="imported",
+        status=import_status,
         warnings=warnings,
     )
+    await db.flush()
+    holdings_by_source_row = {holding.source_row: holding for holding in imported}
+    for row in (
+        *normalized.imported_rows,
+        *normalized.recoverable_rows,
+        *normalized.quarantined_rows,
+        *normalized.garbage_rows,
+    ):
+        linked_holding = holdings_by_source_row.get(row.source_row)
+        db.add(
+            _row_ledger(
+                row,
+                client_id=client_id,
+                import_batch_key=import_batch_key,
+                linked_holding_id=linked_holding.id if linked_holding is not None else None,
+                created_at=now,
+            )
+        )
     await ensure_client_registry(
         db,
         user_id=_DEMO_USER,
@@ -375,7 +468,7 @@ async def import_holdings_from_df(
         await db.refresh(holding)
 
     return _response(
-        status="imported",
+        status=import_status,
         client_id=client_id,
         imported=imported,
         normalized=normalized.holdings,
@@ -385,5 +478,9 @@ async def import_holdings_from_df(
         normalized_preview=normalized_preview,
         warnings=warnings,
         blocking_errors=[],
+        imported_rows=normalized.imported_rows,
+        recoverable_rows=normalized.recoverable_rows,
+        quarantined_rows=normalized.quarantined_rows,
+        garbage_rows=normalized.garbage_rows,
         import_batch_key=import_batch_key,
     )

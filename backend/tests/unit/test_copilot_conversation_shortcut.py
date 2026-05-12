@@ -333,6 +333,38 @@ def test_client_portfolio_query_builds_deterministic_plan() -> None:
     assert _build_client_portfolio_plan("TSLA 최근 1년 분석", session_id="s1") is None
 
 
+def test_portfolio_context_text_degrades_missing_cost_basis_pnl() -> None:
+    from app.services.copilot.orchestrator import _portfolio_context_to_text
+
+    text = _portfolio_context_to_text(
+        {
+            "client_context": {"client_id": "client-003", "client_name": "Client C"},
+            "indicators": {
+                "total_value": "13718214.00",
+                "pnl_pct": "None",
+                "n_holdings": 1,
+                "asset_class_breakdown": {"stock_us": "1.0000"},
+            },
+            "holdings": [
+                {
+                    "market": "yahoo",
+                    "code": "AAPL",
+                    "value_krw": "6810075.00",
+                    "pnl_pct": "None",
+                }
+            ],
+        }
+    )
+
+    assert text is not None
+    assert "Client C" in text
+    assert "AAPL" in text
+    assert "None%" not in text
+    assert "총 손익률 0" not in text
+    assert "AAPL(6,810,075원, 0" not in text
+    assert "unavailable" in text
+
+
 @pytest.mark.asyncio
 async def test_portfolio_agent_uses_normalized_planner_client_id(
     monkeypatch: pytest.MonkeyPatch,
@@ -398,6 +430,75 @@ async def test_portfolio_agent_uses_normalized_planner_client_id(
     assert "미국 주식 100.00%" in result["card"]["content"]
     assert captured_prompt["system_prompt_name"] == "portfolio_system"
     assert '"client_id": "client-003"' in captured_prompt["user_content"]
+
+
+@pytest.mark.asyncio
+async def test_portfolio_agent_prompt_degrades_missing_cost_basis_pnl(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from app.schemas.copilot import CopilotStep, GatePolicy
+    from app.services.copilot.orchestrator import _run_agent_llm
+
+    captured_prompt: dict[str, str] = {}
+
+    async def fake_fetch_portfolio_context(
+        *,
+        client_id: str,
+        client_name: str | None = None,
+    ) -> dict:
+        return {
+            "client_context": {"client_id": client_id, "client_name": "Client C"},
+            "indicators": {
+                "total_value": "13718214.00",
+                "pnl_pct": "None",
+                "n_holdings": 1,
+                "asset_class_breakdown": {"stock_us": "1.0000"},
+            },
+            "holdings": [
+                {
+                    "market": "yahoo",
+                    "code": "AAPL",
+                    "value_krw": "6810075.00",
+                    "pnl_pct": "None",
+                }
+            ],
+        }
+
+    async def fake_call_llm(**kwargs: str) -> str:
+        captured_prompt["user_content"] = str(kwargs["user_content"])
+        return "Client C portfolio context degraded missing PnL."
+
+    monkeypatch.setattr(
+        "app.services.copilot.orchestrator._fetch_portfolio_context",
+        fake_fetch_portfolio_context,
+        raising=False,
+    )
+
+    async def fake_resolve_client(*_: object, **__: object) -> tuple[str, bool, str | None, None]:
+        return "client-003", True, "Client C", None
+
+    monkeypatch.setattr(
+        "app.services.copilot.orchestrator._resolve_client_for_copilot",
+        fake_resolve_client,
+        raising=False,
+    )
+    monkeypatch.setattr("app.agents.llm.call_llm", fake_call_llm, raising=False)
+
+    step = CopilotStep(
+        step_id="a",
+        agent="portfolio",
+        inputs={"client_id": "C"},
+        depends_on=[],
+        gate_policy=GatePolicy.model_validate({"schema": True, "domain": True, "critique": True}),
+    )
+
+    await _run_agent_llm(step, "client C portfolio summary")
+
+    assert captured_prompt["user_content"]
+    assert "None%" not in captured_prompt["user_content"]
+    assert "총 손익률 0" not in captured_prompt["user_content"]
+    assert "AAPL(6,810,075원, 0" not in captured_prompt["user_content"]
+    assert "unavailable" in captured_prompt["user_content"]
 
 
 @pytest.mark.asyncio

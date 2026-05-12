@@ -17,7 +17,7 @@ export interface MarketLeader {
   logo_url: string | null;
   /** BE: price_display(null 가능) 또는 수동 포맷 문자열 */
   price_display: string | null;
-  change_pct: string;
+  change_pct: string | null;
   change_krw: string | null;
 }
 
@@ -89,7 +89,9 @@ function LeaderList({ leaders }: { leaders: MarketLeader[] }) {
     <ul className="flex flex-col gap-2" data-testid="market-leaders">
       {leaders.map((leader, idx) => {
         const changeNum = Number(leader.change_pct);
-        const isPositive = changeNum >= 0;
+        const hasChange =
+          leader.change_pct !== null && leader.change_pct !== "" && Number.isFinite(changeNum);
+        const isPositive = hasChange && changeNum >= 0;
         const bgClass = PASTEL_BG[idx % PASTEL_BG.length] ?? PASTEL_BG[0]!;
 
         return (
@@ -111,18 +113,19 @@ function LeaderList({ leaders }: { leaders: MarketLeader[] }) {
               </p>
               <p
                 className={`flex items-center justify-end gap-0.5 text-[10px] font-semibold tabular-nums ${
-                  isPositive
+                  !hasChange
+                    ? "text-muted-foreground"
+                    : isPositive
                     ? "text-emerald-600 dark:text-emerald-400"
                     : "text-red-600 dark:text-red-400"
                 }`}
               >
-                {isPositive ? (
+                {!hasChange ? null : isPositive ? (
                   <TrendingUp className="h-3 w-3" aria-hidden="true" />
                 ) : (
                   <TrendingDown className="h-3 w-3" aria-hidden="true" />
                 )}
-                {isPositive ? "+" : ""}
-                {changeNum.toFixed(2)}%
+                {hasChange ? `${isPositive ? "+" : ""}${changeNum.toFixed(2)}%` : "-"}
               </p>
               {leader.change_krw && (
                 <p className="text-[10px] text-muted-foreground">

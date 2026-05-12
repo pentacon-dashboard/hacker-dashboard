@@ -72,9 +72,12 @@ function ClientDashboardHomeSkeleton() {
 function ClientBookSummary({ data }: { data: PortfolioClientsResponse }) {
   const clients = data.clients;
   const highRiskCount = clients.filter((client) => client.risk_grade === "high").length;
+  const clientsWithReturn = clients.filter((client) => client.total_pnl_pct !== null);
   const averageReturnPct =
-    clients.reduce((sum, client) => sum + Number(client.total_pnl_pct), 0) /
-    Math.max(clients.length, 1);
+    clientsWithReturn.length > 0
+      ? clientsWithReturn.reduce((sum, client) => sum + Number(client.total_pnl_pct), 0) /
+        clientsWithReturn.length
+      : null;
 
   return (
     <section
@@ -107,11 +110,11 @@ function ClientBookSummary({ data }: { data: PortfolioClientsResponse }) {
       />
       <KpiCard
         label="평균 수익률"
-        value={formatPct(averageReturnPct, { signed: true })}
+        value={averageReturnPct === null ? "-" : formatPct(averageReturnPct, { signed: true })}
         delta="전체 고객 평균 (30일)"
-        deltaValue={averageReturnPct}
+        deltaValue={averageReturnPct === null ? undefined : averageReturnPct}
         icon={<TrendingUp className="h-4 w-4" />}
-        accent={averageReturnPct >= 0 ? "green" : "rose"}
+        accent={averageReturnPct !== null && averageReturnPct < 0 ? "rose" : "green"}
         testId="client-book-average-return"
       />
     </section>
@@ -208,10 +211,12 @@ function ClientListPanel({
                 <div className="flex items-center gap-3">
                   <span
                     className={`text-sm font-semibold tabular-nums ${signedColorClass(
-                      client.total_pnl_pct,
+                      client.total_pnl_pct ?? 0,
                     )}`}
                   >
-                    {formatPct(client.total_pnl_pct, { signed: true })}
+                    {client.total_pnl_pct === null
+                      ? "-"
+                      : formatPct(client.total_pnl_pct, { signed: true })}
                   </span>
                   <ArrowRight
                     className={cn(

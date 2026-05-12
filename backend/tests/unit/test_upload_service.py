@@ -390,6 +390,146 @@ class TestBrokerCsvIntake:
         assert holding.market == "naver_kr"
         assert holding.currency == "KRW"
 
+    def test_missing_avg_cost_imports_position_with_missing_cost_basis(self):
+        """Rows with required position fields and no avg cost remain importable."""
+        content = b"code,quantity,market,currency\nAAPL,3,yahoo,USD\n"
+
+        df, errors = parse_csv(content)
+        result = build_validation_result(df, errors)
+
+        assert result.import_status == "imported"
+        assert len(result.normalized_holdings) == 1
+        holding = result.normalized_holdings[0]
+        assert holding.code == "AAPL"
+        assert holding.avg_cost is None
+        assert holding.cost_basis_status == "missing"
+        assert len(result.imported_rows) == 1
+        assert result.imported_rows[0].normalized_holding == holding
+
+    def test_garbage_rows_are_classified_without_blocking_valid_rows(self):
+        """Blank, subtotal, and repeated header rows are ledgered as garbage."""
+        content = "\n".join(
+            [
+                "code,quantity,avg_cost,market,currency",
+                "AAPL,3,180,yahoo,USD",
+                "",
+                "code,quantity,avg_cost,market,currency",
+                "Total,,,,",
+                "MSFT,2,300,yahoo,USD",
+            ]
+        ).encode()
+
+        df, errors = parse_csv(content)
+        result = build_validation_result(df, errors)
+
+        assert result.import_status == "imported"
+        assert result.error_rows == 0
+        assert [holding.source_row for holding in result.normalized_holdings] == [2, 6]
+        assert [row.source_row for row in result.garbage_rows] == [3, 4, 5]
+        assert [row.reason_code for row in result.garbage_rows] == [
+            "blank_row",
+            "repeated_header",
+            "total_row",
+        ]
+        assert result.garbage_rows[1].source_columns["code"] == "code"
+
+    def test_leading_blank_before_header_still_imports_valid_rows(self):
+        """Leading blank lines before the header do not break broker CSV parsing."""
+        content = b"\ncode,quantity,avg_cost,market,currency\nAAPL,3,180,yahoo,USD\n"
+
+        df, errors = parse_csv(content)
+        result = build_validation_result(df, errors)
+
+        assert errors == []
+        assert result.import_status == "imported"
+        assert len(result.normalized_holdings) == 1
+        assert result.normalized_holdings[0].code == "AAPL"
+        assert result.normalized_holdings[0].source_row == 3
+        assert result.imported_rows[0].source_row == 3
+        assert result.garbage_rows == []
+
+    def test_total_ticker_is_not_classified_as_garbage(self):
+        """A tradable ticker named TOTAL is not treated as an aggregate row."""
+        content = b"code,quantity,avg_cost,market,currency\nTOTAL,3,180,yahoo,USD\n"
+
+        df, errors = parse_csv(content)
+        result = build_validation_result(df, errors)
+
+        assert errors == []
+        assert result.import_status == "imported"
+        assert [holding.code for holding in result.normalized_holdings] == ["TOTAL"]
+        assert len(result.imported_rows) == 1
+        assert result.garbage_rows == []
+
+    def test_numeric_total_and_subtotal_rows_without_market_currency_are_garbage(self):
+        """Aggregate total rows with numeric totals are ignored when not tradable positions."""
+        content = (
+            b"code,quantity,avg_cost,market,currency\n"
+            b"AAPL,3,180,yahoo,USD\n"
+            b"Total,3,540,,\n"
+            b"Subtotal,3,540,,\n"
+        )
+
+        df, errors = parse_csv(content)
+        result = build_validation_result(df, errors)
+
+        assert errors == []
+        assert result.import_status == "imported"
+        assert [holding.source_row for holding in result.normalized_holdings] == [2]
+        assert [row.source_row for row in result.garbage_rows] == [3, 4]
+        assert [row.reason_code for row in result.garbage_rows] == ["total_row", "total_row"]
+        assert result.garbage_rows[0].source_columns["quantity"] == "3"
+        assert result.garbage_rows[0].source_columns["avg_cost"] == "540"
+        assert result.garbage_rows[1].source_columns["code"] == "Subtotal"
+
+    def test_total_in_name_or_note_is_not_classified_as_garbage(self):
+        """Aggregate words in non-symbol cells do not discard a valid position row."""
+        content = (
+            b"code,name,quantity,avg_cost,market,currency,note\n"
+            b"AAPL,Total,3,180,yahoo,USD,total\n"
+        )
+
+        df, errors = parse_csv(content)
+        result = build_validation_result(df, errors)
+
+        assert errors == []
+        assert result.import_status == "imported"
+        assert result.normalized_holdings[0].code == "AAPL"
+        assert result.normalized_holdings[0].name == "Total"
+        assert result.garbage_rows == []
+
+    def test_partial_import_preserves_imported_and_quarantined_row_evidence(self):
+        """98 valid rows plus 2 invalid rows produce imported rows and quarantine evidence."""
+        valid_rows = [
+            f"AAPL,{idx},180,yahoo,USD,row-{idx}"
+            for idx in range(1, 99)
+        ]
+        content = _csv(
+            [
+                *valid_rows,
+                "MSFT,not-a-number,300,yahoo,USD,bad-quantity",
+                "005930,10,72000,naver_kr,USD,bad-currency-market",
+            ],
+            header="code,quantity,avg_cost,market,currency,note",
+        )
+
+        df, errors = parse_csv(content)
+        result = build_validation_result(df, errors)
+
+        assert result.import_status == "partial_imported"
+        assert result.valid_rows == 98
+        assert result.error_rows == 2
+        assert len(result.normalized_holdings) == 98
+        assert len(result.imported_rows) == 98
+        assert len(result.quarantined_rows) == 2
+        assert result.recoverable_rows == []
+        assert result.quarantined_rows[0].source_row == 100
+        assert result.quarantined_rows[0].reason_code == "invalid_quantity"
+        assert result.quarantined_rows[0].source_columns["quantity"] == "not-a-number"
+        assert result.quarantined_rows[1].source_row == 101
+        assert result.quarantined_rows[1].reason_code == "market_currency_mismatch"
+        assert result.quarantined_rows[1].source_columns["currency"] == "USD"
+
 
 # ──────────────────────────────────────────────────────────────────────────────
 # 골든 샘플 기반 테스트

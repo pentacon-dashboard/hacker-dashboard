@@ -94,6 +94,49 @@ def test_portfolio_metrics_balanced() -> None:
     assert metrics["diversification_score"] >= 50
     # suggested_signals: 최소 3개 보장
     assert len(metrics["suggested_signals"]) >= 3
+    assert metrics["cost_basis_status"] == "complete"
+    assert metrics["total_cost"] == 18_500_000
+    assert metrics["pnl"] == 2_500_000
+    assert metrics["pnl_pct"] == pytest.approx(13.5135, rel=1e-4)
+
+
+def test_portfolio_metrics_mixed_cost_basis_degrades_cost_dependent_metrics() -> None:
+    rows = [
+        {
+            "market": "naver_kr",
+            "code": "005930",
+            "quantity": 100,
+            "avg_cost": 50_000,
+            "currency": "KRW",
+            "value_krw": 6_000_000,
+            "cost_krw": 5_000_000,
+            "asset_class": "stock_kr",
+        },
+        {
+            "market": "upbit",
+            "code": "KRW-BTC",
+            "quantity": 0.02,
+            "avg_cost": None,
+            "currency": "KRW",
+            "current_price_krw": 100_000_000,
+            "value_krw": 2_000_000,
+            "asset_class": "crypto",
+        },
+    ]
+
+    metrics = compute_portfolio_metrics(rows)
+
+    assert metrics["n_holdings"] == 2
+    assert metrics["total_value"] == 8_000_000
+    assert metrics["asset_class_breakdown"] == {"stock_kr": 0.75, "crypto": 0.25}
+    assert metrics["hhi"] == pytest.approx(0.625)
+    assert metrics["diversification_score"] > 0
+    assert metrics["cost_basis_status"] == "partial"
+    assert metrics["cost_basis_missing_count"] == 1
+    assert metrics["cost_basis_known_count"] == 1
+    assert metrics["total_cost"] is None
+    assert metrics["pnl"] is None
+    assert metrics["pnl_pct"] is None
 
 
 def test_portfolio_metrics_concentrated() -> None:

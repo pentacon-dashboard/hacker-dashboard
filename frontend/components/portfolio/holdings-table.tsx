@@ -59,8 +59,8 @@ export function HoldingsTable({ holdings }: HoldingsTableProps) {
       : holdings.filter((h) => h.currency === currencyFilter);
 
   const sorted = [...filtered].sort((a, b) => {
-    const aVal = Number(a[sortKey]);
-    const bVal = Number(b[sortKey]);
+    const aVal = a[sortKey] === null ? Number.NEGATIVE_INFINITY : Number(a[sortKey]);
+    const bVal = b[sortKey] === null ? Number.NEGATIVE_INFINITY : Number(b[sortKey]);
     return bVal - aVal;
   });
 
@@ -174,7 +174,10 @@ export function HoldingsTable({ holdings }: HoldingsTableProps) {
           </TableHeader>
           <TableBody>
             {sorted.map((holding) => {
-              const pnlColor = signedColorClass(holding.pnl_krw);
+              const pnlKrw = holding.pnl_krw;
+              const pnlPct = holding.pnl_pct;
+              const hasPnl = pnlKrw !== null && pnlPct !== null;
+              const pnlColor = hasPnl ? signedColorClass(pnlKrw) : "text-muted-foreground";
               const displaySymbol = formatSymbolDisplay(holding.market, holding.code);
               return (
                 <TableRow key={holding.id}>
@@ -197,7 +200,9 @@ export function HoldingsTable({ holdings }: HoldingsTableProps) {
                     })}
                   </TableCell>
                   <TableCell className="text-right tabular-nums text-sm">
-                    {Number(holding.avg_cost).toLocaleString(numberLocale)}
+                    {holding.avg_cost === null
+                      ? "-"
+                      : Number(holding.avg_cost).toLocaleString(numberLocale)}
                     <span className="ml-1 text-xs text-muted-foreground">
                       {holding.currency}
                     </span>
@@ -212,10 +217,10 @@ export function HoldingsTable({ holdings }: HoldingsTableProps) {
                     {formatKRW(holding.value_krw)}
                   </TableCell>
                   <TableCell className={`text-right tabular-nums ${pnlColor}`}>
-                    {formatSignedNumber(holding.pnl_krw)}
+                    {pnlKrw === null ? "-" : formatSignedNumber(pnlKrw)}
                   </TableCell>
                   <TableCell className={`text-right tabular-nums ${pnlColor}`}>
-                    {formatPct(holding.pnl_pct, { signed: true })}
+                    {pnlPct === null ? "-" : formatPct(pnlPct, { signed: true })}
                   </TableCell>
                   <TableCell>
                     <Button

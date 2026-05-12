@@ -102,35 +102,43 @@ function renderPanel(
   );
 }
 
+function expectActionRemoved(label: string) {
+  expect(screen.queryByRole("link", { name: label })).not.toBeInTheDocument();
+  expect(screen.queryByRole("button", { name: label })).not.toBeInTheDocument();
+  expect(screen.queryByText(label)).not.toBeInTheDocument();
+}
+
 describe("KpiEvidencePanel", () => {
-  it("renders total-assets evidence with asset-class breakdown and client link", () => {
+  it("renders total-assets evidence with asset-class breakdown and no customer-detail action", () => {
     renderPanel("totalAssets");
     expect(screen.getByRole("region", { name: /총자산 근거/ })).toBeInTheDocument();
     expect(screen.getByText("국내주식")).toBeInTheDocument();
     expect(screen.getByText("미국주식")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "고객 상세 보기" })).toHaveAttribute(
-      "href",
-      "/clients/client-001",
-    );
+    expectActionRemoved("고객 상세 보기");
+  });
+
+  it("renders missing holding PnL as unknown in top holding evidence rows", () => {
+    renderPanel("totalAssets", 0, snapshots, {
+      ...summary,
+      holdings: [{ ...summary.holdings[0]!, pnl_pct: null }],
+    });
+
+    expect(screen.getByText("005930")).toBeInTheDocument();
+    expect(screen.getByText("-")).toBeInTheDocument();
+    expect(screen.queryByText("0.00%")).not.toBeInTheDocument();
   });
 
   it("renders daily-change degraded block when holdings snapshots are not comparable", () => {
     renderPanel("dailyChange");
     expect(screen.getByText(/종목별 일간 기여를 산출할 수 없습니다/)).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "관련 뉴스 보기" })).toHaveAttribute(
-      "href",
-      "/news?client_id=client-001",
-    );
+    expectActionRemoved("관련 뉴스 보기");
   });
 
   it("renders period stats for 30-day change", () => {
     renderPanel("periodChange");
     expect(screen.getByText("시작값")).toBeInTheDocument();
     expect(screen.getByText("종료값")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "추이 자세히 보기" })).toHaveAttribute(
-      "href",
-      "#client-book-asset-trend",
-    );
+    expectActionRemoved("추이 자세히 보기");
   });
 
   it("renders degraded period comparison text when snapshots are insufficient", () => {
@@ -169,10 +177,7 @@ describe("KpiEvidencePanel", () => {
   it("renders hidden holdings warning inside holdings evidence", () => {
     renderPanel("holdings", 2);
     expect(screen.getByText(/2개 보유종목/)).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "보유 테이블 보기" })).toHaveAttribute(
-      "href",
-      "/clients/client-001#holdings",
-    );
+    expectActionRemoved("보유 테이블 보기");
   });
 
   it("describes concentration risk as asset-class HHI, not a direct recommendation", () => {
@@ -180,10 +185,7 @@ describe("KpiEvidencePanel", () => {
     expect(screen.getByText(hhiFormulaLabel)).toBeInTheDocument();
     expect(screen.queryByText(/매수/)).not.toBeInTheDocument();
     expect(screen.queryByText(/매도/)).not.toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "리밸런싱 검토" })).toHaveAttribute(
-      "href",
-      "/clients/client-001#rebalance",
-    );
+    expectActionRemoved("리밸런싱 검토");
   });
 
   it("degrades concentration evidence when asset-class evidence is unusable", () => {

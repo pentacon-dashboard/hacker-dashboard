@@ -170,14 +170,17 @@ export function ClientWorkspace({ clientId }: ClientWorkspaceProps) {
     );
   }
 
-  const totalPnlColorClass = signedColorClass(summary.total_pnl_krw);
+  const totalPnlKrw = summary.total_pnl_krw;
+  const totalPnlPct = summary.total_pnl_pct;
+  const totalPnlAvailable = totalPnlKrw !== null && totalPnlPct !== null;
+  const totalPnlColorClass = totalPnlAvailable
+    ? signedColorClass(totalPnlKrw)
+    : "text-muted-foreground";
   const dailyColorClass = signedColorClass(summary.daily_change_krw);
-  const rawSummary = summary as typeof summary & { win_rate_pct?: string };
+  const rawSummary = summary as typeof summary & { win_rate_pct?: string | null };
   const winRatePct = rawSummary.win_rate_pct
     ? Number(rawSummary.win_rate_pct)
-    : (summary.holdings.filter((holding) => Number(holding.pnl_pct) > 0).length /
-        Math.max(summary.holdings.length, 1)) *
-      100;
+    : null;
   const hasOnlyCorruptedHoldings =
     summary.holdings.length > 0 && displayHoldings.length === 0;
 
@@ -218,14 +221,20 @@ export function ClientWorkspace({ clientId }: ClientWorkspaceProps) {
         />
         <KpiCard
           label={t("portfolio.kpi.totalPnl")}
-          value={`${formatSignedNumber(summary.total_pnl_krw).replace(
-            /[+-]/,
-            (sign) => (sign === "+" ? "+" : "-"),
-          )} KRW`}
-          delta={formatPct(summary.total_pnl_pct, { signed: true })}
-          deltaValue={Number(summary.total_pnl_pct)}
+          value={
+            totalPnlAvailable
+              ? `${formatSignedNumber(totalPnlKrw).replace(
+                  /[+-]/,
+                  (sign) => (sign === "+" ? "+" : "-"),
+                )} KRW`
+              : "-"
+          }
+          delta={totalPnlAvailable ? formatPct(totalPnlPct, { signed: true }) : "-"}
+          deltaValue={totalPnlAvailable ? Number(totalPnlPct) : undefined}
           icon={<TrendingUp className="h-4 w-4" />}
-          accent={Number(summary.total_pnl_pct) >= 0 ? "green" : "rose"}
+          accent={
+            totalPnlAvailable && Number(totalPnlPct) < 0 ? "rose" : "green"
+          }
           testId="portfolio-kpi-pnl"
         />
         <KpiCard
@@ -249,15 +258,25 @@ export function ClientWorkspace({ clientId }: ClientWorkspaceProps) {
         />
         <KpiCard
           label={t("portfolio.kpi.winRate")}
-          value={`${winRatePct.toFixed(1)}%`}
+          value={winRatePct === null ? "-" : `${winRatePct.toFixed(1)}%`}
           delta={
-            winRatePct >= 60
+            winRatePct === null
+              ? "-"
+              : winRatePct >= 60
               ? t("portfolio.winRate.good")
               : winRatePct >= 40
                 ? t("portfolio.winRate.fair")
                 : t("portfolio.winRate.poor")
           }
-          tone={winRatePct >= 60 ? "positive" : winRatePct >= 40 ? "neutral" : "negative"}
+          tone={
+            winRatePct === null
+              ? "neutral"
+              : winRatePct >= 60
+                ? "positive"
+                : winRatePct >= 40
+                  ? "neutral"
+                  : "negative"
+          }
           icon={<Target className="h-4 w-4" />}
           accent="amber"
           testId="portfolio-kpi-win-rate"
@@ -275,16 +294,20 @@ export function ClientWorkspace({ clientId }: ClientWorkspaceProps) {
             <div className="flex items-center justify-between text-xs">
               <span className="text-muted-foreground">{t("portfolio.totalReturn")}</span>
               <span className={`font-bold tabular-nums ${totalPnlColorClass}`}>
-                {formatPct(summary.total_pnl_pct, { signed: true })}
+                {totalPnlAvailable ? formatPct(totalPnlPct, { signed: true }) : "-"}
               </span>
             </div>
             <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
               <div
                 className={`h-full rounded-full ${
-                  Number(summary.total_pnl_pct) >= 0 ? "bg-emerald-500" : "bg-red-500"
+                  totalPnlAvailable && Number(totalPnlPct) < 0
+                    ? "bg-red-500"
+                    : "bg-emerald-500"
                 }`}
                 style={{
-                  width: `${Math.min(Math.abs(Number(summary.total_pnl_pct)) * 5, 100)}%`,
+                  width: totalPnlAvailable
+                    ? `${Math.min(Math.abs(Number(totalPnlPct)) * 5, 100)}%`
+                    : "0%",
                 }}
               />
             </div>

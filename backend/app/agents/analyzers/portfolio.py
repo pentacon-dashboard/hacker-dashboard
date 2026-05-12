@@ -321,12 +321,20 @@ def compute_portfolio_metrics(
     ccy_items: list[tuple[str, float]] = []
     total_value = 0.0
     total_cost = 0.0
+    valued_holdings_count = 0
+    cost_basis_known_count = 0
+    cost_basis_missing_count = 0
     for h in holdings:
         v = _holding_value(h) or 0.0
-        c = _holding_cost(h) or 0.0
         total_value += v
-        total_cost += c
         if v > 0:
+            valued_holdings_count += 1
+            c = _holding_cost(h)
+            if c is not None and c > 0:
+                total_cost += c
+                cost_basis_known_count += 1
+            else:
+                cost_basis_missing_count += 1
             class_items.append((_classify_holding_asset_class(h), v))
             sector_items.append((_classify_gics_sector(h), v))
             ccy = (h.get("currency") or "").upper() or "KRW"
@@ -352,8 +360,27 @@ def compute_portfolio_metrics(
     volatility_pct = compute_volatility(snap_values) if snap_values else None
 
     # 손익
-    pnl = total_value - total_cost if (total_value > 0 and total_cost > 0) else None
-    pnl_pct = (pnl / total_cost * 100.0) if (pnl is not None and total_cost > 0) else None
+    if valued_holdings_count == 0:
+        cost_basis_status = "unavailable"
+    elif cost_basis_missing_count == 0 and cost_basis_known_count == valued_holdings_count:
+        cost_basis_status = "complete"
+    elif cost_basis_known_count > 0:
+        cost_basis_status = "partial"
+    else:
+        cost_basis_status = "missing"
+
+    cost_basis_complete = cost_basis_status == "complete"
+    total_cost_metric = total_cost if cost_basis_complete and total_cost > 0 else None
+    pnl = (
+        total_value - total_cost_metric
+        if (total_value > 0 and total_cost_metric is not None)
+        else None
+    )
+    pnl_pct = (
+        (pnl / total_cost_metric * 100.0)
+        if (pnl is not None and total_cost_metric is not None and total_cost_metric > 0)
+        else None
+    )
 
     # 분산도
     score = diversification_score(
@@ -379,9 +406,12 @@ def compute_portfolio_metrics(
         "sector_breakdown": sector_weights,
         "currency_exposure": currency_weights,
         "total_value": round(total_value, 4) if total_value > 0 else None,
-        "total_cost": round(total_cost, 4) if total_cost > 0 else None,
+        "total_cost": round(total_cost_metric, 4) if total_cost_metric is not None else None,
         "pnl": round(pnl, 4) if pnl is not None else None,
         "pnl_pct": round(pnl_pct, 4) if pnl_pct is not None else None,
+        "cost_basis_status": cost_basis_status,
+        "cost_basis_known_count": cost_basis_known_count,
+        "cost_basis_missing_count": cost_basis_missing_count,
         "max_drawdown_pct": mdd_pct,
         "volatility_pct": volatility_pct,
         "diversification_score": score,

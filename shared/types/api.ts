@@ -1448,7 +1448,7 @@ export interface components {
              * Pnl Pct
              * @description 해당 차원의 가중 수익률 %% (예: '+3.40')
              */
-            pnl_pct: string;
+            pnl_pct: string | null;
         };
         /**
          * GatePolicy
@@ -1537,7 +1537,7 @@ export interface components {
             /** Quantity */
             quantity: string;
             /** Avg Cost */
-            avg_cost: string;
+            avg_cost: string | null;
             /** Currency */
             currency: string;
             /** Current Price */
@@ -1547,11 +1547,11 @@ export interface components {
             /** Value Krw */
             value_krw: string;
             /** Cost Krw */
-            cost_krw: string;
+            cost_krw: string | null;
             /** Pnl Krw */
-            pnl_krw: string;
+            pnl_krw: string | null;
             /** Pnl Pct */
-            pnl_pct: string;
+            pnl_pct: string | null;
         };
         /** HoldingResponse */
         HoldingResponse: {
@@ -1573,7 +1573,7 @@ export interface components {
             /** Quantity */
             quantity: string;
             /** Avg Cost */
-            avg_cost: string;
+            avg_cost: string | null;
             /** Currency */
             currency: string;
             /** Created At */
@@ -1783,7 +1783,7 @@ export interface components {
             /** Price */
             price: string;
             /** Change Pct */
-            change_pct: string;
+            change_pct: string | null;
             /** Currency */
             currency: string;
             /** Logo Url */
@@ -1823,6 +1823,8 @@ export interface components {
             quantity: string;
             /** Avg Cost */
             avg_cost?: string | null;
+            /** Cost Basis Status */
+            cost_basis_status?: ("provided" | "missing" | "derived" | "needs_review") | null;
             /** Currency */
             currency?: string | null;
             /** Source Row */
@@ -1937,7 +1939,7 @@ export interface components {
             /** Risk Score Pct */
             risk_score_pct: string;
             /** Total Pnl Pct */
-            total_pnl_pct: string;
+            total_pnl_pct: string | null;
         };
         /** PortfolioClientsResponse */
         PortfolioClientsResponse: {
@@ -1981,11 +1983,11 @@ export interface components {
             /** Total Value Krw */
             total_value_krw: string;
             /** Total Cost Krw */
-            total_cost_krw: string;
+            total_cost_krw: string | null;
             /** Total Pnl Krw */
-            total_pnl_krw: string;
+            total_pnl_krw: string | null;
             /** Total Pnl Pct */
-            total_pnl_pct: string;
+            total_pnl_pct: string | null;
             /** Daily Change Krw */
             daily_change_krw: string;
             /** Daily Change Pct */
@@ -2017,7 +2019,7 @@ export interface components {
              * @description 보유 종목 중 최저 손익률 %% (예: '-3.85')
              * @default 0.00
              */
-            worst_asset_pct: string;
+            worst_asset_pct: string | null;
             /**
              * Risk Score Pct
              * @description HHI 기반 집중도 리스크 점수 %% (0: 완전분산 ~ 100: 단일자산)
@@ -2046,7 +2048,7 @@ export interface components {
              * @description 보유 종목 중 pnl_pct > 0 비율 × 100 (문자열, 소수점 2자리)
              * @default 0.00
              */
-            win_rate_pct: string;
+            win_rate_pct: string | null;
             /**
              * Market Leaders
              * @description value_krw 상위 3개 종목 (보유 없으면 S&P top3 fallback)
@@ -2220,9 +2222,9 @@ export interface components {
             /** Weight Pct */
             weight_pct: string;
             /** Pnl Pct */
-            pnl_pct: string;
+            pnl_pct: string | null;
             /** Intensity */
-            intensity: string;
+            intensity: string | null;
         };
         /** SectorKpi */
         SectorKpi: {
@@ -2330,7 +2332,7 @@ export interface components {
             /** Total Value Krw */
             total_value_krw: string;
             /** Total Pnl Krw */
-            total_pnl_krw: string;
+            total_pnl_krw: string | null;
             /** Asset Class Breakdown */
             asset_class_breakdown: {
                 [key: string]: unknown;
@@ -2532,7 +2534,7 @@ export interface components {
              * Status
              * @enum {string}
              */
-            status: "imported" | "needs_confirmation" | "insufficient_data";
+            status: "imported" | "partial_imported" | "needs_confirmation" | "insufficient_data";
             /** Client Id */
             client_id: string;
             /** Imported Count */
@@ -2557,6 +2559,35 @@ export interface components {
             normalization_warnings?: string[];
             /** Blocking Errors */
             blocking_errors?: components["schemas"]["UploadErrorDetail"][];
+            /** Imported Rows */
+            imported_rows?: components["schemas"]["UploadImportRow"][];
+            /** Recoverable Rows */
+            recoverable_rows?: components["schemas"]["UploadImportRow"][];
+            /** Quarantined Rows */
+            quarantined_rows?: components["schemas"]["UploadImportRow"][];
+            /** Garbage Rows */
+            garbage_rows?: components["schemas"]["UploadImportRow"][];
+        };
+        /** UploadImportRow */
+        UploadImportRow: {
+            /**
+             * Classification
+             * @enum {string}
+             */
+            classification: "imported" | "recoverable" | "quarantined" | "garbage";
+            /** Source Row */
+            source_row: number;
+            /** Source Columns */
+            source_columns?: {
+                [key: string]: unknown;
+            };
+            /** Reason Code */
+            reason_code: string;
+            /** Message */
+            message: string;
+            normalized_holding?: components["schemas"]["NormalizedCsvHolding"] | null;
+            /** Errors */
+            errors?: components["schemas"]["UploadErrorDetail"][];
         };
         /** UploadValidationResult */
         UploadValidationResult: {
@@ -2590,7 +2621,7 @@ export interface components {
              * @default insufficient_data
              * @enum {string}
              */
-            import_status: "imported" | "needs_confirmation" | "insufficient_data";
+            import_status: "imported" | "partial_imported" | "needs_confirmation" | "insufficient_data";
             /** Field Mappings */
             field_mappings?: components["schemas"]["CsvFieldMapping"][];
             /** Mapping Candidates */
@@ -2605,6 +2636,14 @@ export interface components {
             normalized_holdings?: components["schemas"]["NormalizedCsvHolding"][];
             /** Normalization Warnings */
             normalization_warnings?: string[];
+            /** Imported Rows */
+            imported_rows?: components["schemas"]["UploadImportRow"][];
+            /** Recoverable Rows */
+            recoverable_rows?: components["schemas"]["UploadImportRow"][];
+            /** Quarantined Rows */
+            quarantined_rows?: components["schemas"]["UploadImportRow"][];
+            /** Garbage Rows */
+            garbage_rows?: components["schemas"]["UploadImportRow"][];
         };
         /** UserMe */
         UserMe: {

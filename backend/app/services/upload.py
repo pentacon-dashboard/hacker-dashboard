@@ -29,6 +29,7 @@ from app.schemas.upload import (
     CsvMappingCandidateGroup,
     NormalizedCsvHolding,
     UploadErrorDetail,
+    UploadImportRow,
     UploadValidationResult,
 )
 
@@ -156,10 +157,14 @@ class PortfolioSchemaDetection:
 
 @dataclass(frozen=True)
 class CsvNormalizationResult:
-    status: Literal["imported", "needs_confirmation", "insufficient_data"]
+    status: Literal["imported", "partial_imported", "needs_confirmation", "insufficient_data"]
     holdings: list[NormalizedCsvHolding]
     warnings: list[str] = field(default_factory=list)
     blocking_errors: list[UploadErrorDetail] = field(default_factory=list)
+    imported_rows: list[UploadImportRow] = field(default_factory=list)
+    recoverable_rows: list[UploadImportRow] = field(default_factory=list)
+    quarantined_rows: list[UploadImportRow] = field(default_factory=list)
+    garbage_rows: list[UploadImportRow] = field(default_factory=list)
 
 
 async def _cleanup_expired() -> None:
@@ -429,7 +434,7 @@ def build_normalized_preview(
     if getattr(df, "empty", True):
         return preview
     for idx, row in df.head(limit).iterrows():
-        item: dict[str, Any] = {"source_row": int(idx) + 2}
+        item: dict[str, Any] = {"source_row": _source_row_number(idx, df)}
         for field_name, column in schema.mapped_columns.items():
             item[field_name] = _string_value(row.get(column))
         code = (
@@ -551,12 +556,180 @@ def _parse_decimal(value: Any) -> Decimal | None:
         parsed = Decimal(cleaned)
     except InvalidOperation:
         return None
+    if not parsed.is_finite():
+        return None
     return -parsed if negative else parsed
 
 
 def _format_decimal(value: Decimal) -> str:
     text = format(value, "f")
     return text.rstrip("0").rstrip(".") if "." in text else text
+
+
+def _strip_leading_blank_lines(raw: bytes) -> tuple[bytes, int]:
+    lines = raw.splitlines(keepends=True)
+    leading_blank_count = 0
+    for line in lines:
+        if line.strip():
+            break
+        leading_blank_count += 1
+    if leading_blank_count == 0:
+        return raw, 0
+    return b"".join(lines[leading_blank_count:]), leading_blank_count
+
+
+def _source_row_number(idx: Any, df: Any) -> int:
+    offset = getattr(df, "attrs", {}).get("source_row_offset", 0)
+    return int(idx) + 2 + int(offset)
+
+
+def _row_source_columns(df: Any, row: Any) -> dict[str, Any]:
+    source: dict[str, Any] = {}
+    for column in getattr(df, "columns", []):
+        value = _string_value(row.get(column))
+        source[_original_column(df, str(column))] = value
+    return source
+
+
+def _source_columns_for_mapped_fields(
+    df: Any,
+    schema: PortfolioSchemaDetection,
+) -> dict[str, str]:
+    return {
+        field_name: _original_column(df, column_name)
+        for field_name, column_name in schema.mapped_columns.items()
+    }
+
+
+def _row_error(
+    *,
+    row: int,
+    column: str | None,
+    code: str,
+    message: str,
+) -> UploadErrorDetail:
+    return UploadErrorDetail(row=row, column=column, code=code, message=message)
+
+
+def _row_entry(
+    *,
+    classification: Literal["imported", "recoverable", "quarantined", "garbage"],
+    source_row: int,
+    source_columns: dict[str, Any],
+    reason_code: str,
+    message: str,
+    normalized_holding: NormalizedCsvHolding | None = None,
+    errors: list[UploadErrorDetail] | None = None,
+) -> UploadImportRow:
+    return UploadImportRow(
+        classification=classification,
+        source_row=source_row,
+        source_columns=source_columns,
+        reason_code=reason_code,
+        message=message,
+        normalized_holding=normalized_holding,
+        errors=errors or [],
+    )
+
+
+def _is_blank_row(row: Any) -> bool:
+    return all(_string_value(value) is None for value in row.values)
+
+
+def _is_repeated_header_row(df: Any, row: Any) -> bool:
+    nonblank: list[tuple[str, str]] = []
+    for column in getattr(df, "columns", []):
+        value = _string_value(row.get(column))
+        if value is not None:
+            nonblank.append((str(column), value))
+    if len(nonblank) < 2:
+        return False
+    return all(
+        _alias_key(value) in {_alias_key(column), _alias_key(_original_column(df, column))}
+        for column, value in nonblank
+    )
+
+
+_TOTAL_ROW_MARKERS = {"total", "subtotal", "grandtotal", "sum", "합계", "소계", "총계"}
+
+
+def _is_total_row(
+    row: Any,
+    symbol_col: str | None,
+    *,
+    quantity_col: str | None = None,
+    avg_cost_col: str | None = None,
+    market_col: str | None = None,
+    currency_col: str | None = None,
+) -> bool:
+    if not symbol_col:
+        return False
+    symbol = _string_value(row.get(symbol_col))
+    if not symbol or _alias_key(symbol) not in _TOTAL_ROW_MARKERS:
+        return False
+
+    market = _normalize_market(_string_value(row.get(market_col))) if market_col else None
+    currency_raw = _string_value(row.get(currency_col)) if currency_col else None
+    currency = currency_raw.upper() if currency_raw else None
+    return not (market or currency in _VALID_CURRENCIES)
+
+
+def _classify_garbage_row(
+    df: Any,
+    row: Any,
+    *,
+    source_row: int,
+    symbol_col: str | None,
+    quantity_col: str | None = None,
+    avg_cost_col: str | None = None,
+    market_col: str | None = None,
+    currency_col: str | None = None,
+) -> UploadImportRow | None:
+    source_columns = _row_source_columns(df, row)
+    if _is_blank_row(row):
+        return _row_entry(
+            classification="garbage",
+            source_row=source_row,
+            source_columns=source_columns,
+            reason_code="blank_row",
+            message="blank row ignored",
+        )
+    if _is_repeated_header_row(df, row):
+        return _row_entry(
+            classification="garbage",
+            source_row=source_row,
+            source_columns=source_columns,
+            reason_code="repeated_header",
+            message="repeated header row ignored",
+        )
+    if _is_total_row(
+        row,
+        symbol_col,
+        quantity_col=quantity_col,
+        avg_cost_col=avg_cost_col,
+        market_col=market_col,
+        currency_col=currency_col,
+    ):
+        return _row_entry(
+            classification="garbage",
+            source_row=source_row,
+            source_columns=source_columns,
+            reason_code="total_row",
+            message="subtotal or total row ignored",
+        )
+    return None
+
+
+def _expected_currency_for_market(symbol: str, market: str | None) -> str | None:
+    if market == "naver_kr":
+        return "KRW"
+    if market == "upbit" and symbol.strip().upper().startswith("KRW-"):
+        return "KRW"
+    if market == "binance" and "USDT" in symbol.strip().upper():
+        return "USDT"
+    if market == "yahoo":
+        return "USD"
+    return None
 
 
 def _normalize_market(value: str | None) -> str | None:
@@ -710,6 +883,10 @@ def normalize_holdings_from_csv(
     schema = schema or detect_portfolio_schema(df)
     warnings = list(schema.warnings)
     blocking_errors: list[UploadErrorDetail] = []
+    imported_rows: list[UploadImportRow] = []
+    recoverable_rows: list[UploadImportRow] = []
+    quarantined_rows: list[UploadImportRow] = []
+    garbage_rows: list[UploadImportRow] = []
 
     if schema.review_fields & set(_REQUIRED_IMPORT_FIELDS):
         return CsvNormalizationResult(status="needs_confirmation", holdings=[], warnings=warnings)
@@ -731,50 +908,97 @@ def normalize_holdings_from_csv(
 
     holdings: list[NormalizedCsvHolding] = []
     needs_confirmation = bool(schema.review_fields)
+    mapped_source_columns = _source_columns_for_mapped_fields(df, schema)
 
     for idx, row in df.iterrows():
-        source_row = int(idx) + 2
+        source_row = _source_row_number(idx, df)
+        source_columns = _row_source_columns(df, row)
+        garbage = _classify_garbage_row(
+            df,
+            row,
+            source_row=source_row,
+            symbol_col=symbol_col,
+            quantity_col=quantity_col,
+            avg_cost_col=avg_cost_col,
+            market_col=market_col,
+            currency_col=currency_col,
+        )
+        if garbage is not None:
+            garbage_rows.append(garbage)
+            continue
+
         code = _string_value(row.get(symbol_col))
         if code is None:
-            blocking_errors.append(
-                UploadErrorDetail(
-                    row=source_row,
-                    column=_original_column(df, symbol_col),
-                    code="missing_symbol",
-                    message="symbol is required",
+            error = _row_error(
+                row=source_row,
+                column=_original_column(df, symbol_col),
+                code="missing_symbol",
+                message="symbol is required",
+            )
+            quarantined_rows.append(
+                _row_entry(
+                    classification="quarantined",
+                    source_row=source_row,
+                    source_columns=source_columns,
+                    reason_code=error.code,
+                    message=error.message,
+                    errors=[error],
                 )
             )
+            blocking_errors.append(error)
             continue
 
         quantity = _parse_decimal(row.get(quantity_col))
         if quantity is None or quantity <= 0:
-            blocking_errors.append(
-                UploadErrorDetail(
-                    row=source_row,
-                    column=_original_column(df, quantity_col),
-                    code="invalid_quantity",
-                    message="quantity must be greater than zero",
+            error = _row_error(
+                row=source_row,
+                column=_original_column(df, quantity_col),
+                code="invalid_quantity",
+                message="quantity must be greater than zero",
+            )
+            quarantined_rows.append(
+                _row_entry(
+                    classification="quarantined",
+                    source_row=source_row,
+                    source_columns=source_columns,
+                    reason_code=error.code,
+                    message=error.message,
+                    errors=[error],
                 )
             )
+            blocking_errors.append(error)
             continue
 
         avg_cost: Decimal | None = None
+        cost_basis_status: Literal["provided", "missing"] = "missing"
         if avg_cost_col:
-            avg_cost = _parse_decimal(row.get(avg_cost_col))
-            if avg_cost is None or avg_cost <= 0:
-                blocking_errors.append(
-                    UploadErrorDetail(
+            avg_cost_raw = _string_value(row.get(avg_cost_col))
+            if avg_cost_raw is not None:
+                avg_cost = _parse_decimal(avg_cost_raw)
+                if avg_cost is None or avg_cost <= 0:
+                    error = _row_error(
                         row=source_row,
                         column=_original_column(df, avg_cost_col),
                         code="invalid_avg_cost",
                         message="avg_cost must be greater than zero",
                     )
-                )
-                continue
+                    recoverable_rows.append(
+                        _row_entry(
+                            classification="recoverable",
+                            source_row=source_row,
+                            source_columns=source_columns,
+                            reason_code=error.code,
+                            message=error.message,
+                            errors=[error],
+                        )
+                    )
+                    needs_confirmation = True
+                    continue
+                cost_basis_status = "provided"
+            else:
+                warnings.append(f"row {source_row}: avg_cost missing")
         else:
-            needs_confirmation = True
-            warnings.append("avg_cost column not mapped; PB confirmation required")
-            continue
+            warnings.append("avg_cost column not mapped; cost basis marked missing")
 
         market = _normalize_market(_string_value(row.get(market_col))) if market_col else None
         if market is None and schema.derived_fields.get("market") == "symbol_pattern":
@@ -782,8 +1006,24 @@ def normalize_holdings_from_csv(
         if market is None:
             market = _infer_market(code)
         if market is None:
-            needs_confirmation = True
             warnings.append(f"row {source_row}: market could not be inferred")
+            error = _row_error(
+                row=source_row,
+                column=_original_column(df, market_col) if market_col else "market",
+                code="unresolved_market",
+                message="market could not be inferred",
+            )
+            recoverable_rows.append(
+                _row_entry(
+                    classification="recoverable",
+                    source_row=source_row,
+                    source_columns=source_columns,
+                    reason_code=error.code,
+                    message=error.message,
+                    errors=[error],
+                )
+            )
+            needs_confirmation = True
             continue
 
         currency_raw = _string_value(row.get(currency_col)) if currency_col else None
@@ -793,61 +1033,131 @@ def normalize_holdings_from_csv(
         if currency is None:
             currency = _infer_currency(code, market)
         if currency is None:
-            needs_confirmation = True
+            currency = _expected_currency_for_market(code, market)
+        if currency is None:
             warnings.append(f"row {source_row}: currency could not be inferred")
-            continue
-        if currency not in _VALID_CURRENCIES:
-            blocking_errors.append(
-                UploadErrorDetail(
-                    row=source_row,
-                    column=_original_column(df, currency_col) if currency_col else "currency",
-                    code="unknown_currency",
-                    message=f"unsupported currency: {currency}",
+            error = _row_error(
+                row=source_row,
+                column=_original_column(df, currency_col) if currency_col else "currency",
+                code="unresolved_currency",
+                message="currency could not be inferred",
+            )
+            recoverable_rows.append(
+                _row_entry(
+                    classification="recoverable",
+                    source_row=source_row,
+                    source_columns=source_columns,
+                    reason_code=error.code,
+                    message=error.message,
+                    errors=[error],
                 )
             )
+            needs_confirmation = True
+            continue
+        if currency not in _VALID_CURRENCIES:
+            error = _row_error(
+                row=source_row,
+                column=_original_column(df, currency_col) if currency_col else "currency",
+                code="unknown_currency",
+                message=f"unsupported currency: {currency}",
+            )
+            quarantined_rows.append(
+                _row_entry(
+                    classification="quarantined",
+                    source_row=source_row,
+                    source_columns=source_columns,
+                    reason_code=error.code,
+                    message=error.message,
+                    errors=[error],
+                )
+            )
+            blocking_errors.append(error)
             continue
 
-        source_columns = {
-            field_name: _original_column(df, column_name)
-            for field_name, column_name in schema.mapped_columns.items()
-        }
-        holdings.append(
-            NormalizedCsvHolding(
-                client_id=_string_value(row.get(client_col)) if client_col else None,
-                client_name=_string_value(row.get(client_name_col)) if client_name_col else None,
-                account=_string_value(row.get(account_col)) if account_col else None,
-                market=market,
-                code=code.upper(),
-                name=_string_value(row.get(name_col)) if name_col else None,
-                quantity=_format_decimal(quantity),
-                avg_cost=_format_decimal(avg_cost),
-                currency=currency,
+        expected_currency = _expected_currency_for_market(code, market)
+        if expected_currency is not None and currency != expected_currency:
+            error = _row_error(
+                row=source_row,
+                column=_original_column(df, currency_col) if currency_col else "currency",
+                code="market_currency_mismatch",
+                message=f"{market} positions require {expected_currency}, got {currency}",
+            )
+            quarantined_rows.append(
+                _row_entry(
+                    classification="quarantined",
+                    source_row=source_row,
+                    source_columns=source_columns,
+                    reason_code=error.code,
+                    message=error.message,
+                    errors=[error],
+                )
+            )
+            blocking_errors.append(error)
+            continue
+
+        holding = NormalizedCsvHolding(
+            client_id=_string_value(row.get(client_col)) if client_col else None,
+            client_name=_string_value(row.get(client_name_col)) if client_name_col else None,
+            account=_string_value(row.get(account_col)) if account_col else None,
+            market=market,
+            code=code.upper(),
+            name=_string_value(row.get(name_col)) if name_col else None,
+            quantity=_format_decimal(quantity),
+            avg_cost=_format_decimal(avg_cost) if avg_cost is not None else None,
+            cost_basis_status=cost_basis_status,
+            currency=currency,
+            source_row=source_row,
+            source_columns=mapped_source_columns,
+        )
+        holdings.append(holding)
+        imported_rows.append(
+            _row_entry(
+                classification="imported",
                 source_row=source_row,
                 source_columns=source_columns,
+                reason_code="normalized",
+                message="row normalized as imported position",
+                normalized_holding=holding,
             )
         )
 
-    if blocking_errors:
+    if not holdings:
+        status = (
+            "needs_confirmation"
+            if recoverable_rows or quarantined_rows or schema.review_fields
+            else "insufficient_data"
+        )
         return CsvNormalizationResult(
-            status="needs_confirmation",
+            status=status,
             holdings=[],
             warnings=warnings,
             blocking_errors=blocking_errors,
+            imported_rows=imported_rows,
+            recoverable_rows=recoverable_rows,
+            quarantined_rows=quarantined_rows,
+            garbage_rows=garbage_rows,
         )
-    if not holdings:
-        return CsvNormalizationResult(status="needs_confirmation", holdings=[], warnings=warnings)
-    status: Literal["imported", "needs_confirmation", "insufficient_data"] = (
-        "needs_confirmation" if needs_confirmation else "imported"
-    )
+
+    status: Literal["imported", "partial_imported", "needs_confirmation", "insufficient_data"]
+    if recoverable_rows or quarantined_rows:
+        status = "partial_imported"
+    elif needs_confirmation:
+        status = "needs_confirmation"
+    else:
+        status = "imported"
     return CsvNormalizationResult(
         status=status,
-        holdings=holdings if status == "imported" else [],
+        holdings=holdings,
         warnings=warnings,
         blocking_errors=blocking_errors,
+        imported_rows=imported_rows,
+        recoverable_rows=recoverable_rows,
+        quarantined_rows=quarantined_rows,
+        garbage_rows=garbage_rows,
     )
 
 
-def parse_csv(
+def _parse_csv_legacy(
     content: bytes,
     filename: str = "upload.csv",
 ) -> tuple[Any, list[UploadErrorDetail]]:
@@ -879,7 +1189,7 @@ def parse_csv(
         return pd.DataFrame(), errors
 
     try:
-        df = pd.read_csv(io.BytesIO(raw), dtype=str)
+        df = pd.read_csv(io.BytesIO(raw), dtype=str, skip_blank_lines=False)
     except Exception as exc:
         errors.append(
             UploadErrorDetail(
@@ -997,6 +1307,161 @@ def parse_csv(
     return df, errors
 
 
+def parse_csv(
+    content: bytes,
+    filename: str = "upload.csv",
+) -> tuple[Any, list[UploadErrorDetail]]:
+    """Parse CSV bytes and collect deterministic row validation errors."""
+    try:
+        import pandas as pd
+    except ImportError as exc:
+        raise RuntimeError("pandas is required: uv add pandas") from exc
+
+    errors: list[UploadErrorDetail] = []
+    raw = content.lstrip(b"\xef\xbb\xbf")
+    if not raw.strip():
+        errors.append(
+            UploadErrorDetail(
+                row=0,
+                column=None,
+                code="empty_file",
+                message="file is empty",
+            )
+        )
+        return pd.DataFrame(), errors
+    csv_raw, source_row_offset = _strip_leading_blank_lines(raw)
+
+    try:
+        df = pd.read_csv(io.BytesIO(csv_raw), dtype=str, skip_blank_lines=False)
+    except Exception as exc:
+        errors.append(
+            UploadErrorDetail(
+                row=0,
+                column=None,
+                code="parse_error",
+                message=f"CSV parse failed: {exc}",
+            )
+        )
+        return pd.DataFrame(), errors
+
+    if df.empty:
+        return df, errors
+
+    original_columns = [str(c).strip() for c in df.columns]
+    normalized_columns = [_normalize_column_name(c) for c in original_columns]
+    df.columns = normalized_columns
+    df.attrs["original_columns"] = dict(zip(normalized_columns, original_columns, strict=False))
+    df.attrs["source_row_offset"] = source_row_offset
+
+    schema = detect_portfolio_schema(df)
+    if schema.missing_required_fields:
+        errors.append(
+            UploadErrorDetail(
+                row=0,
+                column=None,
+                code="missing_columns",
+                message=(
+                    "required holding fields could not be mapped: "
+                    + ", ".join(sorted(schema.missing_required_fields))
+                ),
+            )
+        )
+        return df, errors
+
+    date_col = schema.mapped_columns.get("date")
+    quantity_col = schema.mapped_columns.get("quantity")
+    currency_col = schema.mapped_columns.get("currency")
+    avg_cost_col = schema.mapped_columns.get("avg_cost")
+    price_col = schema.mapped_columns.get("price")
+
+    for idx, row in df.iterrows():
+        row_num = _source_row_number(idx, df)
+        if _classify_garbage_row(
+            df,
+            row,
+            source_row=row_num,
+            symbol_col=schema.mapped_columns.get("symbol"),
+            quantity_col=quantity_col,
+            avg_cost_col=avg_cost_col,
+            market_col=schema.mapped_columns.get("market"),
+            currency_col=currency_col,
+        ):
+            continue
+
+        date_val = _string_value(row.get(date_col)) if date_col else None
+        if date_val:
+            try:
+                from datetime import date as _date
+
+                _date.fromisoformat(date_val)
+            except ValueError:
+                errors.append(
+                    UploadErrorDetail(
+                        row=row_num,
+                        column=_original_column(df, date_col) if date_col else "date",
+                        code="invalid_date",
+                        message=f"invalid date format: '{date_val}' (expected YYYY-MM-DD)",
+                    )
+                )
+
+        qty_val = _string_value(row.get(quantity_col)) if quantity_col else None
+        if qty_val:
+            qty = _parse_decimal(qty_val)
+            if qty is None:
+                errors.append(
+                    UploadErrorDetail(
+                        row=row_num,
+                        column=_original_column(df, quantity_col)
+                        if quantity_col
+                        else "quantity",
+                        code="invalid_quantity",
+                        message=f"invalid quantity format: '{qty_val}'",
+                    )
+                )
+            elif qty <= 0:
+                errors.append(
+                    UploadErrorDetail(
+                        row=row_num,
+                        column=_original_column(df, quantity_col)
+                        if quantity_col
+                        else "quantity",
+                        code="negative_quantity",
+                        message=f"quantity must be greater than zero: {qty_val}",
+                    )
+                )
+
+        for mapped_col, label in ((avg_cost_col, "avg_cost"), (price_col, "price")):
+            if not mapped_col:
+                continue
+            raw_val = _string_value(row.get(mapped_col))
+            if raw_val is None:
+                continue
+            parsed = _parse_decimal(raw_val)
+            if parsed is not None and parsed <= 0:
+                errors.append(
+                    UploadErrorDetail(
+                        row=row_num,
+                        column=_original_column(df, mapped_col),
+                        code=f"invalid_{label}",
+                        message=f"{label} must be greater than zero: {raw_val}",
+                    )
+                )
+
+        currency_raw = _string_value(row.get(currency_col)) if currency_col else None
+        currency_val = currency_raw.upper() if currency_raw else ""
+        if currency_val and currency_val not in _VALID_CURRENCIES:
+            errors.append(
+                UploadErrorDetail(
+                    row=row_num,
+                    column=_original_column(df, currency_col) if currency_col else "currency",
+                    code="unknown_currency",
+                    message=f"unsupported currency: '{currency_val}'",
+                )
+            )
+
+    return df, errors
+
+
 def _make_schema_fingerprint(df: Any) -> str:
     """CSV 헤더를 SHA-256 해시로 변환 (8자리 hex)."""
     cols_str = ",".join(sorted(str(c) for c in df.columns))
@@ -1012,8 +1477,6 @@ def build_validation_result(
     """DataFrame + 오류 목록으로 UploadValidationResult 생성 및 캐시 저장."""
     upload_id = str(uuid.uuid4())
     total_rows = len(df) if not df.empty else 0
-    error_rows = len({e.row for e in errors if e.row > 0})
-    valid_rows = max(0, total_rows - error_rows)
     schema = (
         detect_portfolio_schema(df)
         if not df.empty
@@ -1028,6 +1491,10 @@ def build_validation_result(
         if not df.empty
         else CsvNormalizationResult(status="insufficient_data", holdings=[], warnings=[])
     )
+    error_row_numbers = {e.row for e in errors if e.row > 0}
+    error_row_numbers.update(row.source_row for row in normalized.quarantined_rows)
+    error_rows = len(error_row_numbers)
+    valid_rows = len(normalized.imported_rows)
 
     # preview: 상위 5행
     preview: list[dict[str, Any]] = []
@@ -1066,6 +1533,10 @@ def build_validation_result(
         normalized_preview=normalized_preview,
         normalized_holdings=normalized.holdings,
         normalization_warnings=normalized.warnings,
+        imported_rows=normalized.imported_rows,
+        recoverable_rows=normalized.recoverable_rows,
+        quarantined_rows=normalized.quarantined_rows,
+        garbage_rows=normalized.garbage_rows,
     )
 
     # 캐시 저장 (TTL 30분)

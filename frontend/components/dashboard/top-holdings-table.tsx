@@ -112,7 +112,7 @@ export function TopHoldingsTable({
         </TableHeader>
         <TableBody>
           {sorted.map((h, idx) => {
-            const pnlNum = Number(h.pnl_pct);
+            const pnlNum = h.pnl_pct === null ? null : Number(h.pnl_pct);
             const weight =
               totalForWeight > 0
                 ? (Number(h.value_krw) / totalForWeight) * 100
@@ -156,7 +156,7 @@ export function TopHoldingsTable({
                 )}
                 {showAvgCost && !compact && (
                   <TableCell className="px-1 py-1.5 text-right text-[11px] tabular-nums text-muted-foreground">
-                    {formatKRWCompact(h.avg_cost)}
+                    {h.avg_cost === null ? "-" : formatKRWCompact(h.avg_cost)}
                   </TableCell>
                 )}
                 {showCurrentPrice && !compact && (
@@ -169,9 +169,9 @@ export function TopHoldingsTable({
                     <div className="flex flex-col items-end gap-0.5">
                       <span>{formatKRWCompact(h.value_krw)}</span>
                       <span
-                        className={`font-semibold ${signedColorClass(pnlNum)}`}
+                        className={`font-semibold ${signedColorClass(pnlNum ?? 0)}`}
                       >
-                        {formatPct(h.pnl_pct, { signed: true })}
+                        {h.pnl_pct === null ? "-" : formatPct(h.pnl_pct, { signed: true })}
                       </span>
                     </div>
                   ) : (
@@ -180,9 +180,9 @@ export function TopHoldingsTable({
                 </TableCell>
                 {compact ? null : (
                   <TableCell
-                    className={`px-1 py-1.5 text-right text-[11px] font-semibold tabular-nums ${signedColorClass(pnlNum)}`}
+                    className={`px-1 py-1.5 text-right text-[11px] font-semibold tabular-nums ${signedColorClass(pnlNum ?? 0)}`}
                   >
-                    {formatPct(h.pnl_pct, { signed: true })}
+                    {h.pnl_pct === null ? "-" : formatPct(h.pnl_pct, { signed: true })}
                   </TableCell>
                 )}
                 {compact ? null : (

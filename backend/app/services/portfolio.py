@@ -48,9 +48,19 @@ def _d(v: Any) -> Decimal:
     return Decimal(str(v))
 
 
+def _optional_d(v: Any) -> Decimal | None:
+    if v is None:
+        return None
+    return _d(v)
+
+
 def _fmt(v: Decimal, places: int = 2) -> str:
     quant = Decimal(10) ** -places
     return str(v.quantize(quant, rounding=ROUND_HALF_UP))
+
+
+def _fmt_optional(v: Decimal | None, places: int = 2) -> str | None:
+    return None if v is None else _fmt(v, places)
 
 
 class HoldingInput:
@@ -66,7 +76,7 @@ class HoldingInput:
         self.quantity: Decimal = _d(
             data.quantity if hasattr(data, "quantity") else data["quantity"]
         )
-        self.avg_cost: Decimal = _d(
+        self.avg_cost: Decimal | None = _optional_d(
             data.avg_cost if hasattr(data, "avg_cost") else data["avg_cost"]
         )
         self.currency: str = data.currency if hasattr(data, "currency") else data["currency"]
@@ -94,11 +104,16 @@ async def compute_summary(
 
     total_value = Decimal("0")
     total_cost = Decimal("0")
+    has_missing_cost_basis = False
     asset_class_values: dict[str, Decimal] = {}
     sector_values: dict[str, Decimal] = {}
     holding_details: list[HoldingDetail] = []
 
     for item in items:
+        item_has_cost_basis = item.avg_cost is not None
+        if not item_has_cost_basis:
+            has_missing_cost_basis = True
+
         # 현재가 조회
         try:
             adapter = get_adapter(item.market)
@@ -109,6 +124,13 @@ async def compute_summary(
             logger.warning(
                 "현재가 조회 실패 (%s/%s): %s — avg_cost 로 대체", item.market, item.code, exc
             )
+            if item.avg_cost is None:
+                logger.warning(
+                    "compute_summary: cannot value holding without quote or cost basis (%s/%s)",
+                    item.market,
+                    item.code,
+                )
+                continue
             current_price = item.avg_cost
             price_currency = item.currency
 
@@ -119,14 +141,17 @@ async def compute_summary(
         current_price_krw = current_price * rate_d
         value_krw = current_price_krw * item.quantity
 
-        cost_rate = await get_rate(item.currency, "KRW")
-        cost_krw = item.avg_cost * _d(cost_rate) * item.quantity
-
-        pnl_krw = value_krw - cost_krw
-        pnl_pct = (pnl_krw / cost_krw * 100) if cost_krw != 0 else Decimal("0")
+        cost_krw: Decimal | None = None
+        pnl_krw: Decimal | None = None
+        pnl_pct: Decimal | None = None
+        if item_has_cost_basis and item.avg_cost is not None:
+            cost_rate = await get_rate(item.currency, "KRW")
+            cost_krw = item.avg_cost * _d(cost_rate) * item.quantity
+            pnl_krw = value_krw - cost_krw
+            pnl_pct = (pnl_krw / cost_krw * 100) if cost_krw != 0 else Decimal("0")
+            total_cost += cost_krw
 
         total_value += value_krw
-        total_cost += cost_krw
 
         ac = _classify_asset(item.market)
         asset_class_values[ac] = asset_class_values.get(ac, Decimal("0")) + value_krw
@@ -139,19 +164,22 @@ async def compute_summary(
                 market=item.market,
                 code=item.code,
                 quantity=_fmt(item.quantity, 8),
-                avg_cost=_fmt(item.avg_cost, 4),
+                avg_cost=_fmt_optional(item.avg_cost, 4),
                 currency=item.currency,
                 current_price=_fmt(current_price, 4),
                 current_price_krw=_fmt(current_price_krw, 2),
                 value_krw=_fmt(value_krw, 2),
-                cost_krw=_fmt(cost_krw, 2),
-                pnl_krw=_fmt(pnl_krw, 2),
-                pnl_pct=_fmt(pnl_pct, 2),
+                cost_krw=_fmt_optional(cost_krw, 2),
+                pnl_krw=_fmt_optional(pnl_krw, 2),
+                pnl_pct=_fmt_optional(pnl_pct, 2),
             )
         )
 
-    total_pnl_krw = total_value - total_cost
-    total_pnl_pct = (total_pnl_krw / total_cost * 100) if total_cost != 0 else Decimal("0")
+    total_pnl_krw: Decimal | None = None
+    total_pnl_pct: Decimal | None = None
+    if not has_missing_cost_basis:
+        total_pnl_krw = total_value - total_cost
+        total_pnl_pct = (total_pnl_krw / total_cost * 100) if total_cost != 0 else Decimal("0")
 
     # 자산군 비율
     breakdown: dict[str, str] = {}
@@ -191,9 +219,9 @@ async def compute_summary(
 
     # 최저 단일 종목 수익률
     worst_asset_pct = Decimal("0")
-    if holding_details:
+    if holding_details and not has_missing_cost_basis:
         try:
-            worst_asset_pct = min(_d(hd.pnl_pct) for hd in holding_details)
+            worst_asset_pct = min(_d(hd.pnl_pct) for hd in holding_details if hd.pnl_pct is not None)
         except Exception:
             worst_asset_pct = Decimal("0")
 
@@ -213,27 +241,30 @@ async def compute_summary(
     for detail in holding_details:
         ac = _classify_asset(detail.market)
         v = _d(detail.value_krw)
-        p = _d(detail.pnl_krw)
         class_totals[ac] = class_totals.get(ac, Decimal("0")) + v
-        class_pnls[ac] = class_pnls.get(ac, Decimal("0")) + p
+        if detail.pnl_krw is not None:
+            p = _d(detail.pnl_krw)
+            class_pnls[ac] = class_pnls.get(ac, Decimal("0")) + p
 
     dimension_breakdown: list[DimensionItem] = []
     for ac in sorted(class_totals.keys(), key=lambda k: class_totals[k], reverse=True):
         v = class_totals[ac]
-        p = class_pnls.get(ac, Decimal("0"))
         weight = (v / total_value * 100) if total_value != 0 else Decimal("0")
-        cost = v - p
-        class_pnl_pct = (p / cost * 100) if cost != 0 else Decimal("0")
+        class_pnl_pct: Decimal | None = None
+        if not has_missing_cost_basis:
+            p = class_pnls.get(ac, Decimal("0"))
+            cost = v - p
+            class_pnl_pct = (p / cost * 100) if cost != 0 else Decimal("0")
         dimension_breakdown.append(
             DimensionItem(
                 label=ac,
                 weight_pct=_fmt(weight, 2),
-                pnl_pct=_fmt(class_pnl_pct, 2),
+                pnl_pct=_fmt_optional(class_pnl_pct, 2),
             )
         )
 
     # sprint-08 B-1: win_rate_pct + market_leaders
-    win_rate_pct = calc_win_rate(holding_details)
+    win_rate_pct = None if has_missing_cost_basis else calc_win_rate(holding_details)
     market_leaders = build_market_leaders(holding_details)
 
     return PortfolioSummary(
@@ -242,16 +273,16 @@ async def compute_summary(
         client_name=client_name,
         pb_aum_krw=pb_aum_krw,
         total_value_krw=_fmt(total_value, 2),
-        total_cost_krw=_fmt(total_cost, 2),
-        total_pnl_krw=_fmt(total_pnl_krw, 2),
-        total_pnl_pct=_fmt(total_pnl_pct, 2),
+        total_cost_krw=None if has_missing_cost_basis else _fmt(total_cost, 2),
+        total_pnl_krw=_fmt_optional(total_pnl_krw, 2),
+        total_pnl_pct=_fmt_optional(total_pnl_pct, 2),
         daily_change_krw=_fmt(daily_change_krw, 2),
         daily_change_pct=_fmt(daily_change_pct, 2),
         asset_class_breakdown=breakdown,
         sector_breakdown=sector_breakdown,
         holdings=holding_details,
         holdings_count=len(holding_details),
-        worst_asset_pct=_fmt(worst_asset_pct, 2),
+        worst_asset_pct=None if has_missing_cost_basis else _fmt(worst_asset_pct, 2),
         risk_score_pct=_fmt(risk_score, 2),
         period_change_pct=_fmt(period_change_pct, 2),
         period_days=period_days,
@@ -321,16 +352,19 @@ async def build_portfolio_context(
 
         try:
             current_value_krw = Decimal(detail.value_krw)
-            pnl_pct = float(detail.pnl_pct)
         except Exception:
             current_value_krw = None
+
+        try:
+            pnl_pct = float(detail.pnl_pct) if detail.pnl_pct is not None else None
+        except Exception:
             pnl_pct = None
 
         ph = PortfolioHolding(
             market=detail.market,
             code=detail.code,
             quantity=Decimal(detail.quantity),
-            avg_cost=Decimal(detail.avg_cost),
+            avg_cost=Decimal(detail.avg_cost) if detail.avg_cost is not None else None,
             currency=detail.currency,
             current_value_krw=current_value_krw,
             pnl_pct=pnl_pct,

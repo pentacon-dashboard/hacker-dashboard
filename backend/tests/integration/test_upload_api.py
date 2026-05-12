@@ -4,13 +4,16 @@ from __future__ import annotations
 
 import json
 from collections.abc import AsyncGenerator
+from dataclasses import dataclass
 from typing import Any
 
 import pytest
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy import (
+    JSON,
     Column,
     DateTime,
+    ForeignKey,
     Integer,
     MetaData,
     Numeric,
@@ -18,11 +21,19 @@ from sqlalchemy import (
     Table,
     Text,
     UniqueConstraint,
+    select,
 )
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
+from app.db.models import Holding, PortfolioImportBatch, PortfolioImportRow
 from app.db.session import get_db
 from app.main import app
+
+
+@dataclass(frozen=True)
+class UploadImportHarness:
+    client: AsyncClient
+    sessionmaker: async_sessionmaker[AsyncSession]
 
 
 @pytest.fixture
@@ -82,7 +93,8 @@ def _create_upload_import_tables(conn: Any) -> None:
         Column("market", String(20), nullable=False),
         Column("code", String(50), nullable=False),
         Column("quantity", Numeric(24, 8), nullable=False),
-        Column("avg_cost", Numeric(24, 8), nullable=False),
+        Column("avg_cost", Numeric(24, 8), nullable=True),
+        Column("cost_basis_status", String(32), nullable=False, server_default="provided"),
         Column("currency", String(4), nullable=False, default="USD"),
         Column("import_batch_key", String(128), nullable=True),
         Column("source_row", Integer, nullable=True),
@@ -107,11 +119,36 @@ def _create_upload_import_tables(conn: Any) -> None:
         Column("created_at", DateTime(timezone=True)),
         Column("updated_at", DateTime(timezone=True)),
     )
+    Table(
+        "portfolio_import_rows",
+        metadata,
+        Column("id", Integer, primary_key=True, autoincrement=True),
+        Column("user_id", String(50), nullable=False, default="pb-demo"),
+        Column("client_id", String(50), nullable=False),
+        Column(
+            "import_batch_key",
+            String(128),
+            ForeignKey("portfolio_import_batches.import_batch_key", ondelete="CASCADE"),
+            nullable=False,
+        ),
+        Column("source_row", Integer, nullable=False),
+        Column("row_status", String(32), nullable=False),
+        Column("raw_row_json", JSON, nullable=False, default=dict),
+        Column("normalized_payload_json", JSON, nullable=True),
+        Column("reason_codes", JSON, nullable=False, default=list),
+        Column(
+            "linked_holding_id",
+            Integer,
+            ForeignKey("holdings.id", ondelete="SET NULL"),
+            nullable=True,
+        ),
+        Column("created_at", DateTime(timezone=True)),
+    )
     metadata.create_all(conn)
 
 
 @pytest.fixture
-async def upload_import_client() -> AsyncGenerator[AsyncClient, None]:
+async def upload_import_harness() -> AsyncGenerator[UploadImportHarness, None]:
     engine = create_async_engine("sqlite+aiosqlite:///:memory:", echo=False)
     async with engine.begin() as conn:
         await conn.run_sync(_create_upload_import_tables)
@@ -125,10 +162,17 @@ async def upload_import_client() -> AsyncGenerator[AsyncClient, None]:
     app.dependency_overrides[get_db] = override_get_db
 
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
-        yield ac
+        yield UploadImportHarness(client=ac, sessionmaker=SessionLocal)
 
     app.dependency_overrides.pop(get_db, None)
     await engine.dispose()
+
+
+@pytest.fixture
+async def upload_import_client(
+    upload_import_harness: UploadImportHarness,
+) -> AsyncGenerator[AsyncClient, None]:
+    yield upload_import_harness.client
 
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -273,6 +317,201 @@ async def test_upload_import_persists_normalized_holdings(
     assert len(holdings) == 1
     assert holdings[0]["code"] == "005930"
     assert holdings[0]["quantity"] == "10.00000000"
+
+
+@pytest.mark.asyncio
+async def test_upload_import_persists_imported_row_ledger_and_missing_cost_basis(
+    upload_import_harness: UploadImportHarness,
+) -> None:
+    content = b"code,quantity,market,currency\nAAPL,3,yahoo,USD\n"
+    upload_resp = await upload_import_harness.client.post(
+        "/upload/csv",
+        files={"file": ("missing-cost.csv", content, "text/csv")},
+    )
+    assert upload_resp.status_code == 200
+
+    import_resp = await upload_import_harness.client.post(
+        "/upload/import",
+        json={"upload_id": upload_resp.json()["upload_id"], "client_id": "client-901"},
+    )
+
+    assert import_resp.status_code == 200
+    body = import_resp.json()
+    assert body["status"] == "imported"
+    assert body["imported_count"] == 1
+    assert body["holdings"][0]["avg_cost"] is None
+    assert body["normalized_holdings"][0]["cost_basis_status"] == "missing"
+    assert len(body["imported_rows"]) == 1
+
+    async with upload_import_harness.sessionmaker() as session:
+        holding = (
+            await session.execute(select(Holding).where(Holding.client_id == "client-901"))
+        ).scalar_one()
+        assert holding.avg_cost is None
+        assert holding.cost_basis_status == "missing"
+
+        batch = (
+            await session.execute(
+                select(PortfolioImportBatch).where(
+                    PortfolioImportBatch.import_batch_key == body["import_batch_key"]
+                )
+            )
+        ).scalar_one()
+        assert batch.status == "imported"
+
+        ledger_rows = (
+            await session.execute(
+                select(PortfolioImportRow).where(
+                    PortfolioImportRow.import_batch_key == body["import_batch_key"]
+                )
+            )
+        ).scalars().all()
+        assert len(ledger_rows) == 1
+        assert ledger_rows[0].row_status == "imported"
+        assert ledger_rows[0].linked_holding_id == holding.id
+        assert ledger_rows[0].raw_row_json["code"] == "AAPL"
+        assert ledger_rows[0].normalized_payload_json["avg_cost"] is None
+        assert ledger_rows[0].normalized_payload_json["cost_basis_status"] == "missing"
+        assert ledger_rows[0].reason_codes == ["normalized"]
+
+
+@pytest.mark.asyncio
+async def test_upload_import_persists_partial_import_rows_and_replaces_same_batch(
+    upload_import_harness: UploadImportHarness,
+) -> None:
+    content = (
+        b"code,quantity,avg_cost,market,currency\n"
+        b"AAPL,3,180,yahoo,USD\n"
+        b"MSFT,not-a-number,300,yahoo,USD\n"
+    )
+    upload_resp = await upload_import_harness.client.post(
+        "/upload/csv",
+        files={"file": ("partial-import.csv", content, "text/csv")},
+    )
+    assert upload_resp.status_code == 200
+    request_body = {"upload_id": upload_resp.json()["upload_id"], "client_id": "client-902"}
+
+    first_import = await upload_import_harness.client.post("/upload/import", json=request_body)
+    second_import = await upload_import_harness.client.post("/upload/import", json=request_body)
+
+    assert first_import.status_code == 200
+    assert second_import.status_code == 200
+    body = second_import.json()
+    assert first_import.json()["import_batch_key"] == body["import_batch_key"]
+    assert body["status"] == "partial_imported"
+    assert body["imported_count"] == 1
+    assert len(body["imported_rows"]) == 1
+    assert len(body["quarantined_rows"]) == 1
+
+    async with upload_import_harness.sessionmaker() as session:
+        batch = (
+            await session.execute(
+                select(PortfolioImportBatch).where(
+                    PortfolioImportBatch.import_batch_key == body["import_batch_key"]
+                )
+            )
+        ).scalar_one()
+        assert batch.status == "partial_imported"
+
+        holdings = (
+            await session.execute(select(Holding).where(Holding.client_id == "client-902"))
+        ).scalars().all()
+        assert len(holdings) == 1
+        assert holdings[0].code == "AAPL"
+
+        ledger_rows = (
+            await session.execute(
+                select(PortfolioImportRow)
+                .where(PortfolioImportRow.import_batch_key == body["import_batch_key"])
+                .order_by(PortfolioImportRow.source_row)
+            )
+        ).scalars().all()
+        assert [row.row_status for row in ledger_rows] == ["imported", "quarantined"]
+        assert ledger_rows[0].linked_holding_id == holdings[0].id
+        assert ledger_rows[1].linked_holding_id is None
+        assert ledger_rows[1].reason_codes == ["invalid_quantity"]
+        assert ledger_rows[1].raw_row_json["quantity"] == "not-a-number"
+
+
+@pytest.mark.asyncio
+async def test_upload_import_returns_partial_when_valid_rows_have_garbage_ledger(
+    upload_import_harness: UploadImportHarness,
+) -> None:
+    content = "\n".join(
+        [
+            "code,quantity,avg_cost,market,currency",
+            "AAPL,3,180,yahoo,USD",
+            "Total,,,,",
+        ]
+    ).encode()
+    upload_resp = await upload_import_harness.client.post(
+        "/upload/csv",
+        files={"file": ("garbage-ledger.csv", content, "text/csv")},
+    )
+    assert upload_resp.status_code == 200
+
+    import_resp = await upload_import_harness.client.post(
+        "/upload/import",
+        json={"upload_id": upload_resp.json()["upload_id"], "client_id": "client-904"},
+    )
+
+    assert import_resp.status_code == 200
+    body = import_resp.json()
+    assert body["status"] == "partial_imported"
+    assert body["imported_count"] == 1
+    assert len(body["imported_rows"]) == 1
+    assert len(body["garbage_rows"]) == 1
+
+    async with upload_import_harness.sessionmaker() as session:
+        batch = (
+            await session.execute(
+                select(PortfolioImportBatch).where(
+                    PortfolioImportBatch.import_batch_key == body["import_batch_key"]
+                )
+            )
+        ).scalar_one()
+        assert batch.status == "partial_imported"
+
+        ledger_rows = (
+            await session.execute(
+                select(PortfolioImportRow)
+                .where(PortfolioImportRow.import_batch_key == body["import_batch_key"])
+                .order_by(PortfolioImportRow.source_row)
+            )
+        ).scalars().all()
+        assert [row.row_status for row in ledger_rows] == ["imported", "garbage"]
+        assert ledger_rows[1].linked_holding_id is None
+        assert ledger_rows[1].reason_codes == ["total_row"]
+
+
+@pytest.mark.asyncio
+async def test_upload_import_insufficient_data_does_not_persist_batch_rows_or_holdings(
+    upload_import_harness: UploadImportHarness,
+) -> None:
+    content = b"name,note\nApple,watchlist only\n"
+    upload_resp = await upload_import_harness.client.post(
+        "/upload/csv",
+        files={"file": ("insufficient.csv", content, "text/csv")},
+    )
+    assert upload_resp.status_code == 200
+
+    import_resp = await upload_import_harness.client.post(
+        "/upload/import",
+        json={"upload_id": upload_resp.json()["upload_id"], "client_id": "client-903"},
+    )
+
+    assert import_resp.status_code == 200
+    body = import_resp.json()
+    assert body["status"] == "insufficient_data"
+    assert body["imported_count"] == 0
+    assert body["holdings"] == []
+
+    async with upload_import_harness.sessionmaker() as session:
+        assert (
+            await session.execute(select(Holding).where(Holding.client_id == "client-903"))
+        ).scalars().all() == []
+        assert (await session.execute(select(PortfolioImportBatch))).scalars().all() == []
+        assert (await session.execute(select(PortfolioImportRow))).scalars().all() == []
 
 
 @pytest.mark.asyncio

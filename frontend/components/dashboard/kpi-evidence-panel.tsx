@@ -1,7 +1,6 @@
 "use client";
 
-import { AlertTriangle, ArrowRight, Info } from "lucide-react";
-import Link from "next/link";
+import { AlertTriangle, Info } from "lucide-react";
 import type { PortfolioSummary, SnapshotResponse } from "@/lib/api/portfolio";
 import { cn } from "@/lib/utils";
 import { formatKRWCompact, formatPct, signedColorClass } from "@/lib/utils/format";
@@ -47,28 +46,8 @@ function toNumber(value: number | string | null | undefined): number {
   return Number.isFinite(parsed) ? parsed : 0;
 }
 
-function clientHref(clientId: string): string {
-  return `/clients/${encodeURIComponent(clientId)}`;
-}
-
-function clientNewsHref(clientId: string): string {
-  return `/news?client_id=${encodeURIComponent(clientId)}`;
-}
-
 function displayAssetClassLabel(key: string, fallback: string): string {
   return ASSET_CLASS_LABELS[key] ?? fallback;
-}
-
-function EvidenceAction({ href, label }: { href: string; label: string }) {
-  return (
-    <Link
-      href={href}
-      className="inline-flex h-9 shrink-0 items-center gap-2 rounded-md border bg-card px-3 text-sm font-semibold text-primary transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-    >
-      <span className="truncate">{label}</span>
-      <ArrowRight className="h-4 w-4 shrink-0" aria-hidden="true" />
-    </Link>
-  );
 }
 
 function EvidenceShell({
@@ -76,14 +55,12 @@ function EvidenceShell({
   title,
   value,
   summary,
-  action,
   children,
 }: {
   panelId: string;
   title: string;
   value: string;
   summary: string;
-  action: React.ReactNode;
   children: React.ReactNode;
 }) {
   const titleId = `${panelId}-title`;
@@ -108,7 +85,6 @@ function EvidenceShell({
           </p>
           <p className="mt-1 text-sm leading-6 text-muted-foreground">{summary}</p>
         </div>
-        {action}
       </header>
       <div className="mt-4 grid min-w-0 gap-3 lg:grid-cols-2">{children}</div>
     </section>
@@ -258,37 +234,41 @@ function HoldingWeightList({ rows }: { rows: HoldingWeightRow[] }) {
 
   return (
     <ul className="space-y-2">
-      {rows.map((row) => (
-        <li
-          key={row.id}
-          className="grid min-w-0 grid-cols-[minmax(0,1fr)_auto] gap-3 rounded-md bg-muted/40 px-3 py-2"
-        >
-          <div className="min-w-0">
-            <p className="truncate text-sm font-semibold">{row.code}</p>
-            <p className="truncate text-xs text-muted-foreground">{row.market}</p>
-          </div>
-          <div className="text-right">
-            <p className="whitespace-nowrap text-sm font-semibold tabular-nums">
-              {formatPct(row.weightPct)}
-            </p>
-            <p
-              className={cn(
-                "whitespace-nowrap text-xs font-medium tabular-nums",
-                signedColorClass(row.pnlPct),
-              )}
-            >
-              {formatPct(row.pnlPct, { signed: true })}
-            </p>
-          </div>
-        </li>
-      ))}
+      {rows.map((row) => {
+        const pnlPct = row.pnlPct;
+        const hasPnl = pnlPct !== null;
+
+        return (
+          <li
+            key={row.id}
+            className="grid min-w-0 grid-cols-[minmax(0,1fr)_auto] gap-3 rounded-md bg-muted/40 px-3 py-2"
+          >
+            <div className="min-w-0">
+              <p className="truncate text-sm font-semibold">{row.code}</p>
+              <p className="truncate text-xs text-muted-foreground">{row.market}</p>
+            </div>
+            <div className="text-right">
+              <p className="whitespace-nowrap text-sm font-semibold tabular-nums">
+                {formatPct(row.weightPct)}
+              </p>
+              <p
+                className={cn(
+                  "whitespace-nowrap text-xs font-medium tabular-nums",
+                  hasPnl ? signedColorClass(pnlPct) : "text-muted-foreground",
+                )}
+              >
+                {hasPnl ? formatPct(pnlPct, { signed: true }) : "-"}
+              </p>
+            </div>
+          </li>
+        );
+      })}
     </ul>
   );
 }
 
 export function KpiEvidencePanel({
   activeKey,
-  clientId,
   summary,
   snapshots,
   hiddenHoldingCount,
@@ -311,7 +291,6 @@ export function KpiEvidencePanel({
         title="총자산 근거"
         value={formatKRWCompact(summary.total_value_krw)}
         summary="총자산은 정규화된 보유종목 평가금액 합계와 자산군 비중을 기준으로 표시합니다."
-        action={<EvidenceAction href={clientHref(clientId)} label="고객 상세 보기" />}
       >
         <EvidenceBlock title="자산군 비중">
           <AssetClassRows rows={assetClassRows} />
@@ -341,7 +320,6 @@ export function KpiEvidencePanel({
         title="일간 변동 근거"
         value={formatPct(dailyPct, { signed: true })}
         summary={`${formatKRWCompact(summary.daily_change_krw)} 변동은 요약 API의 확정 지표만 사용합니다.`}
-        action={<EvidenceAction href={clientNewsHref(clientId)} label="관련 뉴스 보기" />}
       >
         <EvidenceBlock title="확정 지표">
           <dl>
@@ -386,7 +364,6 @@ export function KpiEvidencePanel({
         title={`${summary.period_days}일 변화 근거`}
         value={hasPeriodEvidence ? formatPct(periodPct, { signed: true }) : "근거 부족"}
         summary="기간 변화는 스냅샷 총 평가금액의 시작값과 종료값을 비교해 검증합니다."
-        action={<EvidenceAction href="#client-book-asset-trend" label="추이 자세히 보기" />}
       >
         <EvidenceBlock title="기간 통계">
           {periodStats ? (
@@ -451,9 +428,6 @@ export function KpiEvidencePanel({
         title="보유종목 근거"
         value={`${summary.holdings_count}개`}
         summary="보유종목 수와 분포는 정규화된 holdings 배열에서 집계합니다."
-        action={
-          <EvidenceAction href={`${clientHref(clientId)}#holdings`} label="보유 테이블 보기" />
-        }
       >
         <EvidenceBlock title="자산군별 종목 수">
           <HoldingDistributionList rows={distributionRows} />
@@ -480,9 +454,6 @@ export function KpiEvidencePanel({
         title="집중도 근거"
         value={formatPct(summary.risk_score_pct)}
         summary="사용 가능한 원천 데이터가 확인될 때까지 자산군 HHI 근거를 표시하지 않습니다."
-        action={
-          <EvidenceAction href={`${clientHref(clientId)}#rebalance`} label="리밸런싱 검토" />
-        }
       >
         <EvidenceBlock title="HHI 근거 없음" className="lg:col-span-2">
           <DegradedBlock title="집중도 근거 저하">
@@ -500,9 +471,6 @@ export function KpiEvidencePanel({
       title="집중도 근거"
       value={formatPct(summary.risk_score_pct)}
       summary="집중도는 자산군 배분의 쏠림을 설명하는 deterministic 위험 지표입니다."
-      action={
-        <EvidenceAction href={`${clientHref(clientId)}#rebalance`} label="리밸런싱 검토" />
-      }
     >
       <EvidenceBlock title="HHI 산식">
         <p className="break-keep text-sm leading-6 text-muted-foreground">

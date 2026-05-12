@@ -284,6 +284,7 @@ def _create_tables_sqlite(conn: Any) -> None:
         Column,
         Date,
         DateTime,
+        ForeignKey,
         Integer,
         MetaData,
         Numeric,
@@ -304,7 +305,8 @@ def _create_tables_sqlite(conn: Any) -> None:
         Column("market", String(20), nullable=False),
         Column("code", String(50), nullable=False),
         Column("quantity", Numeric(24, 8), nullable=False),
-        Column("avg_cost", Numeric(24, 8), nullable=False),
+        Column("avg_cost", Numeric(24, 8), nullable=True),
+        Column("cost_basis_status", String(32), nullable=False, server_default="provided"),
         Column("currency", String(4), nullable=False, default="USD"),
         Column("import_batch_key", String(128), nullable=True),
         Column("source_row", Integer, nullable=True),
@@ -332,6 +334,32 @@ def _create_tables_sqlite(conn: Any) -> None:
     )
 
     Table(
+        "portfolio_import_rows",
+        metadata,
+        Column("id", Integer, primary_key=True),
+        Column("user_id", String(50), nullable=False, default="demo"),
+        Column("client_id", String(50), nullable=False),
+        Column(
+            "import_batch_key",
+            String(128),
+            ForeignKey("portfolio_import_batches.import_batch_key", ondelete="CASCADE"),
+            nullable=False,
+        ),
+        Column("source_row", Integer, nullable=False),
+        Column("row_status", String(32), nullable=False),
+        Column("raw_row_json", JSON, nullable=False, default=dict),
+        Column("normalized_payload_json", JSON, nullable=True),
+        Column("reason_codes", JSON, nullable=False, default=list),
+        Column(
+            "linked_holding_id",
+            Integer,
+            ForeignKey("holdings.id", ondelete="SET NULL"),
+            nullable=True,
+        ),
+        Column("created_at", DateTime(timezone=True)),
+    )
+
+    Table(
         "portfolio_snapshots",
         metadata,
         Column("id", Integer, primary_key=True),
@@ -339,7 +367,7 @@ def _create_tables_sqlite(conn: Any) -> None:
         Column("client_id", String(50), nullable=False, default="client-001"),
         Column("snapshot_date", Date, nullable=False),
         Column("total_value_krw", Numeric(24, 4), nullable=False),
-        Column("total_pnl_krw", Numeric(24, 4), nullable=False),
+        Column("total_pnl_krw", Numeric(24, 4), nullable=True),
         Column("asset_class_breakdown", JSON, nullable=False),
         Column("holdings_detail", JSON, nullable=False),
         Column("created_at", DateTime(timezone=True)),

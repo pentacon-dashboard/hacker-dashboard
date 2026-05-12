@@ -116,6 +116,12 @@ describe("kpi evidence utils", () => {
     ]);
   });
 
+  it("preserves missing holding PnL as unknown in top holding evidence rows", () => {
+    expect(
+      buildTopHoldingWeightRows([holding({ pnl_pct: null })], 800000, 1),
+    ).toMatchObject([{ code: "005930", pnlPct: null }]);
+  });
+
   it("classifies markets using backend-compatible asset classes", () => {
     expect(classifyMarketAssetClass("upbit")).toBe("crypto");
     expect(classifyMarketAssetClass("binance")).toBe("crypto");

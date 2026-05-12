@@ -9,6 +9,7 @@ from typing import Any
 from pgvector.sqlalchemy import Vector
 from sqlalchemy import (
     Boolean,
+    CheckConstraint,
     Date,
     DateTime,
     ForeignKey,
@@ -122,7 +123,10 @@ class Holding(Base):
     market: Mapped[str] = mapped_column(String(20), nullable=False)
     code: Mapped[str] = mapped_column(String(50), nullable=False)
     quantity: Mapped[Decimal] = mapped_column(Numeric(24, 8), nullable=False)
-    avg_cost: Mapped[Decimal] = mapped_column(Numeric(24, 8), nullable=False)
+    avg_cost: Mapped[Decimal | None] = mapped_column(Numeric(24, 8), nullable=True)
+    cost_basis_status: Mapped[str] = mapped_column(
+        String(32), nullable=False, server_default="provided"
+    )
     currency: Mapped[str] = mapped_column(String(4), nullable=False, default="USD")
     import_batch_key: Mapped[str | None] = mapped_column(String(128), nullable=True, index=True)
     source_row: Mapped[int | None] = mapped_column(Integer, nullable=True)
@@ -131,6 +135,13 @@ class Holding(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+
+    __table_args__ = (
+        CheckConstraint(
+            "cost_basis_status IN ('provided', 'missing', 'derived', 'needs_review')",
+            name="ck_holdings_cost_basis_status",
+        ),
     )
 
 
@@ -155,6 +166,39 @@ class PortfolioImportBatch(Base):
     )
 
 
+class PortfolioImportRow(Base):
+    """Durable row-level ledger for a portfolio CSV import batch."""
+
+    __tablename__ = "portfolio_import_rows"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[str] = mapped_column(String(50), nullable=False, default="pb-demo")
+    client_id: Mapped[str] = mapped_column(String(50), nullable=False, index=True)
+    import_batch_key: Mapped[str] = mapped_column(
+        String(128),
+        ForeignKey("portfolio_import_batches.import_batch_key", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    source_row: Mapped[int] = mapped_column(Integer, nullable=False)
+    row_status: Mapped[str] = mapped_column(String(32), nullable=False, index=True)
+    raw_row_json: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False, default=dict)
+    normalized_payload_json: Mapped[dict[str, Any] | None] = mapped_column(JSONB, nullable=True)
+    reason_codes: Mapped[list[str]] = mapped_column(JSONB, nullable=False, default=list)
+    linked_holding_id: Mapped[int | None] = mapped_column(
+        ForeignKey("holdings.id", ondelete="SET NULL"),
+        nullable=True,
+    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    __table_args__ = (
+        CheckConstraint(
+            "row_status IN ('imported', 'recoverable', 'quarantined', 'garbage')",
+            name="ck_portfolio_import_rows_status",
+        ),
+    )
+
+
 class PortfolioSnapshot(Base):
     """week-3: 일간 포트폴리오 스냅샷."""
 
@@ -167,7 +211,7 @@ class PortfolioSnapshot(Base):
     )
     snapshot_date: Mapped[date] = mapped_column(Date, nullable=False)
     total_value_krw: Mapped[Decimal] = mapped_column(Numeric(24, 4), nullable=False)
-    total_pnl_krw: Mapped[Decimal] = mapped_column(Numeric(24, 4), nullable=False)
+    total_pnl_krw: Mapped[Decimal | None] = mapped_column(Numeric(24, 4), nullable=True)
     # {"crypto": 0.5, "stock_us": 0.3, "stock_kr": 0.2}
     asset_class_breakdown: Mapped[dict[str, Any]] = mapped_column(
         JSONB, nullable=False, default=dict

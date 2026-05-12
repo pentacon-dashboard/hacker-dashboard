@@ -38,7 +38,7 @@ export interface HoldingWeightRow {
   market: string;
   code: string;
   valueKrw: number;
-  pnlPct: number;
+  pnlPct: number | null;
   weightPct: number;
 }
 
@@ -64,6 +64,7 @@ function toNumber(value: number | string | null | undefined): number {
 }
 
 function parseFiniteNumber(value: number | string | null | undefined): number | null {
+  if (value == null || value === "") return null;
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : null;
 }
@@ -137,7 +138,7 @@ export function buildTopHoldingWeightRows(
         market: holding.market,
         code: holding.code,
         valueKrw,
-        pnlPct: toNumber(holding.pnl_pct),
+        pnlPct: parseFiniteNumber(holding.pnl_pct),
         weightPct: totalValueKrw > 0 ? (valueKrw / totalValueKrw) * 100 : 0,
       };
     });

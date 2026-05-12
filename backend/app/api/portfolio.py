@@ -395,7 +395,7 @@ async def list_snapshots(
             client_name=_client_name(getattr(s, "client_id", _DEFAULT_CLIENT_ID)),
             snapshot_date=str(s.snapshot_date),
             total_value_krw=str(s.total_value_krw),
-            total_pnl_krw=str(s.total_pnl_krw),
+            total_pnl_krw=None if s.total_pnl_krw is None else str(s.total_pnl_krw),
             asset_class_breakdown=s.asset_class_breakdown,
             holdings_detail=s.holdings_detail,
             created_at=(

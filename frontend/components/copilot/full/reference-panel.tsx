@@ -14,6 +14,12 @@ interface ReferencePanelProps {
   onQuickQuestion?: (q: string) => void;
 }
 
+function parseFinitePercent(value: number | string | null | undefined): number | null {
+  if (value == null || value === "") return null;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
 export function ReferencePanel({
   quickQuestions,
   onQuickQuestion,
@@ -77,8 +83,8 @@ export function ReferencePanel({
     };
   }, []);
 
-  const pnlPct = summary ? parseFloat(String(summary.total_pnl_pct)) : null;
-  const dailyPct = summary ? parseFloat(String(summary.daily_change_pct)) : null;
+  const pnlPct = summary ? parseFinitePercent(summary.total_pnl_pct) : null;
+  const dailyPct = summary ? parseFinitePercent(summary.daily_change_pct) : null;
 
   return (
     <div className="flex flex-col gap-3 h-full" data-testid="reference-panel">
@@ -97,32 +103,30 @@ export function ReferencePanel({
             <p className="text-xs text-destructive" data-testid="summary-error">
               {t("copilot.summaryError")}
             </p>
-          ) : pnlPct !== null ? (
+          ) : summary ? (
             <>
               <div className="flex items-center justify-between">
                 <span className="text-xs text-muted-foreground">{t("copilot.totalReturn")}</span>
                 <span
-                  className={`text-sm font-bold ${pnlPct >= 0 ? "text-green-500" : "text-destructive"}`}
+                  className={`text-sm font-bold ${pnlPct == null ? "text-muted-foreground" : pnlPct >= 0 ? "text-green-500" : "text-destructive"}`}
                   data-testid="summary-pnl-pct"
                 >
-                  {pnlPct >= 0 ? "+" : ""}
-                  {pnlPct.toFixed(2)}%
+                  {pnlPct == null ? "-" : `${pnlPct >= 0 ? "+" : ""}${pnlPct.toFixed(2)}%`}
                 </span>
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-xs text-muted-foreground">{t("copilot.dailyChange")}</span>
                 <div className="flex items-center gap-1">
-                  {(dailyPct ?? 0) >= 0 ? (
+                  {dailyPct == null ? null : dailyPct >= 0 ? (
                     <TrendingUp className="h-3 w-3 text-green-500" aria-hidden="true" />
                   ) : (
                     <TrendingDown className="h-3 w-3 text-destructive" aria-hidden="true" />
                   )}
                   <span
-                    className={`text-xs font-semibold ${(dailyPct ?? 0) >= 0 ? "text-green-500" : "text-destructive"}`}
+                    className={`text-xs font-semibold ${dailyPct == null ? "text-muted-foreground" : dailyPct >= 0 ? "text-green-500" : "text-destructive"}`}
                     data-testid="summary-daily-pct"
                   >
-                    {(dailyPct ?? 0) >= 0 ? "+" : ""}
-                    {(dailyPct ?? 0).toFixed(2)}%
+                    {dailyPct == null ? "-" : `${dailyPct >= 0 ? "+" : ""}${dailyPct.toFixed(2)}%`}
                   </span>
                 </div>
               </div>

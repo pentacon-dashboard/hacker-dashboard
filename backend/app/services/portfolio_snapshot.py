@@ -40,7 +40,7 @@ async def take_snapshot(
     holdings_detail_raw = [h.model_dump() for h in summary.holdings]
 
     value_krw = Decimal(summary.total_value_krw)
-    pnl_krw = Decimal(summary.total_pnl_krw)
+    pnl_krw = Decimal(summary.total_pnl_krw) if summary.total_pnl_krw is not None else None
 
     # 기존 스냅샷 조회 후 INSERT or UPDATE (SQLite/PostgreSQL 모두 호환)
     existing_result = await session.execute(

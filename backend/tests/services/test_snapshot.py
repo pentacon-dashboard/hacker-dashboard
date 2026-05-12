@@ -99,6 +99,33 @@ async def test_take_snapshot_with_holdings(db_session: AsyncSession) -> None:
 
 
 @pytest.mark.asyncio
+async def test_take_snapshot_preserves_missing_pnl_as_null(db_session: AsyncSession) -> None:
+    """Missing cost basis snapshots keep value but do not fabricate PnL as zero."""
+    from app.services.portfolio_snapshot import take_snapshot
+
+    with patch("app.services.portfolio_snapshot.compute_summary") as mock_cs:
+        from app.schemas.portfolio import PortfolioSummary
+
+        mock_cs.return_value = PortfolioSummary(
+            user_id="demo",
+            total_value_krw="30000000.00",
+            total_cost_krw=None,
+            total_pnl_krw=None,
+            total_pnl_pct=None,
+            daily_change_krw="0.00",
+            daily_change_pct="0.00",
+            asset_class_breakdown={"crypto": "1.0000"},
+            holdings=[],
+        )
+
+        snap = await take_snapshot(db_session, user_id="demo")
+
+    assert snap.total_value_krw == Decimal("30000000.00")
+    assert snap.total_pnl_krw is None
+    assert snap.asset_class_breakdown == {"crypto": "1.0000"}
+
+
+@pytest.mark.asyncio
 async def test_take_snapshot_upsert_same_date(db_session: AsyncSession) -> None:
     """같은 날 두 번 take_snapshot → upsert (id 동일 or 갱신)."""
     from app.schemas.portfolio import PortfolioSummary

@@ -43,7 +43,7 @@ def _d(v: object) -> Decimal:
 # ──────────────────────────────────────────────────────────────────────────────
 
 
-def calc_win_rate(holdings: list[HoldingDetail]) -> str:
+def calc_win_rate(holdings: list[HoldingDetail]) -> str | None:
     """보유 종목 중 pnl_pct > 0 비율 × 100 (문자열 소수점 2자리).
 
     빈 목록: "0.00"
@@ -52,6 +52,8 @@ def calc_win_rate(holdings: list[HoldingDetail]) -> str:
     """
     if not holdings:
         return "0.00"
+    if any(h.pnl_pct is None for h in holdings):
+        return None
     wins = sum(1 for h in holdings if _d(h.pnl_pct) > Decimal("0"))
     rate = Decimal(wins) / Decimal(len(holdings)) * Decimal("100")
     return _fmt(rate, 2)
@@ -126,13 +128,20 @@ def build_market_leaders(holdings: list[HoldingDetail]) -> list[MarketLeader]:
     sorted_holdings = sorted(holdings, key=lambda h: _d(h.value_krw), reverse=True)
     leaders: list[MarketLeader] = []
     for rank, h in enumerate(sorted_holdings[:3], start=1):
-        pnl = _d(h.pnl_pct)
-        sign = "+" if pnl >= 0 else ""
-        pnl_str = f"{sign}{_fmt(pnl, 2)}"
-        pnl_krw = _d(h.pnl_krw)
-        krw_sign = "+" if pnl_krw >= 0 else ""
+        if h.pnl_pct is None:
+            pnl_str = None
+        else:
+            pnl = _d(h.pnl_pct)
+            sign = "+" if pnl >= 0 else ""
+            pnl_str = f"{sign}{_fmt(pnl, 2)}"
+
+        if h.pnl_krw is None:
+            krw_display = None
+        else:
+            pnl_krw = _d(h.pnl_krw)
+            krw_sign = "+" if pnl_krw >= 0 else ""
         # 간략 표기 (천 단위 쉼표)
-        krw_display = f"{krw_sign}{int(pnl_krw):,}"
+            krw_display = f"{krw_sign}{int(pnl_krw):,}"
 
         # 현재가 display
         price_val = _d(h.current_price)
@@ -187,32 +196,36 @@ def sector_heatmap(
     # 섹터 → (총 value, 총 pnl_krw)
     sector_value: dict[str, Decimal] = {}
     sector_pnl: dict[str, Decimal] = {}
+    has_missing_pnl = any(h.pnl_krw is None for h in holdings)
 
     for h in holdings:
         sector = sector_map.get(h.code, get_sector(h.code))
         v = _d(h.value_krw)
-        p = _d(h.pnl_krw)
         sector_value[sector] = sector_value.get(sector, Decimal("0")) + v
-        sector_pnl[sector] = sector_pnl.get(sector, Decimal("0")) + p
+        if h.pnl_krw is not None:
+            p = _d(h.pnl_krw)
+            sector_pnl[sector] = sector_pnl.get(sector, Decimal("0")) + p
 
     tiles: list[SectorHeatmapTile] = []
     for sector in sorted(sector_value.keys(), key=lambda s: sector_value[s], reverse=True):
         sv = sector_value[sector]
-        sp = sector_pnl.get(sector, Decimal("0"))
         weight = sv / total_value * 100
-        cost = sv - sp
-        pnl_pct = (sp / cost * 100) if cost != 0 else Decimal("0")
-        # intensity: pnl_pct 를 [-10%, +10%] 구간에 매핑 → [-1.0, +1.0] 클램프
-        raw_intensity = float(pnl_pct) / 10.0
-        clamped = max(-1.0, min(1.0, raw_intensity))
-        sign = "+" if clamped >= 0 else ""
-        pnl_sign = "+" if pnl_pct >= 0 else ""
+        pnl_pct: Decimal | None = None
+        clamped: float | None = None
+        if not has_missing_pnl:
+            sp = sector_pnl.get(sector, Decimal("0"))
+            cost = sv - sp
+            pnl_pct = (sp / cost * 100) if cost != 0 else Decimal("0")
+            raw_intensity = float(pnl_pct) / 10.0
+            clamped = max(-1.0, min(1.0, raw_intensity))
+        sign = "+" if clamped is not None and clamped >= 0 else ""
+        pnl_sign = "+" if pnl_pct is not None and pnl_pct >= 0 else ""
         tiles.append(
             SectorHeatmapTile(
                 sector=sector,
                 weight_pct=_fmt(weight, 2),
-                pnl_pct=f"{pnl_sign}{_fmt(pnl_pct, 2)}",
-                intensity=f"{sign}{clamped:.2f}",
+                pnl_pct=None if pnl_pct is None else f"{pnl_sign}{_fmt(pnl_pct, 2)}",
+                intensity=None if clamped is None else f"{sign}{clamped:.2f}",
             )
         )
     return tiles
@@ -235,8 +248,11 @@ def monthly_returns(
     if year is None:
         year = date.today().year
 
+    if any(h.pnl_pct is None for h in holdings):
+        return []
+
     # 총 pnl 에서 오프셋 seed 추출 (결정론적, holdings 변경 시 달라짐)
-    total_pnl = sum((_d(h.pnl_pct) for h in holdings), Decimal("0"))
+    total_pnl = sum((_d(h.pnl_pct) for h in holdings if h.pnl_pct is not None), Decimal("0"))
     base_offset = float(total_pnl) * 0.01  # 작은 오프셋
 
     cells: list[MonthlyReturnCell] = []
@@ -293,23 +309,42 @@ def ai_insight_stub(summary: PortfolioSummary) -> AiInsightResponse:
     summary 기반 결정론적 문단 생성.
     """
     total = summary.total_value_krw
-    pnl = summary.total_pnl_pct
-    win = summary.win_rate_pct
+    pnl = summary.total_pnl_pct if summary.total_pnl_pct is not None else "-"
+    win = summary.win_rate_pct if summary.win_rate_pct is not None else "-"
     count = summary.holdings_count
     risk = summary.risk_score_pct
+    risk_float = float(risk)
+    pnl_phrase = (
+        f"총 손익률은 {pnl}%입니다."
+        if summary.total_pnl_pct is not None
+        else "총 손익률은 원가 정보 부족으로 산출하지 않았습니다."
+    )
+    win_phrase = (
+        f"보유 {count}개 종목 중 {win}%가 수익권에 있습니다."
+        if summary.win_rate_pct is not None
+        else f"보유 {count}개 종목의 승률은 원가 정보 부족으로 산출하지 않았습니다."
+    )
 
     summary_text = (
         f"현재 포트폴리오 총 평가금액은 ₩{total}이며, "
-        f"총 손익률은 {pnl}%입니다. "
-        f"보유 {count}개 종목 중 {win}%가 수익권에 있습니다. "
+        f"{pnl_phrase} "
+        f"{win_phrase} "
         f"집중도 리스크 점수는 {risk}점으로, "
-        f"{'분산이 부족하여 리밸런싱을 검토할 필요가 있습니다.' if float(risk) > 50 else '적절한 분산 수준을 유지하고 있습니다.'}"
+        f"{'분산이 부족하여 리밸런싱을 검토할 필요가 있습니다.' if risk_float > 50 else '적절한 분산 수준을 유지하고 있습니다.'}"
     )
 
     bullets = [
-        f"총 평가 손익률 {pnl}% — 시장 대비 성과를 지속 모니터링하세요.",
-        f"승률 {win}% — 수익 종목이 전체의 과반을 {'초과합니다.' if float(win) > 50 else '넘지 못합니다.'}",
-        f"리스크 집중도 {risk}점 — {'다양한 자산군으로 분산 투자를 권장합니다.' if float(risk) > 50 else '현재 분산 수준은 양호합니다.'}",
+        (
+            f"총 평가 손익률 {pnl}% - 시장 대비 성과를 지속 모니터링하세요."
+            if summary.total_pnl_pct is not None
+            else "총 평가 손익률은 원가 정보 부족으로 제외했습니다."
+        ),
+        (
+            f"승률 {win}% - 수익 종목이 전체의 과반을 {'초과합니다.' if float(win) > 50 else '넘지 못합니다.'}"
+            if summary.win_rate_pct is not None
+            else "승률은 원가 정보 부족으로 제외했습니다."
+        ),
+        f"리스크 집중도 {risk}점 - {'다양한 자산군으로 분산 투자를 권장합니다.' if risk_float > 50 else '현재 분산 수준은 양호합니다.'}",
     ]
 
     return AiInsightResponse(

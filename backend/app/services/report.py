@@ -27,6 +27,12 @@ def _format_section(section: ClientBriefingSection) -> str:
     return f"## {section.title}\n\n{section.body}{evidence_line}"
 
 
+def _has_missing_cost_basis(summary: PortfolioSummary) -> bool:
+    return summary.total_pnl_pct is None or any(
+        holding.pnl_pct is None for holding in summary.holdings
+    )
+
+
 def build_client_briefing_report(
     summary: PortfolioSummary,
     *,
@@ -80,14 +86,24 @@ def build_client_briefing_report(
     risk_ev = _metric_evidence("risk_score_pct", "HHI 기반 집중도 위험 점수")
     top_holding = summary.holdings[0]
     top_ev = _row_evidence(str(top_holding.id), f"최대 보유 종목 {top_holding.code}")
+    has_missing_cost_basis = _has_missing_cost_basis(summary)
+    total_pnl_text = (
+        f"총 손익률은 {summary.total_pnl_pct}%입니다."
+        if summary.total_pnl_pct is not None
+        else "총 손익률은 원가 정보 부족으로 산출하지 않았습니다."
+    )
+    top_pnl_text = (
+        f"손익률은 {top_holding.pnl_pct}%입니다."
+        if top_holding.pnl_pct is not None
+        else "손익률은 원가 정보 부족으로 산출하지 않았습니다."
+    )
 
     sections = [
         ClientBriefingSection(
             title="요약",
             body=(
                 f"{client_name}의 총 평가금액은 {summary.total_value_krw} KRW이며, "
-                f"총 손익률은 {summary.total_pnl_pct}%입니다. 보유 종목 수는 "
-                f"{summary.holdings_count}개입니다."
+                f"{total_pnl_text} 보유 종목 수는 {summary.holdings_count}개입니다."
             ),
             evidence=[total_ev, pnl_ev],
         ),
@@ -95,7 +111,7 @@ def build_client_briefing_report(
             title="성과 기여",
             body=(
                 f"가장 큰 포지션은 {top_holding.code}이며 평가금액은 "
-                f"{top_holding.value_krw} KRW, 손익률은 {top_holding.pnl_pct}%입니다."
+                f"{top_holding.value_krw} KRW, {top_pnl_text}"
             ),
             evidence=[top_ev, _metric_evidence("holdings", "포지션별 평가금액과 손익률")],
         ),
@@ -129,7 +145,7 @@ def build_client_briefing_report(
     report_script = "\n\n".join(_format_section(section) for section in sections)
 
     return ClientBriefingReportResponse(
-        status="success",
+        status="degraded" if has_missing_cost_basis else "success",
         client_context=client_context,
         metrics=metrics,
         sections=sections,
@@ -137,9 +153,11 @@ def build_client_briefing_report(
         gate_results={
             "schema_gate": "pass",
             "domain_gate": "pass",
-            "evidence_gate": "pass",
-            "critique_gate": "pass",
+            "evidence_gate": (
+                "degraded: missing cost basis" if has_missing_cost_basis else "pass"
+            ),
+            "critique_gate": "degraded" if has_missing_cost_basis else "pass",
         },
-        export_ready=True,
+        export_ready=not has_missing_cost_basis,
         report_script=report_script,
     )

@@ -4,9 +4,15 @@ from __future__ import annotations
 
 from typing import Any, Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 from app.schemas.portfolio import CLIENT_ID_PATTERN, HoldingResponse
+
+CostBasisStatus = Literal["provided", "missing", "derived", "needs_review"]
+UploadImportStatus = Literal[
+    "imported", "partial_imported", "needs_confirmation", "insufficient_data"
+]
+UploadRowClassification = Literal["imported", "recoverable", "quarantined", "garbage"]
 
 
 class UploadErrorDetail(BaseModel):
@@ -53,9 +59,26 @@ class NormalizedCsvHolding(BaseModel):
     name: str | None = None
     quantity: str
     avg_cost: str | None = None
+    cost_basis_status: CostBasisStatus | None = None
     currency: str | None = None
     source_row: int
     source_columns: dict[str, str]
+
+    @model_validator(mode="after")
+    def default_cost_basis_status(self) -> NormalizedCsvHolding:
+        if self.cost_basis_status is None:
+            self.cost_basis_status = "missing" if self.avg_cost is None else "provided"
+        return self
+
+
+class UploadImportRow(BaseModel):
+    classification: UploadRowClassification
+    source_row: int
+    source_columns: dict[str, Any] = Field(default_factory=dict)
+    reason_code: str
+    message: str
+    normalized_holding: NormalizedCsvHolding | None = None
+    errors: list[UploadErrorDetail] = Field(default_factory=list)
 
 
 class UploadValidationResult(BaseModel):
@@ -69,15 +92,17 @@ class UploadValidationResult(BaseModel):
     preview: list[dict[str, Any]]  # 상위 5행 dict
     schema_fingerprint: str  # CSV 헤더 해시
     created_at: str
-    import_status: Literal["imported", "needs_confirmation", "insufficient_data"] = (
-        "insufficient_data"
-    )
+    import_status: UploadImportStatus = "insufficient_data"
     field_mappings: list[CsvFieldMapping] = Field(default_factory=list)
     mapping_candidates: list[CsvMappingCandidateGroup] = Field(default_factory=list)
     unmapped_columns: list[str] = Field(default_factory=list)
     normalized_preview: list[dict[str, Any]] = Field(default_factory=list)
     normalized_holdings: list[NormalizedCsvHolding] = Field(default_factory=list)
     normalization_warnings: list[str] = Field(default_factory=list)
+    imported_rows: list[UploadImportRow] = Field(default_factory=list)
+    recoverable_rows: list[UploadImportRow] = Field(default_factory=list)
+    quarantined_rows: list[UploadImportRow] = Field(default_factory=list)
+    garbage_rows: list[UploadImportRow] = Field(default_factory=list)
 
 
 class UploadImportRequest(BaseModel):
@@ -94,7 +119,7 @@ class UploadImportRequest(BaseModel):
 
 
 class UploadImportResponse(BaseModel):
-    status: Literal["imported", "needs_confirmation", "insufficient_data"]
+    status: UploadImportStatus
     client_id: str
     imported_count: int
     import_batch_key: str | None = None
@@ -106,6 +131,10 @@ class UploadImportResponse(BaseModel):
     normalized_holdings: list[NormalizedCsvHolding] = Field(default_factory=list)
     normalization_warnings: list[str] = Field(default_factory=list)
     blocking_errors: list[UploadErrorDetail] = Field(default_factory=list)
+    imported_rows: list[UploadImportRow] = Field(default_factory=list)
+    recoverable_rows: list[UploadImportRow] = Field(default_factory=list)
+    quarantined_rows: list[UploadImportRow] = Field(default_factory=list)
+    garbage_rows: list[UploadImportRow] = Field(default_factory=list)
 
 
 class UploadAnalyzerConfig(BaseModel):

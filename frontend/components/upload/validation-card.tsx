@@ -10,6 +10,7 @@ type UploadImportStatus = components["schemas"]["UploadImportResponse"]["status"
 type CsvMappingCandidateGroup =
   components["schemas"]["CsvMappingCandidateGroup"];
 type NormalizedCsvHolding = components["schemas"]["NormalizedCsvHolding"];
+type UploadImportRow = components["schemas"]["UploadImportRow"];
 
 export interface ValidationResult {
   upload_id: string;
@@ -31,6 +32,10 @@ export interface ValidationResult {
   normalized_preview?: Record<string, unknown>[];
   normalized_holdings?: NormalizedCsvHolding[];
   normalization_warnings?: string[];
+  imported_rows?: UploadImportRow[];
+  recoverable_rows?: UploadImportRow[];
+  quarantined_rows?: UploadImportRow[];
+  garbage_rows?: UploadImportRow[];
 }
 
 interface ValidationCardProps {
@@ -44,6 +49,18 @@ export function ValidationCard({ result, loading, error }: ValidationCardProps) 
   const previewRows = result?.preview_rows ?? result?.preview ?? [];
   const columnsDetected = result?.columns_detected ?? Object.keys(previewRows[0] ?? {});
   const errors = result?.errors ?? [];
+  const hasRowLedger = [
+    result?.imported_rows,
+    result?.recoverable_rows,
+    result?.quarantined_rows,
+    result?.garbage_rows,
+  ].some(Array.isArray);
+  const rowClassificationCounts = {
+    imported: result?.imported_rows?.length ?? 0,
+    review: result?.recoverable_rows?.length ?? 0,
+    quarantine: result?.quarantined_rows?.length ?? 0,
+    garbage: result?.garbage_rows?.length ?? 0,
+  };
 
   return (
     <Card data-testid="validation-card">
@@ -120,6 +137,50 @@ export function ValidationCard({ result, loading, error }: ValidationCardProps) 
                 <p className="mt-0.5 text-xs text-muted-foreground">{t("upload.validation.warningRows")}</p>
               </div>
             </div>
+
+            {hasRowLedger && (
+              <div
+                className="grid grid-cols-4 gap-2 rounded-lg border border-border bg-muted/20 p-2"
+                data-testid="validation-row-classification-counts"
+              >
+                <div className="text-center">
+                  <p
+                    className="text-sm font-semibold tabular-nums text-green-600 dark:text-green-400"
+                    data-testid="validation-imported-count"
+                  >
+                    {rowClassificationCounts.imported}
+                  </p>
+                  <p className="text-[11px] text-muted-foreground">Imported</p>
+                </div>
+                <div className="text-center">
+                  <p
+                    className="text-sm font-semibold tabular-nums text-yellow-600 dark:text-yellow-300"
+                    data-testid="validation-review-count"
+                  >
+                    {rowClassificationCounts.review}
+                  </p>
+                  <p className="text-[11px] text-muted-foreground">Review</p>
+                </div>
+                <div className="text-center">
+                  <p
+                    className="text-sm font-semibold tabular-nums text-orange-600 dark:text-orange-300"
+                    data-testid="validation-quarantine-count"
+                  >
+                    {rowClassificationCounts.quarantine}
+                  </p>
+                  <p className="text-[11px] text-muted-foreground">Quarantine</p>
+                </div>
+                <div className="text-center">
+                  <p
+                    className="text-sm font-semibold tabular-nums text-muted-foreground"
+                    data-testid="validation-garbage-count"
+                  >
+                    {rowClassificationCounts.garbage}
+                  </p>
+                  <p className="text-[11px] text-muted-foreground">Garbage</p>
+                </div>
+              </div>
+            )}
 
             {/* 오류 목록 (최대 3개) */}
             {errors.length > 0 && (

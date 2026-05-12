@@ -47,6 +47,10 @@ function getPreviewColumns(result: ValidationResult | null): string[] {
   return result?.columns_detected ?? Object.keys(rows[0] ?? {});
 }
 
+function isSavedImportStatus(status: string | null | undefined): boolean {
+  return status === "imported" || status === "partial_imported";
+}
+
 type ClientRow = PortfolioClientsResponse["clients"][number];
 
 function ClientTargetPanel({
@@ -186,9 +190,17 @@ function ImportStatusPanel({
 
   if (!result) return null;
 
+  const saved = isSavedImportStatus(result.status);
   const imported = result.status === "imported";
+  const partial = result.status === "partial_imported";
   const warnings = result.warnings ?? [];
   const blockingErrors = result.blockingErrors ?? [];
+  const rowCounts = result.rowCounts ?? {
+    imported: result.importedRows,
+    review: 0,
+    quarantine: 0,
+    garbage: 0,
+  };
   return (
     <div
       className={
@@ -207,13 +219,34 @@ function ImportStatusPanel({
         <span className="font-medium">
           {imported
             ? `${result.clientId} 보유자산 ${result.importedRows}건 저장`
+            : partial
+              ? `${result.clientId} 부분 저장, 검토 필요`
             : "보유자산 매핑 확인 필요"}
         </span>
       </div>
+      {saved && (
+        <div
+          className="mt-2 grid grid-cols-2 gap-1 pl-6 sm:grid-cols-4"
+          data-testid="upload-import-row-counts"
+        >
+          <span className="rounded border border-border/80 bg-background/60 px-2 py-1 tabular-nums">
+            Imported {rowCounts.imported}
+          </span>
+          <span className="rounded border border-border/80 bg-background/60 px-2 py-1 tabular-nums">
+            Review {rowCounts.review}
+          </span>
+          <span className="rounded border border-border/80 bg-background/60 px-2 py-1 tabular-nums">
+            Quarantine {rowCounts.quarantine}
+          </span>
+          <span className="rounded border border-border/80 bg-background/60 px-2 py-1 tabular-nums">
+            Garbage {rowCounts.garbage}
+          </span>
+        </div>
+      )}
       {!imported && warnings.length > 0 && (
         <p className="mt-1 pl-6 text-muted-foreground">{warnings[0]}</p>
       )}
-      {!imported && blockingErrors.length > 0 && (
+      {!saved && blockingErrors.length > 0 && (
         <div className="mt-2 space-y-1 pl-6">
           {blockingErrors.slice(0, 3).map((error, index) => (
             <p
@@ -284,9 +317,8 @@ export default function UploadPage() {
       : validationResult?.normalized_preview ?? [];
   const showMappingReview =
     Boolean(validationResult) &&
-    importedClient?.status !== "imported" &&
     mappingCandidates.length > 0 &&
-    (validationResult?.import_status !== "imported" ||
+    (validationResult?.import_status === "needs_confirmation" ||
       importedClient?.status === "needs_confirmation");
 
   useEffect(() => {
@@ -379,11 +411,11 @@ export default function UploadPage() {
         setValidationResult(result);
         setValidationLoading(false);
 
-        if (
-          result.error_rows > 0 ||
-          result.valid_rows === 0 ||
-          (result.import_status && result.import_status !== "imported")
-        ) {
+        const validationAllowsImport =
+          isSavedImportStatus(result.import_status) ||
+          (!result.import_status && result.error_rows === 0);
+
+        if (result.valid_rows === 0 || !validationAllowsImport) {
           setUploading(false);
           return;
         }
@@ -392,7 +424,7 @@ export default function UploadPage() {
         void importPortfolioCsvAsClient(result.upload_id, clientSelection)
           .then(async (importResult) => {
             setImportedClient(importResult);
-            if (importResult.status === "imported") {
+            if (isSavedImportStatus(importResult.status)) {
               await refreshPortfolioCaches(importResult.clientId);
             }
           })
@@ -432,7 +464,7 @@ export default function UploadPage() {
           confirmedMapping,
         );
         setImportedClient(importResult);
-        if (importResult.status === "imported") {
+        if (isSavedImportStatus(importResult.status)) {
           await refreshPortfolioCaches(importResult.clientId);
         }
       } catch (e) {
@@ -458,7 +490,7 @@ export default function UploadPage() {
   }, []);
 
   const handleAnalyzeComplete = useCallback(() => {
-    if (importedClient?.status === "imported" && importedClient.clientId) {
+    if (isSavedImportStatus(importedClient?.status) && importedClient?.clientId) {
       router.push(`/clients/${encodeURIComponent(importedClient.clientId)}`);
       return;
     }
@@ -538,7 +570,7 @@ export default function UploadPage() {
               !validationResult ||
               uploading ||
               validationLoading ||
-              importedClient?.status !== "imported"
+              !isSavedImportStatus(importedClient?.status)
             }
             onComplete={handleAnalyzeComplete}
           />

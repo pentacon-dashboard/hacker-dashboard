@@ -19,7 +19,7 @@ def _make_holding(
     market: str,
     code: str,
     quantity: str,
-    avg_cost: str,
+    avg_cost: str | None,
     currency: str,
 ) -> dict[str, Any]:
     now = datetime.now(UTC)
@@ -29,7 +29,7 @@ def _make_holding(
         "market": market,
         "code": code,
         "quantity": Decimal(quantity),
-        "avg_cost": Decimal(avg_cost),
+        "avg_cost": Decimal(avg_cost) if avg_cost is not None else None,
         "currency": currency,
         "created_at": now,
         "updated_at": now,
@@ -87,6 +87,98 @@ async def test_compute_summary_single_krw_holding() -> None:
     # 손익: 5,000,000 KRW
     assert Decimal(summary.total_pnl_krw) == Decimal("5000000.00")
     assert len(summary.holdings) == 1
+
+
+@pytest.mark.asyncio
+async def test_compute_summary_includes_missing_cost_basis_value_and_degrades_pnl() -> None:
+    """Missing cost basis contributes value/allocation without fabricated cost or PnL."""
+    holdings = [_make_holding(1, "upbit", "KRW-BTC", "0.5", None, "KRW")]
+
+    with (
+        patch("app.services.portfolio.get_adapter") as mock_registry,
+        patch("app.services.portfolio.get_rate", return_value=1.0),
+    ):
+        adapter = AsyncMock()
+        adapter.fetch_quote = AsyncMock(return_value=_mock_quote(60000000, "KRW"))
+        mock_registry.return_value = adapter
+
+        summary = await compute_summary(holdings)
+
+    assert summary.total_value_krw == "30000000.00"
+    assert summary.total_cost_krw is None
+    assert summary.total_pnl_krw is None
+    assert summary.total_pnl_pct is None
+    assert summary.win_rate_pct is None
+    assert summary.holdings_count == 1
+    assert summary.asset_class_breakdown == {"crypto": "1.0000"}
+    assert summary.risk_score_pct == "100.00"
+
+    assert len(summary.holdings) == 1
+    holding = summary.holdings[0]
+    assert holding.avg_cost is None
+    assert holding.value_krw == "30000000.00"
+    assert holding.cost_krw is None
+    assert holding.pnl_krw is None
+    assert holding.pnl_pct is None
+
+    assert [item.model_dump() for item in summary.dimension_breakdown] == [
+        {"label": "crypto", "weight_pct": "100.00", "pnl_pct": None}
+    ]
+    assert summary.market_leaders[0].ticker == "KRW-BTC"
+    assert summary.market_leaders[0].change_pct is None
+    assert summary.market_leaders[0].change_krw is None
+    adapter.fetch_quote.assert_awaited_once_with("KRW-BTC")
+
+
+@pytest.mark.asyncio
+async def test_compute_summary_mixed_cost_basis_degrades_portfolio_pnl_only() -> None:
+    """Partial cost basis keeps values and known holding PnL but degrades aggregate PnL."""
+    holdings = [
+        _make_holding(1, "upbit", "KRW-BTC", "0.5", "50000000", "KRW"),
+        _make_holding(2, "yahoo", "AAPL", "10", None, "USD"),
+    ]
+
+    async def mock_get_rate(base: str, quote: str) -> float:
+        if base == "USD" and quote == "KRW":
+            return 1300.0
+        return 1.0
+
+    with (
+        patch("app.services.portfolio.get_adapter") as mock_registry,
+        patch("app.services.portfolio.get_rate", side_effect=mock_get_rate),
+    ):
+
+        async def side_effect_fetch_quote(code: str) -> Any:
+            if code == "KRW-BTC":
+                return _mock_quote(60000000, "KRW")
+            return _mock_quote(160.0, "USD")
+
+        adapter = AsyncMock()
+        adapter.fetch_quote = AsyncMock(side_effect=side_effect_fetch_quote)
+        mock_registry.return_value = adapter
+
+        summary = await compute_summary(holdings)
+
+    assert summary.total_value_krw == "32080000.00"
+    assert summary.total_cost_krw is None
+    assert summary.total_pnl_krw is None
+    assert summary.total_pnl_pct is None
+    assert summary.win_rate_pct is None
+    assert summary.holdings_count == 2
+    assert len(summary.dimension_breakdown) == 2
+    assert all(item.pnl_pct is None for item in summary.dimension_breakdown)
+
+    known_holding = next(h for h in summary.holdings if h.code == "KRW-BTC")
+    assert known_holding.cost_krw == "25000000.00"
+    assert known_holding.pnl_krw == "5000000.00"
+    assert known_holding.pnl_pct == "20.00"
+
+    missing_holding = next(h for h in summary.holdings if h.code == "AAPL")
+    assert missing_holding.avg_cost is None
+    assert missing_holding.value_krw == "2080000.00"
+    assert missing_holding.cost_krw is None
+    assert missing_holding.pnl_krw is None
+    assert missing_holding.pnl_pct is None
 
 
 @pytest.mark.asyncio

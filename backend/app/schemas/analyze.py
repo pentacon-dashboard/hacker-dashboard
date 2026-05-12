@@ -14,7 +14,7 @@ class PortfolioHolding(BaseModel):
     market: str
     code: str
     quantity: Decimal
-    avg_cost: Decimal
+    avg_cost: Decimal | None
     currency: str
     current_value_krw: Decimal | None = None
     pnl_pct: float | None = None

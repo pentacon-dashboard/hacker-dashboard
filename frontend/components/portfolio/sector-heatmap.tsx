@@ -7,9 +7,9 @@ import { translateSectorName } from "@/lib/i18n/map";
 export interface SectorHeatmapTile {
   sector: string;
   weight_pct: string;
-  pnl_pct: string;
+  pnl_pct: string | null;
   /** -0.5 ~ +1.0 로 정규화된 색 강도 */
-  intensity: string;
+  intensity: string | null;
 }
 
 interface SectorHeatmapProps {
@@ -37,6 +37,14 @@ function intensityToColor(intensity: number): string {
 
 function textColorForIntensity(intensity: number): string {
   return Math.abs(intensity) > 0.4 ? "text-white" : "text-foreground";
+}
+
+function formatNullablePct(value: string | null): string {
+  if (value === null) {
+    return "-";
+  }
+  const valueNum = Number(value);
+  return `${valueNum > 0 ? "+" : ""}${valueNum.toFixed(2)}%`;
 }
 
 interface TooltipState {
@@ -80,10 +88,10 @@ export function SectorHeatmap({ tiles }: SectorHeatmapProps) {
         style={{ gridTemplateColumns: `repeat(${Math.min(tiles.length, 5)}, 1fr)` }}
       >
         {tiles.map((tile) => {
-          const intensityNum = Number(tile.intensity);
+          const intensityNum = tile.intensity === null ? 0 : Number(tile.intensity);
           const bg = intensityToColor(intensityNum);
           const textCls = textColorForIntensity(intensityNum);
-          const pnlNum = Number(tile.pnl_pct);
+          const pnlText = formatNullablePct(tile.pnl_pct);
           return (
             <button
               key={tile.sector}
@@ -93,12 +101,11 @@ export function SectorHeatmap({ tiles }: SectorHeatmapProps) {
               style={{ backgroundColor: bg }}
               onMouseEnter={(e) => handleMouseEnter(e, tile)}
               onMouseLeave={handleMouseLeave}
-              aria-label={`${translateSector(tile.sector)} 섹터 수익률 ${pnlNum > 0 ? "+" : ""}${pnlNum.toFixed(2)}%`}
+              aria-label={`${translateSector(tile.sector)} 섹터 수익률 ${pnlText}`}
             >
               <p className="truncate text-[10px] font-semibold">{translateSector(tile.sector)}</p>
               <p className="mt-0.5 text-xs font-bold tabular-nums">
-                {pnlNum > 0 ? "+" : ""}
-                {pnlNum.toFixed(2)}%
+                {pnlText}
               </p>
             </button>
           );
@@ -117,13 +124,14 @@ export function SectorHeatmap({ tiles }: SectorHeatmapProps) {
             {t("portfolio.sector.tooltip.return")}:{" "}
             <span
               className={
-                Number(tooltip.tile.pnl_pct) >= 0
+                tooltip.tile.pnl_pct === null
+                  ? "text-muted-foreground"
+                  : Number(tooltip.tile.pnl_pct) >= 0
                   ? "text-emerald-600 dark:text-emerald-400"
                   : "text-red-600 dark:text-red-400"
               }
             >
-              {Number(tooltip.tile.pnl_pct) > 0 ? "+" : ""}
-              {Number(tooltip.tile.pnl_pct).toFixed(2)}%
+              {formatNullablePct(tooltip.tile.pnl_pct)}
             </span>
           </p>
         </div>

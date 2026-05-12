@@ -11,24 +11,30 @@ import {
 } from "recharts";
 import type { SnapshotResponse } from "@/lib/api/portfolio";
 import { formatKRW } from "@/lib/utils/format";
+import {
+  buildNetworthChartData,
+  buildNetworthChartDomain,
+  formatNetworthDateLabel,
+  formatNetworthDateTick,
+  type NetworthChartRange,
+} from "./networth-chart-utils";
 
 interface NetworthChartProps {
   snapshots: SnapshotResponse[];
+  range?: NetworthChartRange;
 }
 
-export function NetworthChart({ snapshots }: NetworthChartProps) {
-  if (snapshots.length === 0) {
+export function NetworthChart({ snapshots, range }: NetworthChartProps) {
+  const domain = buildNetworthChartDomain(range);
+  const data = buildNetworthChartData(snapshots, range);
+
+  if (data.length === 0) {
     return (
       <div className="flex h-48 items-center justify-center text-sm text-muted-foreground">
         스냅샷 데이터 없음
       </div>
     );
   }
-
-  const data = snapshots.map((s) => ({
-    date: s.snapshot_date,
-    value: Number(s.total_value_krw),
-  }));
 
   return (
     <div data-testid="networth-chart" className="h-56 w-full">
@@ -42,9 +48,13 @@ export function NetworthChart({ snapshots }: NetworthChartProps) {
           </defs>
           <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
           <XAxis
-            dataKey="date"
+            dataKey="time"
+            type="number"
+            scale="time"
+            domain={domain ?? ["dataMin", "dataMax"]}
+            allowDataOverflow={Boolean(domain)}
             tick={{ fontSize: 11 }}
-            tickFormatter={(v: string) => v.slice(5)} // MM-DD
+            tickFormatter={formatNetworthDateTick}
           />
           <YAxis
             tick={{ fontSize: 11 }}
@@ -58,8 +68,8 @@ export function NetworthChart({ snapshots }: NetworthChartProps) {
             width={52}
           />
           <Tooltip
-            formatter={(value: number) => [formatKRW(value), "순자산"]}
-            labelFormatter={(label: string) => label}
+            formatter={(value: number) => [formatKRW(value), "총자산"]}
+            labelFormatter={formatNetworthDateLabel}
           />
           <Area
             type="monotone"

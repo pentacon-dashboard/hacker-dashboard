@@ -13,7 +13,7 @@ import {
 import { useLocale } from "@/lib/i18n/locale-provider";
 
 interface DimensionBarsProps {
-  data: Array<{ label: string; weight_pct: string; pnl_pct: string }>;
+  data: Array<{ label: string; weight_pct: string; pnl_pct: string | null }>;
 }
 
 const ASSET_CLASS_LABEL_KEYS: Record<string, string> = {
@@ -41,7 +41,7 @@ export function DimensionBars({ data }: DimensionBarsProps) {
   const chartData = data.map((d) => ({
     name: ASSET_CLASS_LABEL_KEYS[d.label] ? t(ASSET_CLASS_LABEL_KEYS[d.label]!) : d.label,
     [weightKey]: Number(d.weight_pct),
-    [returnKey]: Number(d.pnl_pct),
+    [returnKey]: d.pnl_pct === null ? null : Number(d.pnl_pct),
   }));
 
   return (
@@ -66,8 +66,10 @@ export function DimensionBars({ data }: DimensionBarsProps) {
             width={72}
           />
           <Tooltip
-            formatter={(value: number, name: string) => [
-              `${value > 0 ? "+" : ""}${value.toFixed(2)}%`,
+            formatter={(value, name) => [
+              value == null
+                ? "-"
+                : `${Number(value) > 0 ? "+" : ""}${Number(value).toFixed(2)}%`,
               name,
             ]}
           />

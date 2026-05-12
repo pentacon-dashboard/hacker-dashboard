@@ -82,6 +82,18 @@ describe("TopHoldingsTable", () => {
     expect(screen.getByText("50.0%")).toBeInTheDocument();
   });
 
+  it("missing avg_cost renders an empty marker instead of zero", () => {
+    const items: HoldingDetail[] = [
+      holding({ id: 30, code: "AAPL", avg_cost: null }),
+    ];
+
+    render(<TopHoldingsTable holdings={items} showAvgCost />);
+
+    const row = screen.getAllByRole("row")[1]!;
+    expect(within(row).getByText("-")).toBeInTheDocument();
+    expect(within(row).queryByText("₩0")).not.toBeInTheDocument();
+  });
+
   it("수익률에 부호(+/-)를 붙여 표시한다", () => {
     render(<TopHoldingsTable holdings={SAMPLE} />);
     expect(screen.getByText("+22.15%")).toBeInTheDocument();

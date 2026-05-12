@@ -161,7 +161,7 @@ export interface MarketLeaderResponse {
   name: string;
   market: string;
   price: string;
-  change_pct: string;
+  change_pct: string | null;
   currency: string;
   logo_url: string | null;
   price_display: string | null;

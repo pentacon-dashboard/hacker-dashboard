@@ -1,4 +1,4 @@
-import { fireEvent, screen, within } from "@testing-library/react";
+import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { renderWithProviders } from "@/tests/helpers/render-with-providers";
 import { SelectedClientDashboard } from "./dashboard-home";
@@ -6,6 +6,18 @@ import { SelectedClientDashboard } from "./dashboard-home";
 const portfolioMocks = vi.hoisted(() => ({
   getPortfolioSummary: vi.fn(),
   getSnapshots: vi.fn(),
+}));
+
+const watchlistMocks = vi.hoisted(() => ({
+  getAlerts: vi.fn(),
+}));
+
+const newsMocks = vi.hoisted(() => ({
+  searchNews: vi.fn(),
+}));
+
+const networthChartMocks = vi.hoisted(() => ({
+  render: vi.fn(),
 }));
 
 vi.mock("@/lib/api/portfolio", async () => {
@@ -19,8 +31,37 @@ vi.mock("@/lib/api/portfolio", async () => {
   };
 });
 
+vi.mock("@/lib/api/watchlist", async () => {
+  const actual = await vi.importActual<typeof import("@/lib/api/watchlist")>(
+    "@/lib/api/watchlist",
+  );
+  return {
+    ...actual,
+    getAlerts: watchlistMocks.getAlerts,
+  };
+});
+
+vi.mock("@/lib/api/news", async () => {
+  const actual = await vi.importActual<typeof import("@/lib/api/news")>(
+    "@/lib/api/news",
+  );
+  return {
+    ...actual,
+    searchNews: newsMocks.searchNews,
+  };
+});
+
 vi.mock("@/components/portfolio/networth-chart", () => ({
-  NetworthChart: () => <div data-testid="mock-networth-chart" />,
+  NetworthChart: (props: { range?: { from?: string; to?: string } }) => {
+    networthChartMocks.render(props);
+    return (
+      <div
+        data-testid="mock-networth-chart"
+        data-from={props.range?.from}
+        data-to={props.range?.to}
+      />
+    );
+  },
 }));
 
 vi.mock("@/components/dashboard/allocation-breakdown", () => ({
@@ -67,12 +108,77 @@ const SUMMARY = {
   win_rate_pct: "0.00",
 };
 
+function formatDate(date: Date): string {
+  const yyyy = date.getFullYear();
+  const mm = String(date.getMonth() + 1).padStart(2, "0");
+  const dd = String(date.getDate()).padStart(2, "0");
+  return `${yyyy}-${mm}-${dd}`;
+}
+
+function expectedRange(days: number) {
+  const to = new Date();
+  const from = new Date();
+  from.setDate(to.getDate() - days);
+  return { from: formatDate(from), to: formatDate(to) };
+}
+
 describe("SelectedClientDashboard monitoring links", () => {
   beforeEach(() => {
     portfolioMocks.getPortfolioSummary.mockReset();
     portfolioMocks.getSnapshots.mockReset();
+    watchlistMocks.getAlerts.mockReset();
+    newsMocks.searchNews.mockReset();
+    networthChartMocks.render.mockClear();
     portfolioMocks.getPortfolioSummary.mockResolvedValue(SUMMARY);
     portfolioMocks.getSnapshots.mockResolvedValue([]);
+    watchlistMocks.getAlerts.mockResolvedValue([
+      {
+        id: 1,
+        user_id: "pb-demo",
+        symbol: "005930",
+        market: "naver_kr",
+        direction: "below",
+        threshold: "60000",
+        enabled: true,
+        created_at: "2026-05-01T00:00:00Z",
+      },
+      {
+        id: 2,
+        user_id: "pb-demo",
+        symbol: "AAPL",
+        market: "yahoo",
+        direction: "above",
+        threshold: "200",
+        enabled: true,
+        created_at: "2026-05-02T00:00:00Z",
+      },
+    ]);
+    newsMocks.searchNews.mockResolvedValue([
+      {
+        doc_id: 1,
+        chunk_id: 1,
+        source_url: "https://example.com/a",
+        title: "news a",
+      },
+      {
+        doc_id: 2,
+        chunk_id: 1,
+        source_url: "https://example.com/b",
+        title: "news b",
+      },
+      {
+        doc_id: 3,
+        chunk_id: 1,
+        source_url: "https://example.com/c",
+        title: "news c",
+      },
+      {
+        doc_id: 4,
+        chunk_id: 1,
+        source_url: "https://example.com/d",
+        title: "news d",
+      },
+    ]);
   });
 
   it("links client-book monitoring cards to watchlist alerts and client news routes", async () => {
@@ -99,12 +205,42 @@ describe("SelectedClientDashboard monitoring links", () => {
       "/news?client_id=client-001",
     );
   });
+
+  it("uses the same counts as the linked monitoring detail pages", async () => {
+    renderWithProviders(
+      <SelectedClientDashboard
+        clientId="client-001"
+        clientName="고객 A"
+        variant="clientBook"
+      />,
+      { withQuery: true },
+    );
+
+    const attentionCard = await screen.findByRole("link", { name: /주의 종목/ });
+    const alertCard = await screen.findByRole("link", { name: /가격 알림/ });
+    const newsCard = await screen.findByRole("link", { name: /관련 뉴스/ });
+
+    expect(within(attentionCard).getByText("1")).toBeInTheDocument();
+    expect(await within(alertCard).findByText("2")).toBeInTheDocument();
+    expect(await within(newsCard).findByText("4")).toBeInTheDocument();
+    expect(watchlistMocks.getAlerts).toHaveBeenCalledOnce();
+    expect(newsMocks.searchNews).toHaveBeenCalledWith(
+      expect.objectContaining({
+        query: "005930",
+        symbols: ["005930"],
+        k: 8,
+      }),
+    );
+  });
 });
 
 describe("SelectedClientDashboard KPI evidence", () => {
   beforeEach(() => {
     portfolioMocks.getPortfolioSummary.mockReset();
     portfolioMocks.getSnapshots.mockReset();
+    watchlistMocks.getAlerts.mockReset();
+    newsMocks.searchNews.mockReset();
+    networthChartMocks.render.mockClear();
     portfolioMocks.getPortfolioSummary.mockResolvedValue(SUMMARY);
     portfolioMocks.getSnapshots.mockResolvedValue([
       {
@@ -132,6 +268,8 @@ describe("SelectedClientDashboard KPI evidence", () => {
         created_at: "2026-05-07T00:00:00Z",
       },
     ]);
+    watchlistMocks.getAlerts.mockResolvedValue([]);
+    newsMocks.searchNews.mockResolvedValue([]);
   });
 
   it("opens total-assets evidence by default in customer-book mode", async () => {
@@ -167,22 +305,53 @@ describe("SelectedClientDashboard KPI evidence", () => {
     expect(screen.queryByRole("button", { name: /총자산/ })).not.toBeInTheDocument();
   });
 
-  it("keeps evidence actions scoped to the selected client", async () => {
+  it("updates networth chart requests and range when the period tab changes", async () => {
+    renderWithProviders(
+      <SelectedClientDashboard clientId="client-001" clientName="고객 A" variant="clientBook" />,
+      { withQuery: true },
+    );
+
+    expect(await screen.findByTestId("mock-networth-chart")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("tab", { name: "1Y" }));
+
+    const oneYearRange = expectedRange(365);
+    await waitFor(() =>
+      expect(portfolioMocks.getPortfolioSummary).toHaveBeenCalledWith(365, "client-001"),
+    );
+    await waitFor(() =>
+      expect(portfolioMocks.getSnapshots).toHaveBeenCalledWith(
+        oneYearRange.from,
+        oneYearRange.to,
+        "client-001",
+      ),
+    );
+    await waitFor(() =>
+      expect(screen.getByTestId("mock-networth-chart")).toHaveAttribute(
+        "data-from",
+        oneYearRange.from,
+      ),
+    );
+    expect(screen.getByTestId("mock-networth-chart")).toHaveAttribute(
+      "data-to",
+      oneYearRange.to,
+    );
+  });
+
+  it("does not render KPI evidence action buttons in customer-book mode", async () => {
     renderWithProviders(
       <SelectedClientDashboard clientId="client-001" clientName="고객 A" variant="clientBook" />,
       { withQuery: true },
     );
 
     const panel = await screen.findByTestId("kpi-evidence-panel");
-    expect(within(panel).getByRole("link", { name: "고객 상세 보기" })).toHaveAttribute(
-      "href",
-      "/clients/client-001",
-    );
+    expect(within(panel).queryByRole("link", { name: "고객 상세 보기" })).not.toBeInTheDocument();
+    expect(within(panel).queryByRole("button", { name: "고객 상세 보기" })).not.toBeInTheDocument();
+    expect(within(panel).queryByText("고객 상세 보기")).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: /집중도 리스크/ }));
-    expect(screen.getByRole("link", { name: "리밸런싱 검토" })).toHaveAttribute(
-      "href",
-      "/clients/client-001#rebalance",
-    );
+    expect(screen.queryByRole("link", { name: "리밸런싱 검토" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "리밸런싱 검토" })).not.toBeInTheDocument();
+    expect(screen.queryByText("리밸런싱 검토")).not.toBeInTheDocument();
   });
 });

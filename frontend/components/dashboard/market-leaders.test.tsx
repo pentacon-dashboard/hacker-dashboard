@@ -96,6 +96,23 @@ describe("MarketLeaders", () => {
     expect(screen.getByText("₩1.76M")).toBeInTheDocument();
   });
 
+  it("renders missing market leader change as unknown", () => {
+    const leader = {
+      rank: 1,
+      name: "No Cost Leader",
+      ticker: "NCL",
+      logo_url: null,
+      price_display: "$10.00",
+      change_pct: null,
+      change_krw: null,
+    } as unknown as MarketLeader;
+
+    render(<MarketLeaders leaders={[leader]} />, { wrapper: makeWrapper() });
+
+    expect(screen.getByText("-")).toBeInTheDocument();
+    expect(screen.queryByText("+0.00%")).not.toBeInTheDocument();
+  });
+
   it("price_display null 이면 currency+price 조합을 렌더한다", () => {
     const leader: MarketLeader = {
       rank: 1,

@@ -101,7 +101,8 @@ function calcMa(ohlc: OhlcBar[], period: number): number | null {
   return sum / period;
 }
 
-function formatAvgCost(avgCost: string, currency: string): string {
+function formatAvgCost(avgCost: string | null, currency: string): string | null {
+  if (avgCost === null) return null;
   const n = Number(avgCost);
   if (Number.isNaN(n)) return avgCost;
   if (currency === "KRW") return formatKRW(n);

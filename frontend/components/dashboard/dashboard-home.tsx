@@ -43,10 +43,13 @@ import {
   getPortfolioSummary,
   getSnapshots,
 } from "@/lib/api/portfolio";
+import { searchNews } from "@/lib/api/news";
+import { getAlerts } from "@/lib/api/watchlist";
 import {
   buildDashboardNewsQuery,
   getDisplayableHoldings,
   getDisplayableHoldingSymbols,
+  sanitizeCitations,
 } from "@/lib/portfolio/display-safety";
 import {
   formatKRWCompact,
@@ -139,6 +142,7 @@ export function SelectedClientDashboard({
   const summary = summaryQuery.data ?? null;
   const displayName = clientName ?? summary?.client_name ?? clientId;
   const isLoading = summaryQuery.isLoading;
+  const isClientBookPreview = variant === "clientBook";
   const displayHoldings = useMemo(
     () => getDisplayableHoldings(summary?.holdings ?? []),
     [summary?.holdings],
@@ -155,7 +159,33 @@ export function SelectedClientDashboard({
     () => buildDashboardNewsQuery(summary?.holdings ?? []),
     [summary?.holdings],
   );
-  const isClientBookPreview = variant === "clientBook";
+
+  const alertRulesQuery = useQuery({
+    queryKey: ["watchlist", "alerts"],
+    queryFn: getAlerts,
+    enabled: isClientBookPreview && summary !== null,
+    staleTime: 30_000,
+  });
+
+  const newsCountQuery = useQuery({
+    queryKey: [
+      "portfolio",
+      "monitoring-news-count",
+      clientId,
+      newsQuery,
+      newsSymbols.join(","),
+    ],
+    queryFn: async () => {
+      const citations = await searchNews({
+        query: newsQuery ?? "market",
+        symbols: newsSymbols.length > 0 ? newsSymbols : undefined,
+        k: 8,
+      });
+      return sanitizeCitations(citations).length;
+    },
+    enabled: isClientBookPreview && summary !== null,
+    staleTime: 30_000,
+  });
 
   const allocationSlices = useMemo<AllocationSlice[]>(() => {
     if (!summary) return [];
@@ -186,21 +216,17 @@ export function SelectedClientDashboard({
 
     const totalValue = Number(summary.total_value_krw);
     const watchCount = displayHoldings.filter((holding) => {
-      const pnlPct = Number(holding.pnl_pct);
+      const pnlPct = holding.pnl_pct === null ? null : Number(holding.pnl_pct);
       const valueShare =
         totalValue > 0 ? Number(holding.value_krw) / totalValue : 0;
-      return pnlPct < 0 || valueShare >= 0.2;
+      return (pnlPct !== null && pnlPct < 0) || valueShare >= 0.2;
     }).length;
-    const alertCount = displayHoldings.filter(
-      (holding) => Math.abs(Number(holding.pnl_pct)) >= 5,
-    ).length;
-
     return {
       watchCount,
-      alertCount,
-      newsCount: Math.min(newsSymbols.length, 5),
+      alertCount: alertRulesQuery.data?.length ?? 0,
+      newsCount: newsCountQuery.data ?? 0,
     };
-  }, [displayHoldings, newsSymbols.length, summary]);
+  }, [alertRulesQuery.data?.length, displayHoldings, newsCountQuery.data, summary]);
 
   const riskBadgeLabel =
     clientRiskGrade === "high"
@@ -287,8 +313,14 @@ export function SelectedClientDashboard({
             <KpiCard
               label={t("dashboard.kpi.totalAssets")}
               value={formatKRWCompact(summary.total_value_krw)}
-              delta={formatPct(summary.total_pnl_pct, { signed: true })}
-              deltaValue={Number(summary.total_pnl_pct)}
+              delta={
+                summary.total_pnl_pct === null
+                  ? "-"
+                  : formatPct(summary.total_pnl_pct, { signed: true })
+              }
+              deltaValue={
+                summary.total_pnl_pct === null ? undefined : Number(summary.total_pnl_pct)
+              }
               icon={<Wallet className="h-4 w-4" />}
               accent="blue"
               testId="kpi-total-value"
@@ -439,7 +471,7 @@ export function SelectedClientDashboard({
             {snapshotsQuery.isLoading ? (
               <Skeleton className="h-56 w-full" />
             ) : (
-              <NetworthChart snapshots={snapshotsQuery.data ?? []} />
+              <NetworthChart snapshots={snapshotsQuery.data ?? []} range={range} />
             )}
           </SectionCard>
         </div>
@@ -602,7 +634,7 @@ export function SelectedClientDashboard({
             <MonitoringSignalCard
               title="가격 알림"
               count={monitoringSignals.alertCount}
-              description="설정된 가격 알림 발생"
+              description="설정된 가격 알림"
               tone="amber"
               href={clientScopedHref("/watchlist", clientId, { tab: "alerts" })}
               icon={<Bell className="h-5 w-5" aria-hidden="true" />}

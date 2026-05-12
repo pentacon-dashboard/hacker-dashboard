@@ -5,6 +5,7 @@ import { getPortfolioClients } from "@/lib/api/portfolio";
 const CLIENT_ID_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._:-]{0,63}$/;
 
 type UploadImportResponse = components["schemas"]["UploadImportResponse"];
+type UploadImportRow = components["schemas"]["UploadImportRow"];
 export type UploadImportStatus = UploadImportResponse["status"];
 export type ConfirmedCsvMappingMap = NonNullable<
   components["schemas"]["UploadImportRequest"]["confirmed_mapping"]
@@ -25,6 +26,12 @@ export interface UploadedClientImportResult {
   status: UploadImportStatus;
   importedRows: number;
   skippedRows: number;
+  rowCounts: {
+    imported: number;
+    review: number;
+    quarantine: number;
+    garbage: number;
+  };
   warnings: string[];
   mappingCandidates: CsvMappingCandidateGroup[];
   normalizedPreview: Record<string, unknown>[];
@@ -96,6 +103,30 @@ function resolveImportedClientId(
   return importedHoldingClientId ?? fallbackClientId;
 }
 
+function safeRowCount(rows: UploadImportRow[] | undefined): number {
+  return Array.isArray(rows) ? rows.length : 0;
+}
+
+function hasRowLedger(response: UploadImportResponse): boolean {
+  return [
+    response.imported_rows,
+    response.recoverable_rows,
+    response.quarantined_rows,
+    response.garbage_rows,
+  ].some(Array.isArray);
+}
+
+function getRowCounts(response: UploadImportResponse): UploadedClientImportResult["rowCounts"] {
+  return {
+    imported: Array.isArray(response.imported_rows)
+      ? response.imported_rows.length
+      : response.imported_count,
+    review: safeRowCount(response.recoverable_rows),
+    quarantine: safeRowCount(response.quarantined_rows),
+    garbage: safeRowCount(response.garbage_rows),
+  };
+}
+
 export async function importPortfolioCsvAsClient(
   uploadId: string,
   selection?: UploadImportClientSelection,
@@ -112,11 +143,16 @@ export async function importPortfolioCsvAsClient(
   });
 
   const normalizedCount = response.normalized_holdings?.length ?? response.imported_count;
+  const rowCounts = getRowCounts(response);
+  const skippedRows = hasRowLedger(response)
+    ? rowCounts.review + rowCounts.quarantine + rowCounts.garbage
+    : Math.max(normalizedCount - response.imported_count, 0);
   return {
     clientId: resolveImportedClientId(response, requestedClientId),
     status: response.status,
     importedRows: response.imported_count,
-    skippedRows: Math.max(normalizedCount - response.imported_count, 0),
+    skippedRows,
+    rowCounts,
     warnings: response.normalization_warnings ?? [],
     mappingCandidates: response.mapping_candidates ?? [],
     normalizedPreview: response.normalized_preview ?? [],

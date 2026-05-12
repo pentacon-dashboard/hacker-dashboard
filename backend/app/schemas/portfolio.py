@@ -18,7 +18,7 @@ class MarketLeader(BaseModel):
     name: str
     market: str
     price: str  # decimal string (예: "847.23", "115898000")
-    change_pct: str  # "+12.34" 또는 "-1.72" 포맷
+    change_pct: str | None  # "+12.34" 또는 "-1.72" 포맷
     currency: str  # "USD" | "KRW" | ...
     # 하위호환 필드 (summary.market_leaders 에서 사용)
     logo_url: str | None = None
@@ -31,8 +31,8 @@ class SectorHeatmapTile(BaseModel):
 
     sector: str
     weight_pct: str
-    pnl_pct: str
-    intensity: str  # "-1.0" ~ "+1.0"
+    pnl_pct: str | None
+    intensity: str | None  # "-1.0" ~ "+1.0"
 
 
 class MonthlyReturnCell(BaseModel):
@@ -112,14 +112,18 @@ class HoldingResponse(BaseModel):
     market: str
     code: str
     quantity: Decimal
-    avg_cost: Decimal
+    avg_cost: Decimal | None
     currency: str
     created_at: str
     updated_at: str
 
-    @field_serializer("quantity", "avg_cost")
-    def serialize_decimal(self, v: Decimal) -> str:
+    @field_serializer("quantity")
+    def serialize_quantity(self, v: Decimal) -> str:
         return str(v)
+
+    @field_serializer("avg_cost")
+    def serialize_avg_cost(self, v: Decimal | None) -> str | None:
+        return None if v is None else str(v)
 
     model_config = {"from_attributes": True}
 
@@ -131,14 +135,14 @@ class HoldingDetail(BaseModel):
     market: str
     code: str
     quantity: str
-    avg_cost: str
+    avg_cost: str | None
     currency: str
     current_price: str
     current_price_krw: str
     value_krw: str
-    cost_krw: str
-    pnl_krw: str
-    pnl_pct: str
+    cost_krw: str | None
+    pnl_krw: str | None
+    pnl_pct: str | None
 
 
 class DimensionItem(BaseModel):
@@ -146,7 +150,7 @@ class DimensionItem(BaseModel):
 
     label: str = Field(..., description="표시 라벨 (예: 'stock_us', 'crypto')")
     weight_pct: str = Field(..., description="비중 %% (예: '43.20')")
-    pnl_pct: str = Field(..., description="해당 차원의 가중 수익률 %% (예: '+3.40')")
+    pnl_pct: str | None = Field(..., description="해당 차원의 가중 수익률 %% (예: '+3.40')")
 
 
 class PortfolioSummary(BaseModel):
@@ -164,9 +168,9 @@ class PortfolioSummary(BaseModel):
         description="PB가 관리하는 전체 AUM. 단일 고객 summary에서는 없을 수 있음.",
     )
     total_value_krw: str
-    total_cost_krw: str
-    total_pnl_krw: str
-    total_pnl_pct: str
+    total_cost_krw: str | None
+    total_pnl_krw: str | None
+    total_pnl_pct: str | None
     daily_change_krw: str
     daily_change_pct: str
     asset_class_breakdown: dict[str, str] = Field(
@@ -179,7 +183,7 @@ class PortfolioSummary(BaseModel):
     holdings: list[HoldingDetail]
     # ── 대시보드 KPI 확장 ─────────────────────────────
     holdings_count: int = Field(0, description="보유 종목 수")
-    worst_asset_pct: str = Field("0.00", description="보유 종목 중 최저 손익률 %% (예: '-3.85')")
+    worst_asset_pct: str | None = Field("0.00", description="보유 종목 중 최저 손익률 %% (예: '-3.85')")
     risk_score_pct: str = Field(
         "0.00",
         description="HHI 기반 집중도 리스크 점수 %% (0: 완전분산 ~ 100: 단일자산)",
@@ -194,7 +198,7 @@ class PortfolioSummary(BaseModel):
         description="자산군 차원 비중 + 수익률 (바차트용)",
     )
     # ── sprint-08 Phase B-1 확장 ──────────────────────────────
-    win_rate_pct: str = Field(
+    win_rate_pct: str | None = Field(
         "0.00",
         description="보유 종목 중 pnl_pct > 0 비율 × 100 (문자열, 소수점 2자리)",
     )
@@ -211,7 +215,7 @@ class SnapshotResponse(BaseModel):
     client_name: str | None = None
     snapshot_date: str
     total_value_krw: str
-    total_pnl_krw: str
+    total_pnl_krw: str | None
     asset_class_breakdown: dict[str, Any]
     holdings_detail: list[Any]
     created_at: str
@@ -226,7 +230,7 @@ class PortfolioClientRow(BaseModel):
     holdings_count: int
     risk_grade: Literal["low", "medium", "high"]
     risk_score_pct: str
-    total_pnl_pct: str
+    total_pnl_pct: str | None
 
 
 class PortfolioClientsResponse(BaseModel):

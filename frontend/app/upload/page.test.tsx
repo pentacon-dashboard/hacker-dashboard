@@ -233,6 +233,44 @@ const NEEDS_CONFIRMATION_UPLOAD_RESPONSE = {
   ],
 };
 
+const PARTIAL_UPLOAD_RESPONSE = {
+  upload_id: "upload-partial",
+  file_content_hash: "sha256partial",
+  total_rows: 4,
+  valid_rows: 2,
+  error_rows: 1,
+  warning_rows: 1,
+  preview: [{ code: "AAPL", quantity: "1" }],
+  schema_fingerprint: "partial12",
+  created_at: "2026-05-02T00:00:00Z",
+  import_status: "partial_imported",
+  mapping_candidates: [],
+  normalized_preview: [{ symbol: "AAPL", quantity: "1" }],
+  imported_rows: [
+    { classification: "imported", source_row: 2, reason_code: "ok", message: "imported" },
+    { classification: "imported", source_row: 3, reason_code: "ok", message: "imported" },
+  ],
+  recoverable_rows: [
+    {
+      classification: "recoverable",
+      source_row: 4,
+      reason_code: "missing_cost_basis",
+      message: "needs review",
+    },
+  ],
+  quarantined_rows: [
+    {
+      classification: "quarantined",
+      source_row: 5,
+      reason_code: "invalid_quantity",
+      message: "quarantined",
+    },
+  ],
+  garbage_rows: [
+    { classification: "garbage", source_row: 6, reason_code: "empty", message: "ignored" },
+  ],
+};
+
 describe("UploadPage multi-client import flow", () => {
   let invalidateSpy: MockInstance<QueryClient["invalidateQueries"]>;
 
@@ -332,6 +370,66 @@ describe("UploadPage multi-client import flow", () => {
     fireEvent.click(screen.getByTestId("mock-analyze"));
 
     expect(navMocks.push).toHaveBeenCalledWith("/clients/client-002");
+  });
+
+  it("auto-imports partial validation results and enables analysis for saved rows", async () => {
+    vi.mocked(fetch).mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      json: async () => PARTIAL_UPLOAD_RESPONSE,
+    } as Response);
+    uploadImport.importPortfolioCsvAsClient.mockResolvedValue({
+      clientId: "client-003",
+      status: "partial_imported",
+      importedRows: 2,
+      skippedRows: 3,
+      rowCounts: {
+        imported: 2,
+        review: 1,
+        quarantine: 1,
+        garbage: 1,
+      },
+      warnings: ["1 row saved for review"],
+      mappingCandidates: [],
+      normalizedPreview: [],
+      blockingErrors: [],
+    });
+
+    renderWithProviders(<UploadPage />, { withQuery: true });
+
+    await waitFor(() =>
+      expect(screen.getByTestId("upload-new-client-id")).toHaveTextContent("client-003"),
+    );
+    fireEvent.click(screen.getByTestId("mock-file-upload"));
+
+    await waitFor(() =>
+      expect(uploadImport.importPortfolioCsvAsClient).toHaveBeenCalledWith(
+        "upload-partial",
+        {
+          mode: "new",
+          clientId: "client-003",
+          existingClientIds: ["client-001", "client-002"],
+        },
+      ),
+    );
+    await waitFor(() =>
+      expect(invalidateSpy).toHaveBeenCalledWith({
+        queryKey: ["portfolio", "clients"],
+      }),
+    );
+
+    expect(screen.queryByTestId("mapping-review-card")).not.toBeInTheDocument();
+    expect(await screen.findByTestId("upload-import-status")).toHaveTextContent(
+      "Imported 2",
+    );
+    expect(screen.getByTestId("upload-import-status")).toHaveTextContent("Review 1");
+    expect(screen.getByTestId("upload-import-status")).toHaveTextContent("Quarantine 1");
+    expect(screen.getByTestId("upload-import-status")).toHaveTextContent("Garbage 1");
+
+    await waitFor(() => expect(screen.getByTestId("mock-analyze")).not.toBeDisabled());
+    fireEvent.click(screen.getByTestId("mock-analyze"));
+
+    expect(navMocks.push).toHaveBeenCalledWith("/clients/client-003");
   });
 
   it("keeps needs_confirmation in mapping review and re-imports with confirmed mapping", async () => {

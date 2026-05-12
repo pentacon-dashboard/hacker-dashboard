@@ -170,6 +170,39 @@ def _format_value(value: Any) -> str:
     return json.dumps(value, ensure_ascii=False, default=str)
 
 
+_MISSING_METRIC_STRINGS = {"", "none", "null", "nan", "n/a", "na", "-"}
+
+
+def _is_missing_metric_value(value: Any) -> bool:
+    if value is None:
+        return True
+    if isinstance(value, str) and value.strip().lower() in _MISSING_METRIC_STRINGS:
+        return True
+    return False
+
+
+def _context_value_or_none(value: Any) -> str | None:
+    if _is_missing_metric_value(value):
+        return None
+    return str(value)
+
+
+def _normalize_portfolio_context_value(value: Any) -> Any:
+    if _is_missing_metric_value(value):
+        return None
+    if isinstance(value, dict):
+        return {key: _normalize_portfolio_context_value(item) for key, item in value.items()}
+    if isinstance(value, list):
+        return [_normalize_portfolio_context_value(item) for item in value]
+    return value
+
+
+def _format_pct_or_unavailable(value: Any) -> str:
+    if _is_missing_metric_value(value):
+        return "unavailable"
+    return _format_pct(value)
+
+
 def _to_decimal(value: Any) -> Decimal | None:
     try:
         return Decimal(str(value).replace(",", ""))
@@ -231,13 +264,13 @@ def _portfolio_context_to_text(ctx: dict[str, Any]) -> str | None:
     total_value = indicators.get("total_value")
     pnl_pct = indicators.get("pnl_pct")
     n_holdings = indicators.get("n_holdings")
-    if total_value is None or pnl_pct is None:
+    if _is_missing_metric_value(total_value):
         return None
 
     lines = [
         (
             f"{client_name}의 포트폴리오는 총 평가금액 {_format_krw(total_value)}, "
-            f"총 손익률 {_format_pct(pnl_pct)}, 보유 종목 {n_holdings}개입니다."
+            f"총 손익률 {_format_pct_or_unavailable(pnl_pct)}, 보유 종목 {n_holdings}개입니다."
         )
     ]
 
@@ -256,9 +289,10 @@ def _portfolio_context_to_text(ctx: dict[str, Any]) -> str | None:
         code = str(holding.get("code") or "").strip()
         value_krw = holding.get("value_krw")
         holding_pnl_pct = holding.get("pnl_pct")
-        if code and value_krw is not None and holding_pnl_pct is not None:
+        if code and not _is_missing_metric_value(value_krw):
+            holding_pnl_text = _format_pct_or_unavailable(holding_pnl_pct)
             holding_summaries.append(
-                f"{code}({_format_krw(value_krw)}, {_format_pct(holding_pnl_pct)})"
+                f"{code}({_format_krw(value_krw)}, {holding_pnl_text})"
             )
     if holding_summaries:
         lines.append(f"주요 보유 종목은 {', '.join(holding_summaries)}입니다.")
@@ -696,10 +730,10 @@ async def _fetch_portfolio_context(
             "client_name": client_name or _client_display_name(client_id),
         },
         "indicators": {
-            "total_value": str(summary.total_value_krw),
-            "pnl_pct": str(summary.total_pnl_pct),
-            "daily_change_pct": str(summary.daily_change_pct),
-            "period_change_pct": str(summary.period_change_pct),
+            "total_value": _context_value_or_none(summary.total_value_krw),
+            "pnl_pct": _context_value_or_none(summary.total_pnl_pct),
+            "daily_change_pct": _context_value_or_none(summary.daily_change_pct),
+            "period_change_pct": _context_value_or_none(summary.period_change_pct),
             "n_holdings": summary.holdings_count,
             "asset_class_breakdown": {k: str(v) for k, v in summary.asset_class_breakdown.items()},
         },
@@ -708,9 +742,9 @@ async def _fetch_portfolio_context(
                 "market": h.market,
                 "code": h.code,
                 "quantity": str(h.quantity),
-                "avg_cost": str(h.avg_cost),
-                "value_krw": str(h.value_krw),
-                "pnl_pct": str(h.pnl_pct),
+                "avg_cost": _context_value_or_none(h.avg_cost),
+                "value_krw": _context_value_or_none(h.value_krw),
+                "pnl_pct": _context_value_or_none(h.pnl_pct),
             }
             for h in summary.holdings
         ],
@@ -763,11 +797,18 @@ async def _run_agent_llm(
                 }
             if client_was_explicit and ctx.get("portfolio_context_unavailable"):
                 return _missing_portfolio_context_result(ctx)
+            ctx = cast("dict[str, Any]", _normalize_portfolio_context_value(ctx))
             if agent == "portfolio":
                 portfolio_text = _portfolio_context_to_text(ctx)
+            portfolio_text_block = (
+                f"Deterministic portfolio summary:\n{portfolio_text}\n\n"
+                if portfolio_text
+                else ""
+            )
             user_content = (
                 f"{memory_context}\n\n"
                 f"User question: {user_query}\n\n"
+                f"{portfolio_text_block}"
                 f"Deterministic portfolio data:\n{json.dumps(ctx, ensure_ascii=False, indent=2)}"
             )
         else:

@@ -35,7 +35,7 @@ async def client_db() -> AsyncGenerator[AsyncSession, None]:
             Column("client_id", String(50), nullable=False),
             Column("snapshot_date", Date, nullable=False),
             Column("total_value_krw", Numeric(24, 4), nullable=False),
-            Column("total_pnl_krw", Numeric(24, 4), nullable=False),
+            Column("total_pnl_krw", Numeric(24, 4), nullable=True),
             Column("asset_class_breakdown", JSON, nullable=False),
             Column("holdings_detail", JSON, nullable=False),
             Column("created_at", DateTime(timezone=True)),

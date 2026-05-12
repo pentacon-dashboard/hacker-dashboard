@@ -73,6 +73,12 @@ describe("upload-import", () => {
       status: "imported",
       importedRows: 1,
       skippedRows: 0,
+      rowCounts: {
+        imported: 1,
+        review: 0,
+        quarantine: 0,
+        garbage: 0,
+      },
       warnings: [],
       mappingCandidates: [],
       normalizedPreview: [],
@@ -196,11 +202,81 @@ describe("upload-import", () => {
       status: "needs_confirmation",
       importedRows: 0,
       skippedRows: 1,
+      rowCounts: {
+        imported: 0,
+        review: 0,
+        quarantine: 0,
+        garbage: 0,
+      },
       warnings: ["multiple candidates for symbol"],
       mappingCandidates: [],
       normalizedPreview: [],
       blockingErrors: [],
       importBatchKey: undefined,
+    });
+  });
+
+  it("summarizes partial import row ledger classifications", async () => {
+    apiClient.apiFetch.mockResolvedValue({
+      status: "partial_imported",
+      client_id: "client-003",
+      imported_count: 2,
+      holdings: [{ client_id: "client-003" }, { client_id: "client-003" }],
+      normalized_holdings: [{ code: "AAPL" }, { code: "MSFT" }],
+      normalization_warnings: ["2 rows require review"],
+      imported_rows: [
+        {
+          classification: "imported",
+          source_row: 2,
+          reason_code: "ok",
+          message: "imported",
+        },
+        {
+          classification: "imported",
+          source_row: 3,
+          reason_code: "ok",
+          message: "imported",
+        },
+      ],
+      recoverable_rows: [
+        {
+          classification: "recoverable",
+          source_row: 4,
+          reason_code: "missing_cost_basis",
+          message: "needs review",
+        },
+      ],
+      quarantined_rows: [
+        {
+          classification: "quarantined",
+          source_row: 5,
+          reason_code: "invalid_quantity",
+          message: "quarantined",
+        },
+      ],
+      garbage_rows: [
+        {
+          classification: "garbage",
+          source_row: 6,
+          reason_code: "empty",
+          message: "ignored",
+        },
+      ],
+    });
+
+    const result = await importPortfolioCsvAsClient("upload-partial", {
+      mode: "new",
+      existingClientIds: ["client-001", "client-002"],
+    });
+
+    expect(result.status).toBe("partial_imported");
+    expect(result.importedRows).toBe(2);
+    expect(result.skippedRows).toBe(3);
+    expect(result.rowCounts).toEqual({
+      imported: 2,
+      review: 1,
+      quarantine: 1,
+      garbage: 1,
     });
   });
 });

@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { renderWithLocale as render, screen } from "@/lib/test-utils";
+import { fireEvent, renderWithLocale as render, screen } from "@/lib/test-utils";
 import { SectorHeatmap, type SectorHeatmapTile } from "./sector-heatmap";
 
 const MOCK_TILES: SectorHeatmapTile[] = [
@@ -39,5 +39,25 @@ describe("SectorHeatmap", () => {
     const btn = screen.getByTestId("heatmap-tile-Tech");
     expect(btn).toHaveAttribute("aria-label");
     expect(btn.getAttribute("aria-label")).toMatch(/섹터 수익률/);
+  });
+
+  it("nullable pnl and intensity render as unknown instead of zero", () => {
+    const tile = {
+      sector: "Unknown",
+      weight_pct: "20.0",
+      pnl_pct: null,
+      intensity: null,
+    } as SectorHeatmapTile;
+
+    render(<SectorHeatmap tiles={[tile]} />);
+
+    const btn = screen.getByTestId("heatmap-tile-Unknown");
+    expect(btn).toHaveTextContent("-");
+    expect(btn).not.toHaveTextContent("0.00%");
+    expect(btn.getAttribute("aria-label")).not.toContain("0.00%");
+
+    fireEvent.mouseEnter(btn);
+    expect(screen.getByRole("tooltip")).toHaveTextContent("-");
+    expect(screen.getByRole("tooltip")).not.toHaveTextContent("0.00%");
   });
 });
