@@ -565,6 +565,7 @@ export default function UploadPage() {
         <div className="md:col-span-2">
           <AnalyzeProgressCard
             uploadId={validationResult?.upload_id ?? null}
+            file={selectedFile}
             config={config}
             disabled={
               !validationResult ||

@@ -74,15 +74,21 @@ vi.mock("@/components/upload/analyzer-config-card", () => ({
 
 vi.mock("@/components/upload/analyze-progress-card", () => ({
   AnalyzeProgressCard: ({
+    uploadId,
+    file,
     disabled,
     onComplete,
   }: {
+    uploadId?: string | null;
+    file?: File | null;
     disabled?: boolean;
     onComplete?: () => void | Promise<void>;
   }) => (
     <button
       type="button"
       data-testid="mock-analyze"
+      data-upload-id={uploadId ?? ""}
+      data-file-name={file?.name ?? ""}
       disabled={disabled}
       onClick={() => void onComplete?.()}
     >
@@ -330,6 +336,14 @@ describe("UploadPage multi-client import flow", () => {
     );
 
     await waitFor(() => expect(screen.getByTestId("mock-analyze")).not.toBeDisabled());
+    expect(screen.getByTestId("mock-analyze")).toHaveAttribute(
+      "data-upload-id",
+      "upload-123",
+    );
+    expect(screen.getByTestId("mock-analyze")).toHaveAttribute(
+      "data-file-name",
+      "positions.csv",
+    );
     fireEvent.click(screen.getByTestId("mock-analyze"));
 
     expect(navMocks.push).toHaveBeenCalledWith("/clients/client-003");
