@@ -37,7 +37,7 @@ function getHeatColor(value: PercentValue): string {
 export function WorldHeatmap({ data, loading }: WorldHeatmapProps) {
   const { t } = useLocale();
   return (
-    <Card data-testid="world-heatmap">
+    <Card data-testid="world-heatmap" className="h-full">
       <CardHeader className="pb-3">
         <CardTitle className="flex items-center gap-2 text-sm font-semibold">
           <Globe className="h-4 w-4 text-primary" aria-hidden="true" />

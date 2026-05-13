@@ -57,20 +57,23 @@ interface SectorKpiGridProps {
 export function SectorKpiGrid({ sectors, loading }: SectorKpiGridProps) {
   const { t } = useLocale();
   return (
-    <Card data-testid="sector-kpi-grid">
+    <Card data-testid="sector-kpi-grid" className="flex h-full min-h-[21rem] flex-col">
       <CardHeader className="pb-3">
         <CardTitle className="flex items-center gap-2 text-sm font-semibold">
           <BarChart3 className="h-4 w-4 text-primary" aria-hidden="true" />
           {t("market.sectorReturn")}
         </CardTitle>
       </CardHeader>
-      <CardContent className="space-y-1">
+      <CardContent
+        className="grid flex-1 auto-rows-fr gap-1.5 sm:gap-2"
+        data-testid="sector-kpi-list"
+      >
         {loading && (
-          <div className="space-y-1">
+          <>
             {[...Array(11)].map((_, i) => (
-              <div key={i} className="h-8 animate-pulse rounded bg-muted/20" />
+              <div key={i} className="min-h-8 animate-pulse rounded-md bg-muted/20" />
             ))}
-          </div>
+          </>
         )}
 
         {!loading &&
@@ -84,32 +87,35 @@ export function SectorKpiGrid({ sectors, loading }: SectorKpiGridProps) {
             return (
               <div
                 key={sector.name}
-                className="flex items-center gap-2"
+                className="grid min-h-8 grid-cols-[minmax(4.75rem,6.5rem)_minmax(3.5rem,1fr)_4.25rem_0.875rem] items-center gap-1.5 rounded-md px-1 py-1 transition-colors hover:bg-muted/20 sm:grid-cols-[minmax(5.5rem,7rem)_minmax(5rem,1fr)_4.75rem_1rem] sm:gap-2 sm:px-2"
                 data-testid={`sector-${sector.name}`}
+                role="group"
+                aria-label={`${sectorLabel} ${changeLabel}`}
               >
                 {/* 섹터명 */}
-                <span className="w-28 shrink-0 truncate text-xs text-muted-foreground">
+                <span className="min-w-0 truncate text-[11px] font-medium text-muted-foreground sm:text-xs">
                   {sectorLabel}
                 </span>
 
                 {/* 바 */}
-                <div className="flex flex-1 items-center">
-                  <div className="relative h-4 flex-1 overflow-hidden rounded bg-muted/30">
-                    <div
-                      className={cn(
-                        "absolute top-0 h-full rounded",
-                        positive ? "bg-green-500/40 left-0" : "bg-destructive/40 right-0",
-                      )}
-                      style={{ width: `${barPct}%` }}
-                      aria-hidden="true"
-                    />
-                  </div>
+                <div
+                  className="relative h-5 min-w-0 overflow-hidden rounded bg-muted/30"
+                  data-testid={`sector-bar-${sector.name}`}
+                >
+                  <div
+                    className={cn(
+                      "absolute top-0 h-full rounded",
+                      positive ? "bg-green-500/40 left-0" : "bg-destructive/40 right-0",
+                    )}
+                    style={{ width: `${barPct}%` }}
+                    aria-hidden="true"
+                  />
                 </div>
 
                 {/* 수치 */}
                 <span
                   className={cn(
-                    "w-14 shrink-0 text-right text-xs font-bold tabular-nums",
+                    "text-right text-xs font-bold tabular-nums leading-none sm:text-[13px]",
                     positive ? "text-green-500" : "text-destructive",
                   )}
                 >
@@ -117,9 +123,9 @@ export function SectorKpiGrid({ sectors, loading }: SectorKpiGridProps) {
                 </span>
 
                 {positive ? (
-                  <TrendingUp className="h-3 w-3 shrink-0 text-green-500" aria-hidden="true" />
+                  <TrendingUp className="h-3.5 w-3.5 justify-self-end text-green-500" aria-hidden="true" />
                 ) : (
-                  <TrendingDown className="h-3 w-3 shrink-0 text-destructive" aria-hidden="true" />
+                  <TrendingDown className="h-3.5 w-3.5 justify-self-end text-destructive" aria-hidden="true" />
                 )}
               </div>
             );

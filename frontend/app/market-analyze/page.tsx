@@ -100,11 +100,11 @@ export default function MarketAnalyzePage() {
       <IndexKpiStrip indices={indices} loading={loading} />
 
       {/* 2. 중단: 히트맵(좌) + 섹터(우) */}
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-12">
-        <div className="lg:col-span-8">
+      <div className="grid grid-cols-1 items-stretch gap-4 lg:grid-cols-12">
+        <div className="h-full lg:col-span-8">
           <WorldHeatmap data={heatmap} loading={loading} />
         </div>
-        <div className="lg:col-span-4">
+        <div className="h-full lg:col-span-4">
           <SectorKpiGrid sectors={sectors} loading={loading} />
         </div>
       </div>
