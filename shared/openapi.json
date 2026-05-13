@@ -948,6 +948,51 @@
         }
       }
     },
+    "/portfolio/customer-data/reset": {
+      "post": {
+        "tags": [
+          "portfolio"
+        ],
+        "summary": "Reset Customer Data",
+        "description": "Clear PB customer portfolio data after an explicit confirmation phrase.",
+        "operationId": "reset_customer_data_portfolio_customer_data_reset_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PortfolioCustomerDataResetRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PortfolioCustomerDataResetResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Confirmation phrase mismatch"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/portfolio/snapshots": {
       "get": {
         "tags": [
@@ -4509,6 +4554,69 @@
           "clients"
         ],
         "title": "PortfolioClientsResponse"
+      },
+      "PortfolioCustomerDataResetRequest": {
+        "properties": {
+          "confirmation": {
+            "type": "string",
+            "title": "Confirmation",
+            "description": "Safety confirmation phrase required for destructive customer data reset."
+          }
+        },
+        "type": "object",
+        "required": [
+          "confirmation"
+        ],
+        "title": "PortfolioCustomerDataResetRequest"
+      },
+      "PortfolioCustomerDataResetResponse": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "const": "cleared",
+            "title": "Status"
+          },
+          "deleted_holdings": {
+            "type": "integer",
+            "title": "Deleted Holdings"
+          },
+          "deleted_snapshots": {
+            "type": "integer",
+            "title": "Deleted Snapshots"
+          },
+          "deleted_import_rows": {
+            "type": "integer",
+            "title": "Deleted Import Rows"
+          },
+          "deleted_import_batches": {
+            "type": "integer",
+            "title": "Deleted Import Batches"
+          },
+          "deleted_clients": {
+            "type": "integer",
+            "title": "Deleted Clients"
+          },
+          "deleted_client_aliases": {
+            "type": "integer",
+            "title": "Deleted Client Aliases"
+          },
+          "deleted_watchlist_alerts": {
+            "type": "integer",
+            "title": "Deleted Watchlist Alerts"
+          }
+        },
+        "type": "object",
+        "required": [
+          "status",
+          "deleted_holdings",
+          "deleted_snapshots",
+          "deleted_import_rows",
+          "deleted_import_batches",
+          "deleted_clients",
+          "deleted_client_aliases",
+          "deleted_watchlist_alerts"
+        ],
+        "title": "PortfolioCustomerDataResetResponse"
       },
       "PortfolioSummary": {
         "properties": {

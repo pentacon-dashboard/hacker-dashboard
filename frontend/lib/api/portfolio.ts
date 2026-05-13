@@ -12,6 +12,8 @@ export type HoldingDetail = components["schemas"]["HoldingDetail"];
 export type PortfolioSummary = components["schemas"]["PortfolioSummary"];
 export type SnapshotResponse = components["schemas"]["SnapshotResponse"];
 export type PortfolioClientsResponse = components["schemas"]["PortfolioClientsResponse"];
+export type PortfolioCustomerDataResetResponse =
+  components["schemas"]["PortfolioCustomerDataResetResponse"];
 
 export interface ReportEvidenceItem {
   type: string;
@@ -117,6 +119,18 @@ export async function getSnapshots(
 
 export async function getPortfolioClients(): Promise<PortfolioClientsResponse> {
   return apiFetch<PortfolioClientsResponse>("/portfolio/clients");
+}
+
+export async function resetPortfolioCustomerData(
+  confirmation: string,
+): Promise<PortfolioCustomerDataResetResponse> {
+  return apiFetch<PortfolioCustomerDataResetResponse>(
+    "/portfolio/customer-data/reset",
+    {
+      method: "POST",
+      body: JSON.stringify({ confirmation }),
+    },
+  );
 }
 
 export async function createClientBriefingReport(body: {

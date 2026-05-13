@@ -2,16 +2,39 @@
 
 import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { Info, Trash2, CheckCircle, AlertCircle } from "lucide-react";
+import {
+  Info,
+  Trash2,
+  CheckCircle,
+  AlertCircle,
+  ShieldAlert,
+  Loader2,
+} from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useLocale } from "@/lib/i18n/locale-provider";
+import {
+  resetPortfolioCustomerData,
+  type PortfolioCustomerDataResetResponse,
+} from "@/lib/api/portfolio";
 
 interface SystemInfoProps {
   version?: string;
   apiStatus?: "healthy" | "degraded" | "error";
   buildTime?: string;
   cacheSizeMb?: number;
+}
+
+const RESET_CONFIRMATION = "CLEAR_CUSTOMER_DATA";
+const STORAGE_KEYS_TO_KEEP = ["theme", "hd-theme", "hd-locale", "hd-accent"];
+
+function clearLocalAppCache() {
+  if (typeof window === "undefined") return;
+
+  Object.keys(localStorage).forEach((k) => {
+    if (!STORAGE_KEYS_TO_KEEP.includes(k)) localStorage.removeItem(k);
+  });
+  sessionStorage.clear();
 }
 
 export function SystemInfo({
@@ -21,6 +44,11 @@ export function SystemInfo({
   cacheSizeMb = 42,
 }: SystemInfoProps) {
   const [cacheCleared, setCacheCleared] = useState(false);
+  const [resetConfirmation, setResetConfirmation] = useState("");
+  const [resetPending, setResetPending] = useState(false);
+  const [resetResult, setResetResult] =
+    useState<PortfolioCustomerDataResetResponse | null>(null);
+  const [resetError, setResetError] = useState<string | null>(null);
   const queryClient = useQueryClient();
   const { locale, t } = useLocale();
 
@@ -31,14 +59,33 @@ export function SystemInfo({
 
   function handleClearCache() {
     queryClient.clear();
-    if (typeof window !== "undefined") {
-      const keysToKeep = ["theme", "hd-theme", "hd-locale", "hd-accent"];
-      Object.keys(localStorage).forEach((k) => {
-        if (!keysToKeep.includes(k)) localStorage.removeItem(k);
-      });
-    }
+    clearLocalAppCache();
     setCacheCleared(true);
     setTimeout(() => setCacheCleared(false), 3000);
+  }
+
+  async function handleResetCustomerData() {
+    if (resetConfirmation !== RESET_CONFIRMATION || resetPending) return;
+
+    setResetPending(true);
+    setResetError(null);
+    setResetResult(null);
+
+    try {
+      const result = await resetPortfolioCustomerData(resetConfirmation);
+      queryClient.clear();
+      clearLocalAppCache();
+      setResetResult(result);
+      setResetConfirmation("");
+    } catch (error) {
+      setResetError(
+        error instanceof Error
+          ? error.message
+          : t("settings.system.customerData.error"),
+      );
+    } finally {
+      setResetPending(false);
+    }
   }
 
   return (
@@ -99,6 +146,87 @@ export function SystemInfo({
             </>
           )}
         </Button>
+
+        <p className="text-[11px] leading-4 text-muted-foreground">
+          {t("settings.system.clearCacheDesc")}
+        </p>
+
+        <div className="rounded-md border border-destructive/30 bg-destructive/5 p-3">
+          <div className="flex items-start gap-2">
+            <ShieldAlert
+              className="mt-0.5 h-4 w-4 shrink-0 text-destructive"
+              aria-hidden="true"
+            />
+            <div className="min-w-0 flex-1 space-y-2">
+              <div>
+                <p className="text-xs font-semibold text-destructive">
+                  {t("settings.system.customerData.title")}
+                </p>
+                <p className="mt-1 text-[11px] leading-4 text-muted-foreground">
+                  {t("settings.system.customerData.desc")}
+                </p>
+              </div>
+
+              <input
+                aria-label={t("settings.system.customerData.confirmLabel")}
+                className="h-9 w-full rounded-md border border-input bg-background px-3 text-xs outline-none ring-offset-background placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                data-testid="reset-customer-data-confirmation"
+                value={resetConfirmation}
+                onChange={(event) => setResetConfirmation(event.target.value)}
+                placeholder={RESET_CONFIRMATION}
+                autoComplete="off"
+              />
+
+              <Button
+                variant="destructive"
+                size="sm"
+                className="w-full"
+                onClick={handleResetCustomerData}
+                disabled={
+                  resetConfirmation !== RESET_CONFIRMATION || resetPending
+                }
+                data-testid="reset-customer-data-btn"
+              >
+                {resetPending ? (
+                  <>
+                    <Loader2
+                      className="mr-2 h-3.5 w-3.5 animate-spin"
+                      aria-hidden="true"
+                    />
+                    {t("settings.system.customerData.resetting")}
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="mr-2 h-3.5 w-3.5" aria-hidden="true" />
+                    {t("settings.system.customerData.action")}
+                  </>
+                )}
+              </Button>
+
+              {resetResult ? (
+                <p
+                  className="text-[11px] leading-4 text-destructive"
+                  data-testid="reset-customer-data-result"
+                >
+                  {t("settings.system.customerData.result", {
+                    holdings: resetResult.deleted_holdings,
+                    clients: resetResult.deleted_clients,
+                    snapshots: resetResult.deleted_snapshots,
+                  })}
+                </p>
+              ) : null}
+
+              {resetError ? (
+                <p
+                  className="text-[11px] leading-4 text-destructive"
+                  data-testid="reset-customer-data-error"
+                >
+                  {t("settings.system.customerData.error")}: {resetError}
+                </p>
+              ) : null}
+            </div>
+          </div>
+        </div>
       </CardContent>
     </Card>
   );

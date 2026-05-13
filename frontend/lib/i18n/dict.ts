@@ -545,6 +545,38 @@ export const DICT: Dict = {
   "settings.system.error": { ko: "오류", en: "Error" },
   "settings.system.clearCache": { ko: "캐시 비우기", en: "Clear Cache" },
   "settings.system.cacheCleared": { ko: "캐시 삭제 완료", en: "Cache cleared" },
+  "settings.system.clearCacheDesc": {
+    ko: "브라우저 캐시만 비웁니다. 고객 데이터는 삭제되지 않습니다.",
+    en: "Clears browser cache only. Customer data is not deleted.",
+  },
+  "settings.system.customerData.title": {
+    ko: "고객 데이터 초기화",
+    en: "Reset customer data",
+  },
+  "settings.system.customerData.desc": {
+    ko: "배포 DB의 고객, 보유종목, 스냅샷, 업로드 이력, 알림을 삭제합니다.",
+    en: "Deletes clients, holdings, snapshots, import history, and alerts from the deployed DB.",
+  },
+  "settings.system.customerData.confirmLabel": {
+    ko: "고객 데이터 초기화 확인 문구",
+    en: "Customer data reset confirmation phrase",
+  },
+  "settings.system.customerData.action": {
+    ko: "고객 데이터 초기화",
+    en: "Reset customer data",
+  },
+  "settings.system.customerData.resetting": {
+    ko: "초기화 중",
+    en: "Resetting",
+  },
+  "settings.system.customerData.result": {
+    ko: "삭제 완료: 보유 {{holdings}}개, 고객 {{clients}}명, 스냅샷 {{snapshots}}개",
+    en: "Deleted: {{holdings}} holdings, {{clients}} clients, {{snapshots}} snapshots",
+  },
+  "settings.system.customerData.error": {
+    ko: "고객 데이터 초기화 실패",
+    en: "Failed to reset customer data",
+  },
 
   // User card
   "user.name": { ko: "Demo User", en: "Demo User" },

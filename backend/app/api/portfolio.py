@@ -13,10 +13,18 @@ from datetime import UTC, date, datetime
 from decimal import Decimal
 
 from fastapi import APIRouter, Depends, HTTPException, Path, Query, Request, Response
-from sqlalchemy import select
+from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.db.models import Holding, PortfolioSnapshot
+from app.db.models import (
+    Client,
+    ClientAlias,
+    Holding,
+    PortfolioImportBatch,
+    PortfolioImportRow,
+    PortfolioSnapshot,
+    WatchlistAlert,
+)
 from app.db.session import get_db
 from app.schemas.portfolio import (
     CLIENT_ID_PATTERN,
@@ -28,6 +36,8 @@ from app.schemas.portfolio import (
     MonthlyReturnCell,
     PortfolioClientRow,
     PortfolioClientsResponse,
+    PortfolioCustomerDataResetRequest,
+    PortfolioCustomerDataResetResponse,
     PortfolioSummary,
     SectorHeatmapTile,
     SnapshotResponse,
@@ -288,8 +298,6 @@ async def list_clients(
     for holding in holdings:
         cid = getattr(holding, "client_id", _DEFAULT_CLIENT_ID)
         by_client.setdefault(cid, []).append(holding)
-    if not by_client:
-        by_client = {_DEFAULT_CLIENT_ID: [], "client-002": []}
 
     rows: list[PortfolioClientRow] = []
     total_aum = Decimal("0")
@@ -319,6 +327,66 @@ async def list_clients(
         aum_krw=str(total_aum.quantize(Decimal("0.01"))),
         client_count=len(rows),
         clients=rows,
+    )
+
+
+def _deleted_count(result: object) -> int:
+    rowcount = getattr(result, "rowcount", None)
+    return int(rowcount or 0)
+
+
+@router.post(
+    "/customer-data/reset",
+    response_model=PortfolioCustomerDataResetResponse,
+    responses={400: {"description": "Confirmation phrase mismatch"}},
+)
+async def reset_customer_data(
+    body: PortfolioCustomerDataResetRequest,
+    db: AsyncSession = Depends(get_db),
+) -> PortfolioCustomerDataResetResponse:
+    """Clear PB customer portfolio data after an explicit confirmation phrase."""
+    if body.confirmation != "CLEAR_CUSTOMER_DATA":
+        raise HTTPException(status_code=400, detail="confirmation phrase mismatch")
+
+    deleted_import_rows = _deleted_count(
+        await db.execute(
+            delete(PortfolioImportRow).where(PortfolioImportRow.user_id.in_(_PB_USER_IDS))
+        )
+    )
+    deleted_import_batches = _deleted_count(
+        await db.execute(
+            delete(PortfolioImportBatch).where(PortfolioImportBatch.user_id.in_(_PB_USER_IDS))
+        )
+    )
+    deleted_watchlist_alerts = _deleted_count(
+        await db.execute(delete(WatchlistAlert).where(WatchlistAlert.user_id.in_(_PB_USER_IDS)))
+    )
+    deleted_snapshots = _deleted_count(
+        await db.execute(
+            delete(PortfolioSnapshot).where(PortfolioSnapshot.user_id.in_(_PB_USER_IDS))
+        )
+    )
+    deleted_holdings = _deleted_count(
+        await db.execute(delete(Holding).where(Holding.user_id.in_(_PB_USER_IDS)))
+    )
+    deleted_client_aliases = _deleted_count(
+        await db.execute(delete(ClientAlias).where(ClientAlias.user_id.in_(_PB_USER_IDS)))
+    )
+    deleted_clients = _deleted_count(
+        await db.execute(delete(Client).where(Client.user_id.in_(_PB_USER_IDS)))
+    )
+
+    await db.commit()
+
+    return PortfolioCustomerDataResetResponse(
+        status="cleared",
+        deleted_holdings=deleted_holdings,
+        deleted_snapshots=deleted_snapshots,
+        deleted_import_rows=deleted_import_rows,
+        deleted_import_batches=deleted_import_batches,
+        deleted_clients=deleted_clients,
+        deleted_client_aliases=deleted_client_aliases,
+        deleted_watchlist_alerts=deleted_watchlist_alerts,
     )
 
 

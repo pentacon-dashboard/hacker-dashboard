@@ -12,9 +12,11 @@ import pytest
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy import (
     JSON,
+    Boolean,
     Column,
     Date,
     DateTime,
+    ForeignKey,
     Integer,
     MetaData,
     Numeric,
@@ -33,6 +35,31 @@ from app.main import app
 
 def _create_portfolio_tables(conn: Any) -> None:
     metadata = MetaData()
+    Table(
+        "clients",
+        metadata,
+        Column("id", Integer, primary_key=True, autoincrement=True),
+        Column("user_id", String(50), nullable=False, default="pb-demo"),
+        Column("client_id", String(50), nullable=False),
+        Column("label", String(128), nullable=True),
+        Column("display_name", String(128), nullable=True),
+        Column("normalized_label", String(128), nullable=True),
+        Column("normalized_name", String(128), nullable=True),
+        Column("status", String(32), nullable=False, default="active"),
+        Column("created_at", DateTime(timezone=True)),
+        Column("updated_at", DateTime(timezone=True)),
+    )
+    Table(
+        "client_aliases",
+        metadata,
+        Column("id", Integer, primary_key=True, autoincrement=True),
+        Column("user_id", String(50), nullable=False, default="pb-demo"),
+        Column("client_id", String(50), nullable=False),
+        Column("alias_type", String(32), nullable=False),
+        Column("alias_value", String(128), nullable=False),
+        Column("normalized_value", String(128), nullable=False),
+        Column("created_at", DateTime(timezone=True)),
+    )
     Table(
         "holdings",
         metadata,
@@ -67,6 +94,55 @@ def _create_portfolio_tables(conn: Any) -> None:
         UniqueConstraint(
             "user_id", "client_id", "snapshot_date", name="uq_snapshot_user_client_date"
         ),
+    )
+    Table(
+        "portfolio_import_batches",
+        metadata,
+        Column("id", Integer, primary_key=True, autoincrement=True),
+        Column("user_id", String(50), nullable=False, default="pb-demo"),
+        Column("client_id", String(50), nullable=False),
+        Column("import_batch_key", String(128), nullable=False, unique=True),
+        Column("file_name", String(255), nullable=False),
+        Column("file_content_hash", String(64), nullable=False),
+        Column("confirmed_mapping_hash", String(64), nullable=False),
+        Column("confirmed_mapping", Text, nullable=False),
+        Column("status", String(32), nullable=False),
+        Column("warnings", Text, nullable=False, default="[]"),
+        Column("created_at", DateTime(timezone=True)),
+        Column("updated_at", DateTime(timezone=True)),
+    )
+    Table(
+        "portfolio_import_rows",
+        metadata,
+        Column("id", Integer, primary_key=True, autoincrement=True),
+        Column("user_id", String(50), nullable=False, default="pb-demo"),
+        Column("client_id", String(50), nullable=False),
+        Column(
+            "import_batch_key",
+            String(128),
+            ForeignKey("portfolio_import_batches.import_batch_key", ondelete="CASCADE"),
+            nullable=False,
+        ),
+        Column("source_row", Integer, nullable=False),
+        Column("row_status", String(32), nullable=False),
+        Column("raw_row_json", JSON, nullable=False),
+        Column("normalized_payload_json", JSON, nullable=True),
+        Column("reason_codes", JSON, nullable=False),
+        Column("linked_holding_id", Integer, nullable=True),
+        Column("created_at", DateTime(timezone=True)),
+    )
+    Table(
+        "watchlist_alerts",
+        metadata,
+        Column("id", Integer, primary_key=True, autoincrement=True),
+        Column("user_id", String(50), nullable=False, default="pb-demo"),
+        Column("client_id", String(50), nullable=False, default="client-001"),
+        Column("symbol", String(50), nullable=False),
+        Column("market", String(20), nullable=False),
+        Column("direction", String(10), nullable=False),
+        Column("threshold", Numeric(18, 4), nullable=False),
+        Column("enabled", Boolean, nullable=False, default=True),
+        Column("created_at", DateTime(timezone=True)),
     )
     metadata.create_all(conn)
 
@@ -332,15 +408,145 @@ async def test_get_summary_with_holdings(portfolio_client: AsyncClient) -> None:
 
 @pytest.mark.asyncio
 async def test_get_clients_empty(portfolio_client: AsyncClient) -> None:
-    """GET /portfolio/clients는 빈 DB에서도 PB 고객 목록 형태를 유지한다."""
+    """GET /portfolio/clients returns an empty client book when no ledger exists."""
     resp = await portfolio_client.get("/portfolio/clients")
 
     assert resp.status_code == 200
     body = resp.json()
     assert body["user_id"] == "pb-demo"
-    assert body["client_count"] >= 1
-    assert body["clients"][0]["client_id"] == "client-001"
-    assert "risk_grade" in body["clients"][0]
+    assert body["client_count"] == 0
+    assert body["clients"] == []
+
+
+@pytest.mark.asyncio
+async def test_reset_customer_data_requires_confirmation(
+    portfolio_client: AsyncClient,
+) -> None:
+    """POST /portfolio/customer-data/reset rejects accidental destructive requests."""
+    resp = await portfolio_client.post(
+        "/portfolio/customer-data/reset",
+        json={"confirmation": "wrong"},
+    )
+
+    assert resp.status_code == 400
+
+
+@pytest.mark.asyncio
+async def test_reset_customer_data_deletes_customer_ledger(
+    portfolio_client: AsyncClient,
+) -> None:
+    """Confirmed reset removes PB customer holdings, snapshots, imports, registry, and alerts."""
+    with patch("app.api.portfolio.get_adapter") as mock_reg:
+        mock_reg.return_value = AsyncMock()
+        created = await portfolio_client.post(
+            "/portfolio/holdings",
+            json={
+                "client_id": "client-002",
+                "market": "yahoo",
+                "code": "MSFT",
+                "quantity": "2",
+                "avg_cost": "300",
+                "currency": "USD",
+            },
+        )
+    holding_id = created.json()["id"]
+
+    from app.db.models import (
+        Client,
+        ClientAlias,
+        PortfolioImportBatch,
+        PortfolioImportRow,
+        PortfolioSnapshot,
+        WatchlistAlert,
+    )
+
+    async for db in app.dependency_overrides[get_db]():
+        now = datetime.now(UTC)
+        db.add_all(
+            [
+                Client(
+                    user_id="pb-demo",
+                    client_id="client-002",
+                    label="Client B",
+                    status="active",
+                    created_at=now,
+                    updated_at=now,
+                ),
+                ClientAlias(
+                    user_id="pb-demo",
+                    client_id="client-002",
+                    alias_type="label",
+                    alias_value="Client B",
+                    normalized_value="clientb",
+                    created_at=now,
+                ),
+                PortfolioSnapshot(
+                    user_id="pb-demo",
+                    client_id="client-002",
+                    snapshot_date=now.date(),
+                    total_value_krw=Decimal("1000"),
+                    total_pnl_krw=Decimal("10"),
+                    asset_class_breakdown={},
+                    holdings_detail=[],
+                    created_at=now,
+                ),
+                PortfolioImportBatch(
+                    user_id="pb-demo",
+                    client_id="client-002",
+                    import_batch_key="batch-1",
+                    file_name="sample.csv",
+                    file_content_hash="hash",
+                    confirmed_mapping_hash="mapping",
+                    confirmed_mapping="{}",
+                    status="imported",
+                    warnings="[]",
+                    created_at=now,
+                    updated_at=now,
+                ),
+                PortfolioImportRow(
+                    user_id="pb-demo",
+                    client_id="client-002",
+                    import_batch_key="batch-1",
+                    source_row=2,
+                    row_status="imported",
+                    raw_row_json={},
+                    normalized_payload_json={},
+                    reason_codes=[],
+                    linked_holding_id=holding_id,
+                    created_at=now,
+                ),
+                WatchlistAlert(
+                    user_id="pb-demo",
+                    client_id="client-002",
+                    symbol="MSFT",
+                    market="yahoo",
+                    direction="above",
+                    threshold=Decimal("400"),
+                    enabled=True,
+                    created_at=now,
+                ),
+            ]
+        )
+        await db.commit()
+
+    resp = await portfolio_client.post(
+        "/portfolio/customer-data/reset",
+        json={"confirmation": "CLEAR_CUSTOMER_DATA"},
+    )
+
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["status"] == "cleared"
+    assert body["deleted_holdings"] == 1
+    assert body["deleted_snapshots"] == 1
+    assert body["deleted_import_rows"] == 1
+    assert body["deleted_import_batches"] == 1
+    assert body["deleted_clients"] == 1
+    assert body["deleted_client_aliases"] == 1
+    assert body["deleted_watchlist_alerts"] == 1
+
+    clients_resp = await portfolio_client.get("/portfolio/clients")
+    assert clients_resp.json()["clients"] == []
 
 
 @pytest.mark.asyncio

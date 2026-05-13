@@ -240,3 +240,21 @@ class PortfolioClientsResponse(BaseModel):
     aum_krw: str
     client_count: int
     clients: list[PortfolioClientRow]
+
+
+class PortfolioCustomerDataResetRequest(BaseModel):
+    confirmation: str = Field(
+        ...,
+        description="Safety confirmation phrase required for destructive customer data reset.",
+    )
+
+
+class PortfolioCustomerDataResetResponse(BaseModel):
+    status: Literal["cleared"]
+    deleted_holdings: int
+    deleted_snapshots: int
+    deleted_import_rows: int
+    deleted_import_batches: int
+    deleted_clients: int
+    deleted_client_aliases: int
+    deleted_watchlist_alerts: int

@@ -420,6 +420,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/portfolio/customer-data/reset": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Reset Customer Data
+         * @description Clear PB customer portfolio data after an explicit confirmation phrase.
+         */
+        post: operations["reset_customer_data_portfolio_customer_data_reset_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/portfolio/snapshots": {
         parameters: {
             query?: never;
@@ -1954,6 +1974,36 @@ export interface components {
             client_count: number;
             /** Clients */
             clients: components["schemas"]["PortfolioClientRow"][];
+        };
+        /** PortfolioCustomerDataResetRequest */
+        PortfolioCustomerDataResetRequest: {
+            /**
+             * Confirmation
+             * @description Safety confirmation phrase required for destructive customer data reset.
+             */
+            confirmation: string;
+        };
+        /** PortfolioCustomerDataResetResponse */
+        PortfolioCustomerDataResetResponse: {
+            /**
+             * Status
+             * @constant
+             */
+            status: "cleared";
+            /** Deleted Holdings */
+            deleted_holdings: number;
+            /** Deleted Snapshots */
+            deleted_snapshots: number;
+            /** Deleted Import Rows */
+            deleted_import_rows: number;
+            /** Deleted Import Batches */
+            deleted_import_batches: number;
+            /** Deleted Clients */
+            deleted_clients: number;
+            /** Deleted Client Aliases */
+            deleted_client_aliases: number;
+            /** Deleted Watchlist Alerts */
+            deleted_watchlist_alerts: number;
         };
         /**
          * PortfolioSummary
@@ -3606,6 +3656,46 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PortfolioClientsResponse"];
+                };
+            };
+        };
+    };
+    reset_customer_data_portfolio_customer_data_reset_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PortfolioCustomerDataResetRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PortfolioCustomerDataResetResponse"];
+                };
+            };
+            /** @description Confirmation phrase mismatch */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
