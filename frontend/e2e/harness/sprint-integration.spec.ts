@@ -4,7 +4,7 @@ import { mockBaseApis } from "../fixtures/api";
 const PAGES: Array<{ path: string; key: RegExp }> = [
   { path: "/", key: /Client A|고객장부|Dashboard/i },
   { path: "/portfolio", key: /Client A|고객장부|Dashboard/i },
-  { path: "/watchlist", key: /Client A|고객장부|Dashboard/i },
+  { path: "/watchlist", key: /Watchlist|관심 종목|Dashboard/i },
   { path: "/symbol/yahoo/AAPL", key: /AAPL|RSI|MACD/i },
   { path: "/market-analyze", key: /KOSPI|S&P|VIX|Sector|시장/i },
   { path: "/copilot", key: /Copilot|코파일럿/i },

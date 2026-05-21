@@ -250,7 +250,7 @@ test("/dashboard redirects to the unified home", async ({ page }) => {
   });
 });
 
-test("legacy client and watchlist routes redirect to the main client book", async ({ page }) => {
+test("legacy client routes redirect to the main client book", async ({ page }) => {
   await setupHomeRoutes(page);
 
   await page.goto("/clients");
@@ -259,11 +259,17 @@ test("legacy client and watchlist routes redirect to the main client book", asyn
     timeout: 10_000,
   });
 
-  await page.goto("/watchlist");
-  await expect(page).toHaveURL(/\/$/);
-  await expect(page.locator("[data-testid='client-dashboard-home']")).toBeVisible();
-
   await page.goto("/portfolio");
   await expect(page).toHaveURL(/\/$/);
   await expect(page.locator("[data-testid='client-dashboard-home']")).toBeVisible();
+});
+
+test("/watchlist renders the dedicated watchlist workspace", async ({ page }) => {
+  await setupHomeRoutes(page);
+
+  await page.goto("/watchlist");
+  await expect(page).toHaveURL(/\/watchlist(?:[?#].*)?$/);
+  await expect(page.locator("[data-testid='watchlist-page']")).toBeVisible({
+    timeout: 10_000,
+  });
 });

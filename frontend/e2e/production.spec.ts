@@ -38,15 +38,16 @@ test("홈 페이지가 렌더되고 주요 영역이 보인다", async ({ page }
   await expect(main).toBeVisible({ timeout: 15_000 });
 });
 
-// ── 시나리오 3: /watchlist 레거시 리다이렉트 ───────────────────────────────
-test("/watchlist 는 고객장부 메인으로 이동한다", async ({ page }) => {
+// Scenario 3: /watchlist renders the restored watchlist page.
+test("/watchlist renders the watchlist page", async ({ page }) => {
   await page.goto("/watchlist", { waitUntil: "domcontentloaded", timeout: 30_000 });
 
   // 에러 페이지가 아닌지 확인
   const bodyText = await page.locator("body").innerText();
   expect(bodyText).not.toMatch(/500|Internal Server Error/i);
-  await expect(page).toHaveURL(/\/$/);
+  await expect(page).toHaveURL(/\/watchlist(?:[?#].*)?$/);
 
-  const main = page.locator("main, [role='main'], [id='main-content']").first();
-  await expect(main).toBeVisible({ timeout: 15_000 });
+  await expect(page.getByTestId("watchlist-page")).toBeVisible({
+    timeout: 15_000,
+  });
 });
